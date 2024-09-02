@@ -1,8 +1,11 @@
-.section .data
-addr:	.dword 0x0
+.section .bss
+result:	.dword 0
 
 .section .text
 .global main
+
+#define RESULT result
+
 main:
 	li t0,0
 	li t1,1
@@ -13,7 +16,7 @@ loop:
 	addi t1, t1, 1
 	ble t1, t2, loop
 
-	la t3, addr
+	la t3, RESULT
 	sd t0, 0(t3)
 
 // TODO: [p0-task1] Add your code here!
