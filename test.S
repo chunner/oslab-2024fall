@@ -1,4 +1,4 @@
-.section .bss
+.section .data
 result:	.dword 0
 
 .section .text
