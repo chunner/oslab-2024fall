@@ -1,7 +1,7 @@
 .section .data 
 start_sp: .dword 0x0
-isprime: .asciz "%d is prime\n"
-notprime: .asciz "%d is not prime\n"
+# isprime: .asciz "%d is prime\n"
+# notprime: .asciz "%d is not prime\n"
 .section .text
 .global main
 .global judge
