@@ -1,7 +1,7 @@
 .section .data 
 start_sp: .dword 0x0
-# is_prime: .asciz "%d is prime"
-# not_prime: .asciz "%d is not prime"
+isprime: .asciz "%d is prime\n"
+notprime: .asciz "%d is not prime\n"
 .section .text
 .global main
 .global judge
@@ -50,10 +50,10 @@ check:
 
 
 is_prime:
-	li a0, 1
+	li a0, 1          # a0 is return value
 	ret
 
-not_prime: 
+not_prime: 			  # a0 is return value
 	li a0, 0
 	ret
 
