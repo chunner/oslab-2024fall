@@ -76,8 +76,15 @@ int main(void)
     bios_putstr("Hello OS!\n\r");
     bios_putstr(buf);
     
-    int input = bios_getchar();
-    bios_putchar(input);
+    int input;
+    
+    while(1){
+        input = bios_getchar();   
+        if (input < 0 || input > 127) {  // if the input is not among ASCII
+            continue;              // skip illegal ch
+        }
+        bios_putchar(input);       
+    }
 
     // TODO: Load tasks by either task id [p1-task3] or task name [p1-task4],
     //   and then execute them.
