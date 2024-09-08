@@ -15,10 +15,20 @@ ENTRY(_start)
   csrw CSR_SIP, zero
 
   /* TODO: [p1-task2] clear BSS for flat non-ELF images */
+  la a0, __bss_start        # load .bss 's start and end addr
+  la a1, __BSS_END__
 
+clear_bss:
+  bge a0, a1, stack_set;
+  sd zero, 0(a0)
+  addi a0, a0, 8            # a0 move forward 8 byte
+  j clear_bss               # clear next 64 bit mem
 
   /* TODO: [p1-task2] setup C environment */
-
+stack_set:              # set stack
+  li sp, KERNEL_STACK
+  
+  j main      # jump to main
 
 loop:
   wfi
