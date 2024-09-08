@@ -129,7 +129,11 @@ static void create_image(int nfiles, char *files[])
          */
         if (strcmp(*files, "bootblock") == 0) {
             write_padding(img, &phyaddr, SECTOR_SIZE);
+        }else {             //  kernel and every app program sectors occupies 15 sectors
+            write_padding(img, &phyaddr, SECTOR_SIZE * (fidx -1) * 15 +  SECTOR_SIZE);
         }
+
+
 
         fclose(fp);
         files++;
@@ -215,6 +219,15 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
 {
     // TODO: [p1-task3] & [p1-task4] write image info to some certain places
     // NOTE: os size, infomation about app-info sector(s) ...
+    long os_size_loc = 0x1fc;               // kernel sector num
+    int ret = fseek(img, os_size_loc, SEEK_SET);
+    assert(ret == 0);  // check if move to the right place
+   
+    unsigned char buffer[] = { 0x15, tasknum};      //  kernel occupies 15 sectors
+    size_t data_size = sizeof(buffer);
+
+    // 写入多个字节的数据
+    fwrite(buffer, 1, data_size, img);
 }
 
 /* print an error message and exit */

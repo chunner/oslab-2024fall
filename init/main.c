@@ -75,16 +75,32 @@ int main(void)
 
     bios_putstr("Hello OS!\n\r");
     bios_putstr(buf);
-    
-    int input;
-    
+
+    int taskid;
     while(1){
-        input = bios_getchar();   
-        if (input < 0 || input > 127) {  // if the input is not among ASCII
-            continue;              // skip illegal ch
+        taskid = bios_getchar();   
+        if(taskid >= 0 && taskid < TASK_MAXNUM){
+            break;
         }
-        bios_putchar(input);       
     }
+    uint64_t usrentry = load_task_img(taskid);
+    // 使用内联汇编执行 JAL 跳转到 usrentry
+    __asm__ __volatile__ (
+        "jal zero, usrentry\n"  
+    );
+
+
+
+    
+    // int input;
+    
+    // while(1){
+    //     input = bios_getchar();   
+    //     if (input < 0 || input > 127) {  // if the input is not among ASCII
+    //         continue;              // skip illegal ch
+    //     }
+    //     bios_putchar(input);       
+    // }
 
     // TODO: Load tasks by either task id [p1-task3] or task name [p1-task4],
     //   and then execute them.
