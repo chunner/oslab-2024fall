@@ -19,13 +19,13 @@ main:
 	// TODO: [p1-task1] call BIOS to print string "It's bootblock!"
 	li a7, BIOS_PUTSTR
 	la a0, msg
-	li a1, 0
-	li a2, 0
-	li a3, 0
-	li a4, 0
 	jal bios_func_entry
 	// TODO: [p1-task2] call BIOS to read kernel in SD card
-
+	li a7, BIOS_SDREAD
+	li a0, kernel
+	li a1, 1
+	li a2, 1
+	jal bios_func_entry
 
 	// TODO: [p1-task4] load task-related arguments and pass them to kernel
 
