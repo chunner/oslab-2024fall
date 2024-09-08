@@ -17,10 +17,13 @@ main:
 	fence
 
 	// TODO: [p1-task1] call BIOS to print string "It's bootblock!"
-	li a7, BIOS_PUTCHAR
+	li a7, BIOS_PUTSTR
 	la a0, msg
-	la t0, bios_func_entry
-	jr t0
+	li a1, 0
+	li a2, 0
+	li a3, 0
+	li a4, 0
+	jal bios_func_entry
 	// TODO: [p1-task2] call BIOS to read kernel in SD card
 
 
