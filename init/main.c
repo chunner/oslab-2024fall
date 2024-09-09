@@ -84,11 +84,11 @@ int main(void)
             break;
         }
     }
-    uint64_t usrentry = load_task_img(taskid);
-    // 使用内联汇编执行 JAL 跳转到 usrentry
-    __asm__ __volatile__ (
-        "jal zero, usrentry\n"  
-    );
+    // uint64_t usrentry = load_task_img(taskid);
+    // // 使用内联汇编执行 JAL 跳转到 usrentry
+    // __asm__ __volatile__ (
+    //     "jal zero, usrentry\n"  
+    // );
 
 
 
