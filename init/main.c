@@ -76,6 +76,7 @@ int main(void)
     bios_putstr("Hello OS!\n\r");
     bios_putstr(buf);
 
+    bios_putstr("input task id: 1.2048; 2.auipc; 3.bcc; 4.data.c\n\r");
     int taskid;
     while(1){
         taskid = bios_getchar();   
