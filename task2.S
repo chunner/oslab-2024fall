@@ -37,7 +37,7 @@ end:
 judge:
 	li t1, 2
 	bge t0, t1, check
-	j not_prime                 # t1<2, is not prime
+	j not_prime                 # t0<2, is not prime
 
 check:
 	bge t1, t0, is_prime  # t1 >= t0
