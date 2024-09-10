@@ -93,6 +93,8 @@ static void create_image(int nfiles, char *files[])
     /* for each input file */
     for (int fidx = 0; fidx < nfiles; ++fidx) {
 
+        int fi_phyaddr_begin = phyaddr;
+
         int taskidx = fidx - 2;
 
         /* open input file */
@@ -130,7 +132,7 @@ static void create_image(int nfiles, char *files[])
         if (strcmp(*files, "bootblock") == 0) {
             write_padding(img, &phyaddr, SECTOR_SIZE);
         }else {             //  kernel and every app program sectors occupies 15 sectors
-            write_padding(img, &phyaddr, SECTOR_SIZE * (fidx -1) * 15 +  SECTOR_SIZE);
+           write_padding(img, &phyaddr, fi_phyaddr_begin + SECTOR_SIZE * 15);
         }
 
 
@@ -220,14 +222,16 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
     // TODO: [p1-task3] & [p1-task4] write image info to some certain places
     // NOTE: os size, infomation about app-info sector(s) ...
     long os_size_loc = 0x1fc;               // kernel sector num
-    int ret = fseek(img, os_size_loc, SEEK_SET);
-    assert(ret == 0);  // check if move to the right place
+    fseek(img, os_size_loc, SEEK_SET);
    
-    unsigned char buffer[] = { 0x15, tasknum};      //  kernel occupies 15 sectors
+    unsigned char buffer[] = {15, tasknum};      //  kernel occupies 15 sectors
     size_t data_size = sizeof(buffer);
 
     // 写入多个字节的数据
-    fwrite(buffer, 1, data_size, img);
+    //fwrite(buffer, 1, data_size, img);
+    fputc(15, img);
+    fputc(0, img);              // half word: 0x 00_0f
+    fputc(tasknum, img);
 }
 
 /* print an error message and exit */

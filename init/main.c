@@ -75,21 +75,27 @@ int main(void)
 
     bios_putstr("Hello OS!\n\r");
     bios_putstr(buf);
-
-    bios_putstr("input task id: 1.2048; 2.auipc; 3.bcc; 4.data.c\n\r");
-    int taskid;
     while(1){
-        taskid = bios_getchar();   
-        if(taskid >= 0 && taskid < TASK_MAXNUM){
-            break;
+        bios_putstr("input task id: 0.bss; 1.auipc; 2.data; 3.2048\n\r");
+        int taskid;
+        while(1){
+            taskid = bios_getchar();   
+            if(taskid >= '0' && taskid <= TASK_MAXNUM + '0'){
+                taskid = taskid - '0';  // 将字符转换为数字
+                char task_str[] = "task id =_\n\r";
+                task_str[9] = taskid + '0';  // 再次转换回字符用于显示
+                bios_putstr(task_str);
+                break;
+            }
         }
+        uint64_t usrentry = load_task_img(taskid);
+        // 使用内联汇编执行 JAL 跳转到 usrentry
+        __asm__ __volatile__ (
+            "jalr ra, %0\n"
+            :
+            : "r"(usrentry)
+        );
     }
-    // uint64_t usrentry = load_task_img(taskid);
-    // // 使用内联汇编执行 JAL 跳转到 usrentry
-    // __asm__ __volatile__ (
-    //     "jal zero, usrentry\n"  
-    // );
-
 
 
     

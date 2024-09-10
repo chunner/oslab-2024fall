@@ -1,5 +1,5 @@
 #include <asm.h>
-
+#define USER_STACK		0x53000000
 .section ".entry_function","ax"
 ENTRY(_start)
 
@@ -13,11 +13,15 @@ clear_bss:
     addi a0, a0, 8            # a0 move forward 8 byte
     j clear_bss               # clear next 64 bit mem
 stack_set:              # set stack
-    li sp, KERNEL_STACK
+    li sp, USER_STACK
   
 
     /* TODO: [p1-task3] enter main function */
+    addi sp,sp, -8
+    sd ra, 0(sp)
     jal main      # jump to main
+    ld ra, 0(sp)
+    addi sp, sp , 8
 
     /* TODO: [p1-task3] finish task and return to the kernel, replace this in p3-task2! */
     ret
