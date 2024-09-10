@@ -17,9 +17,14 @@
 
 #define NBYTES2SEC(nbytes) (((nbytes) / SECTOR_SIZE) + ((nbytes) % SECTOR_SIZE != 0))
 
+#define MAXLEN 10       // the max len of task name
+
 /* TODO: [p1-task4] design your own task_info_t */
 typedef struct {
-
+    int taskid;
+    int sector_num;
+    char taskname[MAXLEN];
+    int offset;
 } task_info_t;
 
 #define TASK_MAXNUM 16
@@ -131,8 +136,16 @@ static void create_image(int nfiles, char *files[])
          */
         if (strcmp(*files, "bootblock") == 0) {
             write_padding(img, &phyaddr, SECTOR_SIZE);
-        }else {             //  kernel and every app program sectors occupies 15 sectors
-           write_padding(img, &phyaddr, fi_phyaddr_begin + SECTOR_SIZE * 15);
+        }//else {             //  kernel and every app program sectors occupies 15 sectors
+           //write_padding(img, &phyaddr, fi_phyaddr_begin + SECTOR_SIZE * 15);
+        //}
+
+        /* updata taskinfo */
+        if(taskidx >=0){                // taskinfo data
+            taskinfo[taskidx].taskid = taskidx;                                     // id
+            strcpy(&taskinfo[taskidx].taskname, files);                             // name
+            taskinfo[taskidx].sector_num = NBYTES2SEC(phyaddr - fi_phyaddr_begin);      // sectors num
+            taskinfo[taskidx].offset = fi_phyaddr_begin;                             // offset
         }
 
 
@@ -221,17 +234,34 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
 {
     // TODO: [p1-task3] & [p1-task4] write image info to some certain places
     // NOTE: os size, infomation about app-info sector(s) ...
+    fseek(img, nbytes_kernel + SECTOR_SIZE, SEEK_SET);
+    int taskinfo_offset = nbytes_kernel;
+    for (int i = 0; i < tasknum; i++) {
+        fwrite(&taskinfo[i].taskid, sizeof(int), 1, img);   // task id
+
+        fwrite(&taskinfo[i].sector_num, sizeof(int), 1, img);   //  task num
+
+        fwrite(taskinfo[i].taskname, sizeof(char), MAXLEN, img); // task name
+
+        fwrite(&taskinfo[i].offset, sizeof(int), 1, img);       // task offset
+        /* update nbytes_kernel */
+        nbytes_kernel += sizeof(int) * 3 + sizeof(char) * MAXLEN;
+    }
+
     long os_size_loc = 0x1fc;               // kernel sector num
     fseek(img, os_size_loc, SEEK_SET);
-   
-    unsigned char buffer[] = {15, tasknum};      //  kernel occupies 15 sectors
-    size_t data_size = sizeof(buffer);
 
-    // 写入多个字节的数据
-    //fwrite(buffer, 1, data_size, img);
-    fputc(15, img);
-    fputc(0, img);              // half word: 0x 00_0f
-    fputc(tasknum, img);
+    short nsectors_kernel = NBYTES2SEC(nbytes_kernel);
+
+    fwrite(&nsectors_kernel, sizeof(short), 1, img);                
+    // fputc(nsectors_kernel, img);   
+    // fputc(0, img);              // half word: 0x 00_0f
+    fwrite(&tasknum, sizeof(short), 1, img);    
+    // fputc(tasknum, img);
+    // fputc(0, img);              // half word:
+    long taskinfo_offset_loc = 0x1f8;               // bootblock 's last 8 bytes
+    fseek(img, taskinfo_offset_loc, SEEK_SET);
+    fwrite(&taskinfo_offset, sizeof(int), 1, img);
 }
 
 /* print an error message and exit */

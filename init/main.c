@@ -7,6 +7,7 @@
 #include <type.h>
 
 #define VERSION_BUF 50
+#define MAXLEN 10           // max len of task name
 
 int version = 2; // version must between 0 and 9
 char buf[VERSION_BUF];
@@ -77,18 +78,31 @@ int main(void)
     bios_putstr(buf);
     while(1){
         bios_putstr("input task id: 0.bss; 1.auipc; 2.data; 3.2048\n\r");
-        int taskid;
-        while(1){
-            taskid = bios_getchar();   
-            if(taskid >= '0' && taskid <= TASK_MAXNUM + '0'){
-                taskid = taskid - '0';  // 将字符转换为数字
-                char task_str[] = "task id =_\n\r";
-                task_str[9] = taskid + '0';  // 再次转换回字符用于显示
-                bios_putstr(task_str);
-                break;
+        // int taskid;
+        // while(1){
+        //     taskid = bios_getchar();   
+        //     if(taskid >= '0' && taskid <= TASK_MAXNUM + '0'){
+        //         taskid = taskid - '0';  // 将字符转换为数字
+        //         char task_str[] = "task id =_\n\r";
+        //         task_str[9] = taskid + '0';  // 再次转换回字符用于显示
+        //         bios_putstr(task_str);
+        //         break;
+        //     }
+        // }
+        int input;
+        char taskname[MAXLEN];
+        int i=0;
+        while(i<=MXLEN){
+            input = port_read_ch();   
+            if (input >= 0 && input <= 127) {  // if the input is not among ASCII
+                bios_putchar(input);
+                taskname[i++] = input;
             }
+            if (input == '\n' || input == '\r') {
+                    break;
+                } 
         }
-        uint64_t usrentry = load_task_img(taskid);
+        uint64_t usrentry = load_task_img(taskname);
         // 使用内联汇编执行 JAL 跳转到 usrentry
         __asm__ __volatile__ (
             "jalr ra, %0\n"
