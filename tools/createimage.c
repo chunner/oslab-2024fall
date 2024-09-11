@@ -161,6 +161,8 @@ static void create_image(int nfiles, char *files[])
     write_img_info(nbytes_kernel, taskinfo, tasknum, img);
 
     fclose(img);
+
+    printf("image size = 0x%04x byte\n", phyaddr);
 }
 
 static void read_ehdr(Elf64_Ehdr * ehdr, FILE * fp)
