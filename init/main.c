@@ -7,7 +7,6 @@
 #include <type.h>
 
 #define VERSION_BUF 50
-#define MAXLEN 10           // max len of task name
 
 int version = 2; // version must between 0 and 9
 char buf[VERSION_BUF];
@@ -92,23 +91,26 @@ int main(void)
         int input;
         char taskname[MAXLEN];
         int i=0;
-        while(i<=MXLEN){
+        while(i<=MAXLEN){
             input = port_read_ch();   
             if (input >= 0 && input <= 127) {  // if the input is not among ASCII
                 bios_putchar(input);
-                taskname[i++] = input;
-            }
-            if (input == '\n' || input == '\r') {
+                if (input == '\n' || input == '\r') {
+                    taskname[i++] = '\0';
                     break;
                 } 
+                taskname[i++] = input;
+            }
         }
         uint64_t usrentry = load_task_img(taskname);
-        // 使用内联汇编执行 JAL 跳转到 usrentry
-        __asm__ __volatile__ (
-            "jalr ra, %0\n"
-            :
-            : "r"(usrentry)
-        );
+        if(usrentry != -1){                // task name input correct
+            // 使用内联汇编执行 JAL 跳转到 usrentry
+            __asm__ __volatile__ (
+                "jalr ra, %0\n"
+                :
+                : "r"(usrentry)
+            );
+        }
     }
 
 

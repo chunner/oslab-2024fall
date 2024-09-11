@@ -21,10 +21,11 @@
 
 /* TODO: [p1-task4] design your own task_info_t */
 typedef struct {
-    int taskid;
+    //int taskid;
     int sector_num;
     char taskname[MAXLEN];
     int offset;
+    int entry;
 } task_info_t;
 
 #define TASK_MAXNUM 16
@@ -142,10 +143,11 @@ static void create_image(int nfiles, char *files[])
 
         /* updata taskinfo */
         if(taskidx >=0){                // taskinfo data
-            taskinfo[taskidx].taskid = taskidx;                                     // id
-            strcpy(&taskinfo[taskidx].taskname, files);                             // name
+            //taskinfo[taskidx].taskid = taskidx;                                     // id
+            strcpy(taskinfo[taskidx].taskname, *files);                             // name
             taskinfo[taskidx].sector_num = NBYTES2SEC(phyaddr - fi_phyaddr_begin);      // sectors num
-            taskinfo[taskidx].offset = fi_phyaddr_begin;                             // offset
+            taskinfo[taskidx].offset = NBYTES2SEC(fi_phyaddr_begin);                             // the first sector in image
+            taskinfo[taskidx].entry = get_entrypoint(ehdr);                     // entry point in mem
         }
 
 
@@ -235,9 +237,10 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
     // TODO: [p1-task3] & [p1-task4] write image info to some certain places
     // NOTE: os size, infomation about app-info sector(s) ...
     fseek(img, nbytes_kernel + SECTOR_SIZE, SEEK_SET);
+    //int test = nbytes_kernel + SECTOR_SIZE;
     int taskinfo_offset = nbytes_kernel;
     for (int i = 0; i < tasknum; i++) {
-        fwrite(&taskinfo[i].taskid, sizeof(int), 1, img);   // task id
+        //fwrite(&taskinfo[i].taskid, sizeof(int), 1, img);   // task id
 
         fwrite(&taskinfo[i].sector_num, sizeof(int), 1, img);   //  task num
 
@@ -262,6 +265,17 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
     long taskinfo_offset_loc = 0x1f8;               // bootblock 's last 8 bytes
     fseek(img, taskinfo_offset_loc, SEEK_SET);
     fwrite(&taskinfo_offset, sizeof(int), 1, img);
+
+    //for test
+    fseek(img, 0x500 + 0x200, SEEK_SET);
+    //int test =12345;
+    //fwrite(taskinfo, sizeof(task_info_t), 4, img);
+    // fwrite(&taskinfo[0].sector_num, sizeof(int),1, img);
+    // //fwrite(taskinfo[0].taskname, sizeof(char), MAXLEN, img); // task name
+    // fwrite(&nbytes_kernel, sizeof(int), 1, img);
+     fwrite(&taskinfo_offset, sizeof(int), 1, img);
+    // fwrite(&test, sizeof(int), 1, img);
+    // fwrite( &nbytes_kernel, sizeof(int), 1, img);
 }
 
 /* print an error message and exit */
