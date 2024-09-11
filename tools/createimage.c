@@ -17,13 +17,14 @@
 
 #define NBYTES2SEC(nbytes) (((nbytes) / SECTOR_SIZE) + ((nbytes) % SECTOR_SIZE != 0))
 
-#define MAXLEN 10       // the max len of task name
+#define MAXLEN 8       // the max len of task name
 
 /* TODO: [p1-task4] design your own task_info_t */
 typedef struct {
     //int taskid;
-    int sector_num;
     char taskname[MAXLEN];
+    int sector_num;
+    int firstsector;
     int offset;
     int entry;
 } task_info_t;
@@ -92,6 +93,8 @@ static void create_image(int nfiles, char *files[])
     Elf64_Ehdr ehdr;
     Elf64_Phdr phdr;
 
+    int taskinfo_size = tasknum * sizeof(task_info_t);          // the size of task_info
+
     /* open the image file */
     img = fopen(IMAGE_FILE, "w");
     assert(img != NULL);
@@ -137,16 +140,16 @@ static void create_image(int nfiles, char *files[])
          */
         if (strcmp(*files, "bootblock") == 0) {
             write_padding(img, &phyaddr, SECTOR_SIZE);
-        }//else {             //  kernel and every app program sectors occupies 15 sectors
-           //write_padding(img, &phyaddr, fi_phyaddr_begin + SECTOR_SIZE * 15);
-        //}
+        }else if(strcmp(*files, "main") == 0){             
+           write_padding(img, &phyaddr, phyaddr + taskinfo_size);       // keep the room for taskinfo_size
+        }
 
         /* updata taskinfo */
         if(taskidx >=0){                // taskinfo data
-            //taskinfo[taskidx].taskid = taskidx;                                     // id
             strcpy(taskinfo[taskidx].taskname, *files);                             // name
-            taskinfo[taskidx].sector_num = NBYTES2SEC(phyaddr - fi_phyaddr_begin);      // sectors num
-            taskinfo[taskidx].offset = NBYTES2SEC(fi_phyaddr_begin);                             // the first sector in image
+            taskinfo[taskidx].sector_num = NBYTES2SEC(phyaddr) - NBYTES2SEC(fi_phyaddr_begin) + 1;      // sectors num
+            taskinfo[taskidx].offset = fi_phyaddr_begin % SECTOR_SIZE;                  // the offset in first sector in image
+            taskinfo[taskidx].firstsector = NBYTES2SEC(fi_phyaddr_begin) - 1;
             taskinfo[taskidx].entry = get_entrypoint(ehdr);                     // entry point in mem
         }
 
@@ -231,51 +234,25 @@ static void write_padding(FILE *img, int *phyaddr, int new_phyaddr)
     }
 }
 
-static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
-                           short tasknum, FILE * img)
-{
-    // TODO: [p1-task3] & [p1-task4] write image info to some certain places
-    // NOTE: os size, infomation about app-info sector(s) ...
-    fseek(img, nbytes_kernel + SECTOR_SIZE, SEEK_SET);
-    //int test = nbytes_kernel + SECTOR_SIZE;
-    int taskinfo_offset = nbytes_kernel;
-    for (int i = 0; i < tasknum; i++) {
-        //fwrite(&taskinfo[i].taskid, sizeof(int), 1, img);   // task id
+ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
+                            short tasknum, FILE * img)
+ {
+     // TODO: [p1-task3] & [p1-task4] write image info to some certain places
+     // NOTE: os size, infomation about app-info sector(s) ...  
+     fseek(img, nbytes_kernel + SECTOR_SIZE, SEEK_SET);         // save the taskinfo after kernel
+     int taskinfo_addr = nbytes_kernel;
+     fwrite(taskinfo,sizeof(task_info_t), tasknum, img);
+     nbytes_kernel += sizeof(task_info_t) * tasknum;
 
-        fwrite(&taskinfo[i].sector_num, sizeof(int), 1, img);   //  task num
-
-        fwrite(taskinfo[i].taskname, sizeof(char), MAXLEN, img); // task name
-
-        fwrite(&taskinfo[i].offset, sizeof(int), 1, img);       // task offset
-        /* update nbytes_kernel */
-        nbytes_kernel += sizeof(int) * 3 + sizeof(char) * MAXLEN;
-    }
-
-    long os_size_loc = 0x1fc;               // kernel sector num
-    fseek(img, os_size_loc, SEEK_SET);
-
+    // kernel sector num
+    fseek(img, OS_SIZE_LOC, SEEK_SET);
     short nsectors_kernel = NBYTES2SEC(nbytes_kernel);
-
-    fwrite(&nsectors_kernel, sizeof(short), 1, img);                
-    // fputc(nsectors_kernel, img);   
-    // fputc(0, img);              // half word: 0x 00_0f
-    fwrite(&tasknum, sizeof(short), 1, img);    
-    // fputc(tasknum, img);
-    // fputc(0, img);              // half word:
-    long taskinfo_offset_loc = 0x1f8;               // bootblock 's last 8 bytes
-    fseek(img, taskinfo_offset_loc, SEEK_SET);
-    fwrite(&taskinfo_offset, sizeof(int), 1, img);
-
-    //for test
-    fseek(img, 0x500 + 0x200, SEEK_SET);
-    //int test =12345;
-    //fwrite(taskinfo, sizeof(task_info_t), 4, img);
-    // fwrite(&taskinfo[0].sector_num, sizeof(int),1, img);
-    // //fwrite(taskinfo[0].taskname, sizeof(char), MAXLEN, img); // task name
-    // fwrite(&nbytes_kernel, sizeof(int), 1, img);
-     fwrite(&taskinfo_offset, sizeof(int), 1, img);
-    // fwrite(&test, sizeof(int), 1, img);
-    // fwrite( &nbytes_kernel, sizeof(int), 1, img);
+    fwrite(&nsectors_kernel, sizeof(short), 1, img);            // kernel's number of sectors 
+    
+    int tasknum_loc = 0x1f6;
+    fseek(img, tasknum_loc, SEEK_SET);
+    fwrite(&tasknum, sizeof(short), 1, img);                    // tasknum  0x1f6-0x1f7
+    fwrite(&taskinfo_addr, sizeof(int), 1, img);                // taskinfo_addr  0x1f8 - 0x1fb
 }
 
 /* print an error message and exit */

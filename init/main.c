@@ -76,18 +76,8 @@ int main(void)
     bios_putstr("Hello OS!\n\r");
     bios_putstr(buf);
     while(1){
-        bios_putstr("input task id: 0.bss; 1.auipc; 2.data; 3.2048\n\r");
-        // int taskid;
-        // while(1){
-        //     taskid = bios_getchar();   
-        //     if(taskid >= '0' && taskid <= TASK_MAXNUM + '0'){
-        //         taskid = taskid - '0';  // 将字符转换为数字
-        //         char task_str[] = "task id =_\n\r";
-        //         task_str[9] = taskid + '0';  // 再次转换回字符用于显示
-        //         bios_putstr(task_str);
-        //         break;
-        //     }
-        // }
+        bios_putstr("Please input taskname: 0.bss; 1.auipc; 2.data; 3.2048\n\r");
+
         int input;
         char taskname[MAXLEN];
         int i=0;

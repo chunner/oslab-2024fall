@@ -7,9 +7,11 @@
 #include <csr.h>
 
 #define KERNEL_STACK		0x50500000
-#define tasknum_loc 0x502001fe
-#define taskinfo_offset_loc 0x502001f8
-#define taskinfo_size 22
+#define tasknum_loc 0x502001f6
+#define taskinfo_offset_loc 0x502001f8 # store the offset of task_info in kernel
+#define taskinfo_size 24
+#define kernel 0x50201000
+#define task_info_new_loc 0x50500010    # sp + 0x10
 .section ".entry_function","ax"
 ENTRY(_start)
   /* Mask all interrupts */
@@ -19,25 +21,27 @@ ENTRY(_start)
   /* set stack pointer*/ 
 stack_set:              
   li sp, KERNEL_STACK
-  /*keep the task info*/
-  li t0, tasknum_loc      # load task num
-  lh a0, 0(t0) 
+
+  /*move the task info*/
+  li t0, tasknum_loc      
+  lh a0, 0(t0)          # load task num
   li t1, taskinfo_size  
-  mul t0, t0, t1        # t0 = task_num * task_size
+  mul t0, a0, t1        # t0 = task_num * task_size
 
   # get taskinfo addr
   li t1, taskinfo_offset_loc
-  lw t2, 0(t1)  # t2 = the addr of taskinfo
+  lw t2, 0(t1)  # t2 = the offset of taskinfo in kernel
+  li t1, kernel
+  add t2, t2, t1   # t2 = the addr of task_info
 
-  sub sp, sp, t0
-  mv t3, sp
+  li t3, task_info_new_loc
 
 store_taskinfo:
-  lbu t4, 0(t2)     # load byte from mem
-  sb t4, 0(t3)      # store byre to sp
-  addi t2, t2, 1    # move mem pointer
-  addi t3, t3, 1    # move stack point
-  addi t0, t0, -1   # size --
+  lw t4, 0(t2)     # load word from mem
+  sw t4, 0(t3)      # store word to sp
+  addi t2, t2, 4    # move mem pointer
+  addi t3, t3, 4    # move stack point
+  addi t0, t0, -4   # size -=4
   bnez t0, store_taskinfo
 
 
