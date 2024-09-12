@@ -11,7 +11,7 @@
 #define taskinfo_offset_loc 0x502001f8 # store the offset of task_info in kernel
 #define taskinfo_size 24
 #define kernel 0x50201000
-#define task_info_new_loc 0x50500010    # sp + 0x10
+#define task_info_new_loc 0x53000010   # user's sp + 0x10
 .section ".entry_function","ax"
 ENTRY(_start)
   /* Mask all interrupts */
