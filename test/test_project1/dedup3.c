@@ -31,7 +31,7 @@ void word2str(char *str, char word[MAX_NUM][MAX_LEN], int len){
 int dedup(char word[MAX_NUM][MAX_LEN], int len){
     int reallen = len;
     int i;
-    for(i = 0; i <= reallen; i++){
+    for(i = 0; i < reallen; i++){
         if(strcmp(word[i], word[i+1]) == 0){
             deleteword(word, i--, reallen--);
         }

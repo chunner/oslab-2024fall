@@ -100,7 +100,7 @@ int main(void)
 
     uint64_t usrentry;      // the entry of app
     while(1){
-        bios_putstr("Please input taskname: 0.bss; 1.auipc; 2.data; 3.2048\n\r");
+        bios_putstr("Please input taskname: 0.bss; 1.auipc; 2.data; 3.2048; 4.output1; 5.sort2; 6.dedup3; 7.append\n\r");
 
         int input;
         char taskname[COMMAND_LEN];
@@ -123,6 +123,7 @@ int main(void)
             int k = 0;
             for(int i =  9; taskname[i] != '\0'; i++){ // taskname start from taskname[10]
                 if(taskname[i] == ' '){
+                    multask[n-1][k] = '\0';
                     n ++;
                     k = 0;
                 }else {
