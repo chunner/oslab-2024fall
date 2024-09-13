@@ -1,6 +1,6 @@
 #include <kernel.h>
 // #include<string.h>
-#define STRS_addr 0x53000200
+#define STRS_addr 0x59000000
 char *strcpy(char *dest, const char *src);
 
 char output[] = "sister\n"

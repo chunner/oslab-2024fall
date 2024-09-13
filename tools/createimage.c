@@ -26,7 +26,7 @@ typedef struct {
     int sector_num;
     int firstsector;
     int offset;
-    int entry;
+    uint64_t entry;
 } task_info_t;
 
 #define TASK_MAXNUM 16

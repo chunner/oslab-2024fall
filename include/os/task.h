@@ -19,10 +19,10 @@ typedef struct {
     int sector_num;
     int firstsector;
     int offset;
-    int entry;
+    uint64_t entry;
 } task_info_t;
 
 
 extern task_info_t tasks[TASK_MAXNUM];
-
+extern short tasknum;
 #endif

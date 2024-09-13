@@ -1,5 +1,5 @@
 #include <kernel.h>
-#define STRS_addr 0x53000200
+#define STRS_addr 0x59000000
 
 #define MAX_NUM 20
 #define MAX_LEN 10

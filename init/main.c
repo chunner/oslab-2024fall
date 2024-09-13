@@ -9,11 +9,20 @@
 #define VERSION_BUF 50
 #define nmultask 4
 #define COMMAND_LEN 50
+
+
+#define task_info_new_loc 0x58000010  // user's sp + 0x10
+#define kernel          0x50201000
+#define tasknum_loc     0x502001f6
+
+
+
 int version = 2; // version must between 0 and 9
 char buf[VERSION_BUF];
 
 // Task info array
 task_info_t tasks[TASK_MAXNUM];
+short tasknum;
 
 static int bss_check(void)
 {
@@ -41,6 +50,17 @@ static void init_task_info(void)
 {
     // TODO: [p1-task4] Init 'tasks' array via reading app-info sector
     // NOTE: You need to get some related arguments from bootblock first
+        /* get taskinfo from memory */
+    short *tasknum_mem = (short *) tasknum_loc;
+    tasknum = * tasknum_mem;
+    task_info_t *taskinfo_mem = (task_info_t *)(task_info_new_loc);
+    for(int i = 0; i < tasknum; i++){
+        tasks[i].sector_num = taskinfo_mem[i].sector_num;
+        tasks[i].firstsector = taskinfo_mem[i].firstsector;
+        tasks[i].offset = taskinfo_mem[i].offset;
+        tasks[i].entry = taskinfo_mem[i].entry;
+        strcpy(tasks[i].taskname,taskinfo_mem[i].taskname);
+    }
 }
 
 /************************************************************/
@@ -76,6 +96,9 @@ int main(void)
 
     bios_putstr("Hello OS!\n\r");
     bios_putstr(buf);
+
+
+    uint64_t usrentry;      // the entry of app
     while(1){
         bios_putstr("Please input taskname: 0.bss; 1.auipc; 2.data; 3.2048\n\r");
 
@@ -107,7 +130,7 @@ int main(void)
                 }
             }
             for(int i = 0; i< n; i++){
-                uint64_t usrentry = load_task_img(multask[i]);
+                usrentry = load_task_img(multask[i]);
                 if(usrentry != -1){                // task name input correct
                     // 使用内联汇编执行 JAL 跳转到 usrentry
                     __asm__ __volatile__ (
@@ -118,7 +141,7 @@ int main(void)
                 }
             }
         }else{          // single task
-            uint64_t usrentry = load_task_img(taskname);
+            usrentry = load_task_img(taskname);
             if(usrentry != -1){                // task name input correct
                 // 使用内联汇编执行 JALR 跳转到 usrentry
                 __asm__ __volatile__ (

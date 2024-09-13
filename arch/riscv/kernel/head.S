@@ -9,7 +9,7 @@
 #define KERNEL_STACK		0x50500000
 #define tasknum_loc 0x502001f6
 #define taskinfo_offset_loc 0x502001f8 # store the offset of task_info in kernel
-#define taskinfo_size 24
+#define taskinfo_size 28
 #define kernel 0x50201000
 #define task_info_new_loc 0x58000010   # user's sp + 0x10
 .section ".entry_function","ax"
