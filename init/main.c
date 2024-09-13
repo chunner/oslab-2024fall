@@ -7,7 +7,8 @@
 #include <type.h>
 
 #define VERSION_BUF 50
-
+#define nmultask 4
+#define COMMAND_LEN 50
 int version = 2; // version must between 0 and 9
 char buf[VERSION_BUF];
 
@@ -79,9 +80,9 @@ int main(void)
         bios_putstr("Please input taskname: 0.bss; 1.auipc; 2.data; 3.2048\n\r");
 
         int input;
-        char taskname[MAXLEN];
+        char taskname[COMMAND_LEN];
         int i=0;
-        while(i<=MAXLEN){
+        while(i<=COMMAND_LEN){
             input = port_read_ch();   
             if (input >= 0 && input <= 127) {  // if the input is not among ASCII
                 bios_putchar(input);
@@ -92,14 +93,40 @@ int main(void)
                 taskname[i++] = input;
             }
         }
-        uint64_t usrentry = load_task_img(taskname);
-        if(usrentry != -1){                // task name input correct
-            // 使用内联汇编执行 JAL 跳转到 usrentry
-            __asm__ __volatile__ (
-                "jalr ra, %0\n"
-                :
-                : "r"(usrentry)
-            );
+        bios_putstr("\n\r");         // new line
+        if(strncmp(taskname, "multitask", 9) == 0){      // len of "multitask" == 9, multitask
+            char multask[nmultask][MAXLEN];
+            int n = 0;  // the number of tasks
+            int k = 0;
+            for(int i =  9; taskname[i] != '\0'; i++){ // taskname start from taskname[10]
+                if(taskname[i] == ' '){
+                    n ++;
+                    k = 0;
+                }else {
+                    multask[n-1][k++] = taskname[i]; 
+                }
+            }
+            for(int i = 0; i< n; i++){
+                uint64_t usrentry = load_task_img(multask[i]);
+                if(usrentry != -1){                // task name input correct
+                    // 使用内联汇编执行 JAL 跳转到 usrentry
+                    __asm__ __volatile__ (
+                        "jalr ra, %0\n"
+                        :
+                        : "r"(usrentry)
+                    );
+                }
+            }
+        }else{          // single task
+            uint64_t usrentry = load_task_img(taskname);
+            if(usrentry != -1){                // task name input correct
+                // 使用内联汇编执行 JALR 跳转到 usrentry
+                __asm__ __volatile__ (
+                    "jalr ra, %0\n"
+                    :
+                    : "r"(usrentry)
+                );
+            }
         }
     }
 
