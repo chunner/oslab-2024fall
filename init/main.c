@@ -130,6 +130,7 @@ int main(void)
                     multask[n-1][k++] = taskname[i]; 
                 }
             }
+            multask[n-1][k] = '\0';
             for(int i = 0; i< n; i++){
                 usrentry = load_task_img(multask[i]);
                 if(usrentry != -1){                // task name input correct

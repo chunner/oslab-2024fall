@@ -10,6 +10,7 @@ char output[] = "sister\n"
                 "if\n"
                 "else\n"
                 "apple\n"
+                "brother\n"
                 "if\n\0";
 int main(){     
     bios_putstr(output);
