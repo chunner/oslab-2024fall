@@ -70,9 +70,8 @@ static void init_jmptab(void)
 
 static void init_task_info(void)
 {
-    // TODO: [p1-task4] Init 'tasks' array via reading app-info sector
     // NOTE: You need to get some related arguments from bootblock first
-        /* get taskinfo from memory */
+    /* get taskinfo from memory */
     short *tasknum_mem = (short *) tasknum_loc;
     tasknum = * tasknum_mem;
     task_info_t *taskinfo_mem = (task_info_t *)(task_info_new_loc);
@@ -159,78 +158,6 @@ int main(void)
     
 
 
-
-    uint64_t usrentry;      // the entry of app
-    while(1){
-        bios_putstr("Please input taskname: 0.bss; 1.auipc; 2.data; 3.2048; 4.output1; 5.sort2; 6.dedup3; 7.append\n\r");
-
-        int input;
-        char taskname[COMMAND_LEN];
-        int i=0;
-        while(i<=COMMAND_LEN){
-            input = port_read_ch();   
-            if (input >= 0 && input <= 127) {  // if the input is not among ASCII
-                bios_putchar(input);
-                if (input == '\n' || input == '\r') {
-                    taskname[i++] = '\0';
-                    break;
-                } 
-                taskname[i++] = input;
-            }
-        }
-        bios_putstr("\n\r");         // new line
-        if(strncmp(taskname, "multitask", 9) == 0){      // len of "multitask" == 9, multitask
-            char multask[nmultask][MAXLEN];
-            int n = 0;  // the number of tasks
-            int k = 0;
-            for(int i =  9; taskname[i] != '\0'; i++){ // taskname start from taskname[10]
-                if(taskname[i] == ' '){
-                    multask[n-1][k] = '\0';
-                    n ++;
-                    k = 0;
-                }else {
-                    multask[n-1][k++] = taskname[i]; 
-                }
-            }
-            multask[n-1][k] = '\0';
-            for(int i = 0; i< n; i++){
-                usrentry = load_task_img(multask[i]);
-                if(usrentry != -1){                // task name input correct
-                    // 使用内联汇编执行 JAL 跳转到 usrentry
-                    __asm__ __volatile__ (
-                        "jalr ra, %0\n"
-                        :
-                        : "r"(usrentry)
-                    );
-                }
-            }
-        }else{          // single task
-            usrentry = load_task_img(taskname);
-            if(usrentry != -1){                // task name input correct
-                // 使用内联汇编执行 JALR 跳转到 usrentry
-                __asm__ __volatile__ (
-                    "jalr ra, %0\n"
-                    :
-                    : "r"(usrentry)
-                );
-            }
-        }
-    }
-
-
-    
-    // int input;
-    
-    // while(1){
-    //     input = bios_getchar();   
-    //     if (input < 0 || input > 127) {  // if the input is not among ASCII
-    //         continue;              // skip illegal ch
-    //     }
-    //     bios_putchar(input);       
-    // }
-
-    // TODO: Load tasks by either task id [p1-task3] or task name [p1-task4],
-    //   and then execute them.
 
     // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
     while (1)
