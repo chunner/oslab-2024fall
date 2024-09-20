@@ -19,6 +19,7 @@ typedef enum {
     MUTEX_INIT,
     MUTEX_ACQ,
     MUTEX_RELEASE,
+    SCREEN_FLUSH,
     NUM_ENTRIES
 } jmptab_idx_t;
 
