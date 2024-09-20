@@ -85,6 +85,9 @@ typedef struct pcb
     /* time(seconds) to wake up sleeping PCB */
     uint64_t wakeup_time;
 
+    /* enter_point of user */
+    uint64_t entry_point;
+
 } pcb_t;
 
 /* ready queue to run */
