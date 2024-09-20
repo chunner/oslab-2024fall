@@ -25,6 +25,11 @@
 #define task_info_new_loc 0x58000010  // user's sp + 0x10
 #define kernel          0x50201000
 #define tasknum_loc     0x502001f6
+
+#define UserStackPage 10
+#define KernelStackPage 10
+
+
 int version = 2; // version must between 0 and 9
 char buf[VERSION_BUF];
 
@@ -63,7 +68,7 @@ static void init_jmptab(void)
     jmptab[MUTEX_INIT]      = (long (*)())do_mutex_lock_init;
     jmptab[MUTEX_ACQ]       = (long (*)())do_mutex_lock_acquire;
     jmptab[MUTEX_RELEASE]   = (long (*)())do_mutex_lock_release;
-
+    jmptab[SCREEN_FLUSH]    = (long (*)())screen_reflush;
     // TODO: [p2-task1] (S-core) initialize system call table.
 
 }
@@ -104,16 +109,37 @@ static void init_pcb_stack(
      */
     switchto_context_t *pt_switchto =
         (switchto_context_t *)((ptr_t)pt_regs - sizeof(switchto_context_t));
+    memset(pt_switchto, 0, sizeof(switchto_context_t));         // set the switchto_context to 0
 
 }
 
 static void init_pcb(void)
 {
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
-
-
+    for(int i = 0;i < tasknum; i++){
+        pcb[i].kernel_sp=allocKernelPage(KernelStackPage) + KernelStackPage * PAGE_SIZE;
+        pcb[i].user_sp=allocUserPage(UserStackPage) + UserStackPage * PAGE_SIZE;
+        if(i == 0){         // list head
+            pcb[i].list.prev = NULL;
+        }else{
+            pcb[i].list.prev = &pcb[i-1].list;
+        }
+        if(i == tasknum){   // list tail
+            pcb[i].list.next = NULL;
+        }else{
+            pcb[i].list.next = &pcb[i+1].list;
+        }
+        pcb[i].pid = i + 2;  // user pid start from 2
+        pcb[i].status = TASK_READY;
+        pcb[i].cursor_x = 0;
+        pcb[i].cursor_y = 0;
+        pcb[i].wakeup_time = 10;   // seconds
+        pcb[i].entry_point = tasks[i].entry;
+        init_pcb_stack(pcb[i].kernel_sp, pcb[i].kernel_sp, pcb[i].entry_point, &pcb[i]);
+    }
+    
     /* TODO: [p2-task1] remember to initialize 'current_running' */
-
+    current_running = &pid0_pcb;
 }
 
 static void init_syscall(void)
