@@ -31,8 +31,10 @@ void do_scheduler(void)
 
     // TODO: [p2-task1] Modify the current_running pointer.
     pcb_t *prepcb = current_running;
-    current_running =(pcb_t *) ((char *)current_running ->list.next - sizeof(reg_t) * 2);
-
+    // current_running =(pcb_t *) ((char *)current_running ->list.next - sizeof(reg_t) * 2);
+    current_running = LIST_PCB(ready_queue.next);
+    ready_queue.next= ready_queue.next->next;       // delete current_running from ready_queue
+    add_readyqueue(prepcb);
     // TODO: [p2-task1] switch_to current_running
     if(current_running != NULL)
         switch_to(prepcb, current_running);

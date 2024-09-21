@@ -51,5 +51,6 @@ typedef list_node_t list_head;
 #define LIST_HEAD(name) struct list_node name = {&(name), &(name)}
 
 /* TODO: [p2-task1] implement your own list API */
-
+#define LIST_PCB(list) (pcb_t *)((char *)(list) - sizeof(reg_t) * 2) 
+// list is  list_node * in a pcb, return pcb_t *
 #endif

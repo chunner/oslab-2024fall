@@ -50,7 +50,6 @@ static int bss_check(void)
     }
     return 1;
 }
-
 static void init_jmptab(void)
 {
     volatile long (*(*jmptab))() = (volatile long (*(*))())KERNEL_JMPTAB_BASE;
@@ -130,21 +129,21 @@ static void init_pcb(void)
     for(int i = 0;i < tasknum; i++){
         pcb[i].kernel_sp=allocKernelPage(KernelStackPage) + KernelStackPage * PAGE_SIZE;
         pcb[i].user_sp=allocUserPage(UserStackPage) + UserStackPage * PAGE_SIZE;
-        if(i == 0){         // list head
-            pcb[i].list.prev = &pcb[tasknum - 1].list;
-        }else{
-            pcb[i].list.prev = &pcb[i-1].list;
-        }
-        if(i == tasknum - 1){   // list tail
-            pcb[i].list.next = &pcb[0].list;
-        }else{
-            pcb[i].list.next = &pcb[i+1].list;
-        }
+        // if(i == 0){         // list head
+        //     pcb[i].list.prev = &pcb[tasknum - 1].list;
+        // }else{
+        //     pcb[i].list.prev = &pcb[i-1].list;
+        // }
+        // if(i == tasknum - 1){   // list tail
+        //     pcb[i].list.next = &pcb[0].list;
+        // }else{
+        //     pcb[i].list.next = &pcb[i+1].list;
+        // }
         pcb[i].pid = i + 2;  // user pid start from 2
-        pcb[i].status = TASK_READY;
-        pcb[i].cursor_x = 0;
-        pcb[i].cursor_y = 0;
-        pcb[i].wakeup_time = 10;   // seconds
+        // pcb[i].status = TASK_READY;
+        // pcb[i].cursor_x = 0;
+        // pcb[i].cursor_y = 0;
+        // pcb[i].wakeup_time = 10;   // seconds
         pcb[i].entry_point = tasks[i].entry;
         init_pcb_stack(pcb[i].kernel_sp, pcb[i].user_sp, pcb[i].entry_point, &pcb[i]);
     }
@@ -160,6 +159,57 @@ static void init_syscall(void)
 }
 /************************************************************/
 
+void add_readyqueue(pcb_t * pcb)        // add the tail of ready_queue
+{   
+    if(!pcb)   return;  // pcb = NULL
+    list_node_t *p = &ready_queue;
+    while(p->next != &ready_queue){
+        p = p->next;
+    }
+    pcb->list.next = p->next;   // &ready_queue
+    p->next = &pcb->list;
+}
+static pcb_t *taskname2pcb(char taskname[]){
+    int i=0;
+    for(; i < tasknum; i ++){
+        if(strcmp(taskname, tasks[i].taskname) == 0){
+            break;
+        }
+    }
+    if(i == tasknum){             // task name match failed
+        port_write("taskname: \"");
+        port_write(taskname);
+        port_write("\" does not exit\n\r");
+        return NULL;
+    }else{
+        return &pcb[i]; 
+    }
+}
+// static void manage_input(void)
+// {
+//     bios_putstr("Please input taskname: task1, task2, task3, task4, task5\n\r");
+
+//     int input;
+//     char taskname[COMMAND_LEN];
+//     int i=0;
+//     while(i<=COMMAND_LEN){
+//         input = port_read_ch();   
+//         if (input >= 0 && input <= 127) {  // if the input is not among ASCII
+//             bios_putchar(input);
+//             if (input == '\n' || input == '\r') {
+//                 taskname[i++] = '\0';
+//                 break;
+//             } 
+//             taskname[i++] = input;
+//         }
+//     }
+//     bios_putstr("\n\r");         // new line
+//     if(strcmp(taskname, "task1") == 0){
+//         add_readyqueue(taskname2pcb("print1"));
+//         add_readyqueue(taskname2pcb("print2"));
+//         add_readyqueue(taskname2pcb("fly"));
+//     }
+// }
 int main(void)
 {
     // Init jump table provided by kernel and bios(ΦωΦ)
@@ -198,8 +248,12 @@ int main(void)
     for(int i=0; i<tasknum; i++){
         load_task_img(tasks[i].taskname);
     }
-
-
+    /* input the command */
+    //manage_input();
+    // task1
+    add_readyqueue(taskname2pcb("print1"));
+    add_readyqueue(taskname2pcb("fly"));
+    add_readyqueue(taskname2pcb("print2"));
     // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
     while (1)
     {
