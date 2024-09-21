@@ -69,7 +69,8 @@ static void init_jmptab(void)
     jmptab[MUTEX_INIT]      = (long (*)())do_mutex_lock_init;
     jmptab[MUTEX_ACQ]       = (long (*)())do_mutex_lock_acquire;
     jmptab[MUTEX_RELEASE]   = (long (*)())do_mutex_lock_release;
-    jmptab[SCREEN_FLUSH]    = (long (*)())screen_reflush;
+    jmptab[SCREEN_FLUSH]    = (long (*)())screen_reflush;   // reflush screen buffer
+    jmptab[SCREEN_WRITE]    = (long (*)())screen_write;   // screen write string
     // TODO: [p2-task1] (S-core) initialize system call table.
 
 }
