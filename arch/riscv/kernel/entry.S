@@ -70,6 +70,9 @@ ENTRY(switch_to)
   sd  s10, SWITCH_TO_S10(t0)
   sd  s11, SWITCH_TO_S11(t0)
 
+  sd t0, PCB_KERNEL_SP(a0)    # updata pre pcb's kernel sp
+
+
   ld t0, PCB_KERNEL_SP(a1)    # a1 = pcb_t * next  
   # mv tp, a1                   # change current_running
   /* TODO: [p2-task1] restore all callee save registers from kernel stack,
@@ -89,7 +92,8 @@ ENTRY(switch_to)
   ld  s10, SWITCH_TO_S10(t0)
   ld  s11, SWITCH_TO_S11(t0)
   addi t0, t0, SWITCH_TO_SIZE
-  sd t0, PCB_KERNEL_SP(a1)    # kernel sp += SWITCH_TO_SIZE
+  
+  sd t0, PCB_KERNEL_SP(a1)    # updat kernel sp += SWITCH_TO_SIZE
   #addi sp, sp, SWITCH_TO_SIZE
   jr ra
 ENDPROC(switch_to)
