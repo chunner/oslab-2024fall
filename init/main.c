@@ -37,6 +37,7 @@ extern void ret_from_exception();
 
 // Task info array
 task_info_t tasks[TASK_MAXNUM];
+short tasknum;
 
 static int bss_check(void)
 {
@@ -109,8 +110,17 @@ static void init_pcb_stack(
      */
     switchto_context_t *pt_switchto =
         (switchto_context_t *)((ptr_t)pt_regs - sizeof(switchto_context_t));
-    memset(pt_switchto, 0, sizeof(switchto_context_t));         // set the switchto_context to 0
-
+    // memset(pt_switchto, 0, sizeof(switchto_context_t));         // set the switchto_context to 0
+    for(int i=0; i<14; i++){
+        if(i == 0){ // ra
+            pt_switchto->regs[i] = entry_point;
+        }else if(i == 1){   // sp
+            pt_switchto->regs[i] = user_stack;
+        }else{      // S0 - S11
+            pt_switchto->regs[i] = 0;
+        }
+    }
+    pcb->kernel_sp = kernel_stack - sizeof(regs_context_t) - sizeof(switchto_context_t);
 }
 
 static void init_pcb(void)
@@ -135,11 +145,12 @@ static void init_pcb(void)
         pcb[i].cursor_y = 0;
         pcb[i].wakeup_time = 10;   // seconds
         pcb[i].entry_point = tasks[i].entry;
-        init_pcb_stack(pcb[i].kernel_sp, pcb[i].kernel_sp, pcb[i].entry_point, &pcb[i]);
+        init_pcb_stack(pcb[i].kernel_sp, pcb[i].user_sp, pcb[i].entry_point, &pcb[i]);
     }
     
     /* TODO: [p2-task1] remember to initialize 'current_running' */
     current_running = &pid0_pcb;
+    current_running ->list.next = &pcb[0].list;
 }
 
 static void init_syscall(void)
@@ -182,7 +193,10 @@ int main(void)
     // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
     // NOTE: The function of sstatus.sie is different from sie's
     
-
+    // load all tasks from sd to mem
+    for(int i=0; i<tasknum; i++){
+        load_task_img(tasks[i].taskname);
+    }
 
 
     // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)

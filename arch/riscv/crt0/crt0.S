@@ -12,8 +12,8 @@ clear_bss:
     sd zero, 0(a0)
     addi a0, a0, 8            # a0 move forward 8 byte
     j clear_bss               # clear next 64 bit mem
-stack_set:              # set stack
-    li sp, USER_STACK
+# stack_set:              # set stack
+#     li sp, USER_STACK
   
 
     /* TODO: [p1-task3] enter main function */
