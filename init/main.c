@@ -120,12 +120,12 @@ static void init_pcb(void)
         pcb[i].kernel_sp=allocKernelPage(KernelStackPage) + KernelStackPage * PAGE_SIZE;
         pcb[i].user_sp=allocUserPage(UserStackPage) + UserStackPage * PAGE_SIZE;
         if(i == 0){         // list head
-            pcb[i].list.prev = NULL;
+            pcb[i].list.prev = &pcb[tasknum].list;
         }else{
             pcb[i].list.prev = &pcb[i-1].list;
         }
         if(i == tasknum){   // list tail
-            pcb[i].list.next = NULL;
+            pcb[i].list.next = &pcb[i].list;
         }else{
             pcb[i].list.next = &pcb[i+1].list;
         }

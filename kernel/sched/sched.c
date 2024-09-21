@@ -30,10 +30,11 @@ void do_scheduler(void)
     /************************************************************/
 
     // TODO: [p2-task1] Modify the current_running pointer.
-
+    current_running = current_running ->list.next - sizeof(reg_t) * 2;
 
     // TODO: [p2-task1] switch_to current_running
-
+    if(current_running != NULL)
+        switch_to(current_running->list.prev, current_running);
 }
 
 void do_sleep(uint32_t sleep_time)
