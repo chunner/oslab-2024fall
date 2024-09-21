@@ -8,7 +8,7 @@ ENTRY(_start)
     la a1, __BSS_END__
 
 clear_bss:
-    bge a0, a1, stack_set;
+    bge a0, a1, jump2main;
     sd zero, 0(a0)
     addi a0, a0, 8            # a0 move forward 8 byte
     j clear_bss               # clear next 64 bit mem
@@ -17,6 +17,7 @@ clear_bss:
   
 
     /* TODO: [p1-task3] enter main function */
+jump2main:
     addi sp,sp, -8
     sd ra, 0(sp)
     jal main      # jump to main
