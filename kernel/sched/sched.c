@@ -34,7 +34,8 @@ void do_scheduler(void)
     // current_running =(pcb_t *) ((char *)current_running ->list.next - sizeof(reg_t) * 2);
     current_running = LIST_PCB(ready_queue.next);
     ready_queue.next= ready_queue.next->next;       // delete current_running from ready_queue
-    add_readyqueue(prepcb);
+    if(prepcb->status == TASK_READY)
+        add_readyqueue(prepcb);
     // TODO: [p2-task1] switch_to current_running
     if(current_running != NULL)
         switch_to(prepcb, current_running);
@@ -63,4 +64,5 @@ void do_unblock(list_node_t *pcb_node)
     // TODO: [p2-task2] unblock the `pcb` from the block queue
     pcb_node->prev->next = pcb_node->next;
     pcb_node->next->prev = pcb_node->prev;
+    add_readyqueue(LIST_PCB(pcb_node));
 }

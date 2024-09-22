@@ -140,7 +140,7 @@ static void init_pcb(void)
         //     pcb[i].list.next = &pcb[i+1].list;
         // }
         pcb[i].pid = i + 2;  // user pid start from 2
-        // pcb[i].status = TASK_READY;
+        pcb[i].status = TASK_READY;
         // pcb[i].cursor_x = 0;
         // pcb[i].cursor_y = 0;
         // pcb[i].wakeup_time = 10;   // seconds
