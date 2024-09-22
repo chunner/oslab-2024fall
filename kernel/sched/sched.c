@@ -52,9 +52,15 @@ void do_sleep(uint32_t sleep_time)
 void do_block(list_node_t *pcb_node, list_head *queue)
 {
     // TODO: [p2-task2] block the pcb task into the block queue
+    queue->prev->next = pcb_node;
+    pcb_node->prev =  queue->prev;
+    pcb_node->next = queue;
+    queue->prev = pcb_node;
 }
 
 void do_unblock(list_node_t *pcb_node)
 {
     // TODO: [p2-task2] unblock the `pcb` from the block queue
+    pcb_node->prev->next = pcb_node->next;
+    pcb_node->next->prev = pcb_node->prev;
 }
