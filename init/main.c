@@ -254,6 +254,8 @@ int main(void)
     add_readyqueue(taskname2pcb("print1"));
     add_readyqueue(taskname2pcb("fly"));
     add_readyqueue(taskname2pcb("print2"));
+    add_readyqueue(taskname2pcb("lock1"));
+    add_readyqueue(taskname2pcb("lock2"));
     // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
     while (1)
     {

@@ -72,4 +72,5 @@ void do_mutex_lock_release(int mlock_idx)
     while(mlocks[mlock_idx].block_queue.next != &mlocks[mlock_idx].block_queue){
         do_unblock(mlocks[mlock_idx].block_queue.next);
     }
+    //do_scheduler();
 }
