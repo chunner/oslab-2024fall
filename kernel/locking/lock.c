@@ -62,7 +62,6 @@ void do_mutex_lock_acquire(int mlock_idx)
             return;
         }else{
             do_block(&current_running->list, &mlocks[mlock_idx].block_queue);
-            current_running->status = TASK_BLOCKED;
             do_scheduler();
         }
     }

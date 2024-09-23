@@ -34,7 +34,7 @@
 
 #define NUM_MAX_TASK 16
 
-/* used to save register infomation */
+ /* used to save register infomation */
 typedef struct regs_context
 {
     /* Saved main processor registers.*/
@@ -97,7 +97,7 @@ extern list_head ready_queue;
 extern list_head sleep_queue;
 
 /* current running task PCB */
-register pcb_t * current_running asm("tp");
+register pcb_t *current_running asm("tp");
 extern pid_t process_id;
 
 extern pcb_t pcb[NUM_MAX_TASK];
@@ -111,7 +111,7 @@ void do_sleep(uint32_t);
 void do_block(list_node_t *, list_head *queue);
 void do_unblock(list_node_t *);
 
-extern void add_readyqueue(pcb_t * pcb);
+extern void add_readyqueue(pcb_t *pcb);
 
 /************************************************************/
 /* Do not touch this comment. Reserved for future projects. */

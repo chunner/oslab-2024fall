@@ -11,8 +11,8 @@ pcb_t pcb[NUM_MAX_TASK];
 const ptr_t pid0_stack = INIT_KERNEL_STACK + PAGE_SIZE;
 pcb_t pid0_pcb = {
     .pid = 0,
-    .kernel_sp = (ptr_t)pid0_stack,
-    .user_sp = (ptr_t)pid0_stack
+    .kernel_sp = (ptr_t) pid0_stack,
+    .user_sp = (ptr_t) pid0_stack
 };
 
 LIST_HEAD(ready_queue);
@@ -33,11 +33,11 @@ void do_scheduler(void)
     pcb_t *prepcb = current_running;
     // current_running =(pcb_t *) ((char *)current_running ->list.next - sizeof(reg_t) * 2);
     current_running = LIST_PCB(ready_queue.next);
-    ready_queue.next= ready_queue.next->next;       // delete current_running from ready_queue
-    if(prepcb->status == TASK_READY)
+    ready_queue.next = ready_queue.next->next;       // delete current_running from ready_queue
+    if (prepcb->status == TASK_READY)
         add_readyqueue(prepcb);
     // TODO: [p2-task1] switch_to current_running
-    if(current_running != NULL)
+    if (current_running != NULL)
         switch_to(prepcb, current_running);
 }
 
@@ -54,9 +54,11 @@ void do_block(list_node_t *pcb_node, list_head *queue)
 {
     // TODO: [p2-task2] block the pcb task into the block queue
     queue->prev->next = pcb_node;
-    pcb_node->prev =  queue->prev;
+    pcb_node->prev = queue->prev;
     pcb_node->next = queue;
     queue->prev = pcb_node;
+    pcb_t *pcb = LIST_PCB(pcb_node);
+    pcb->status = TASK_BLOCKED;
 }
 
 void do_unblock(list_node_t *pcb_node)
