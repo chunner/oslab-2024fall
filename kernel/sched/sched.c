@@ -64,5 +64,7 @@ void do_unblock(list_node_t *pcb_node)
     // TODO: [p2-task2] unblock the `pcb` from the block queue
     pcb_node->prev->next = pcb_node->next;
     pcb_node->next->prev = pcb_node->prev;
-    add_readyqueue(LIST_PCB(pcb_node));
+    pcb_t *pcb = LIST_PCB(pcb_node);
+    add_readyqueue(pcb);
+    pcb->status = TASK_READY;
 }

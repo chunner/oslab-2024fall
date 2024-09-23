@@ -55,13 +55,16 @@ int do_mutex_lock_init(int key)
 void do_mutex_lock_acquire(int mlock_idx)
 {
     /* TODO: [p2-task2] acquire mutex lock */
-    spin_lock_acquire(&mlocks[mlock_idx].lock);
-    if(mlocks[mlock_idx].lock.status == UNLOCKED){
-        mlocks[mlock_idx].lock.status = LOCKED;
-    }else{
-        do_block(&current_running->list, &mlocks[mlock_idx].block_queue);
-        current_running->status = TASK_BLOCKED;
-        do_scheduler();
+    //spin_lock_acquire(&mlocks[mlock_idx].lock);
+    while(1){
+        if(mlocks[mlock_idx].lock.status == UNLOCKED){
+            mlocks[mlock_idx].lock.status = LOCKED;
+            return;
+        }else{
+            do_block(&current_running->list, &mlocks[mlock_idx].block_queue);
+            current_running->status = TASK_BLOCKED;
+            do_scheduler();
+        }
     }
 }
 
