@@ -7,6 +7,9 @@
 #include <assert.h>
 #include <screen.h>
 
+#define SCAUSE_IRQ_FLAG   (1UL << 63)
+#define SCAUSE_EXC_CODE   ~(1UL << 63)
+
 handler_t irq_table[IRQC_COUNT];
 handler_t exc_table[EXCC_COUNT];
 
@@ -14,8 +17,11 @@ void interrupt_helper(regs_context_t *regs, uint64_t stval, uint64_t scause)
 {
     // TODO: [p2-task3] & [p2-task4] interrupt handler.
     // call corresponding handler by the value of `scause`
-    //if(scause & 0x800000)
-
+    if (scause & SCAUSE_IRQ_FLAG) {       // Interrupt = 1
+        //irq_table[scause & SCAUSE_EXC_CODE](regs, stval, scause);
+    } else {            // Interrupt = 0
+        exc_table[scause & SCAUSE_EXC_CODE](regs, stval, scause);
+    }
     return;  // jump to ret_from_complete
 }
 
