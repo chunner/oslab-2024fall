@@ -110,7 +110,7 @@ static void init_pcb_stack(
         else
             pt_regs->regs[i] = 0;
     }
-    pt_regs->sstatus = pt_regs->sstatus & (~SR_SPP) | SR_SPIE & (~SR_SIE);           // set spp = 0, spie = 1, sid = 0
+    pt_regs->sstatus = ((pt_regs->sstatus & (~SR_SPP)) & (~SR_SPIE)) | SR_SIE;           // set spp = 0, spie = 1, sid = 0
     pt_regs->sepc = entry_point;            // entry pointer of Interrupt handling function
 
     /* TODO: [p2-task1] set sp to simulate just returning from switch_to

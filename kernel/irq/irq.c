@@ -50,6 +50,7 @@ void init_exception()
 
     /* TODO: [p2-task3] set up the entrypoint of exceptions */
     setup_exception();
+    return;
 }
 
 void handle_other(regs_context_t *regs, uint64_t stval, uint64_t scause)

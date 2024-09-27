@@ -24,5 +24,6 @@ void handle_syscall(regs_context_t *regs, uint64_t interrupt, uint64_t cause)
 
     regs->regs[OFFSET_REG_A0] = retval;
     regs->regs[OFFSET_REG_SEPC] += 4;           // sepc += 4
-    ret_from_exception();
+    //ret_from_exception();
+    return;
 }

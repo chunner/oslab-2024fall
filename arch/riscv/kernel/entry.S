@@ -51,10 +51,14 @@
    */
   li t0, SR_SUM | SR_FS
   /* TODO: [p2-task3] save sstatus, sepc, stval and scause on kernel stack */
-  sd  sstatus,OFFSET_REG_SSTATUS (sp) 
-  sd  sepc,OFFSET_REG_SEPC    (sp) 
-  sd  stval,OFFSET_REG_SBADADDR(sp) 
-  sd  scause,OFFSET_REG_SCAUSE  (sp) 
+  csrr t1, sstatus  
+  csrr t2, sepc     
+  csrr t3, stval    
+  csrr t4, scause   
+  sd  t1,OFFSET_REG_SSTATUS (sp) 
+  sd  t2,OFFSET_REG_SEPC    (sp) 
+  sd  t3,OFFSET_REG_SBADADDR(sp) 
+  sd  t4,OFFSET_REG_SCAUSE  (sp) 
 
   csrc sstatus, t0
 .endm
@@ -62,6 +66,16 @@
 .macro RESTORE_CONTEXT
   /* TODO: Restore all general purpose registers and sepc, sstatus */
   /* HINT: Pay attention to sp again! */
+  // restore from csr
+  lw t0, OFFSET_REG_SSTATUS(sp) 
+  lw t1, OFFSET_REG_SEPC(sp)    
+  lw t2, OFFSET_REG_SBADADDR(sp)
+  lw t3, OFFSET_REG_SCAUSE(sp)  
+  csrw sstatus, t0  
+  csrw sepc, t1
+  csrw stval, t2 
+  csrw scause, t3
+
   ld  zero,OFFSET_REG_ZERO(sp) 
   ld  ra,OFFSET_REG_RA(sp) 
   ld  gp,OFFSET_REG_GP(sp) 
@@ -93,11 +107,6 @@
   ld  t4,OFFSET_REG_T4(sp) 
   ld  t5,OFFSET_REG_T5(sp) 
   ld  t6,OFFSET_REG_T6(sp) 
-
-  ld  sstatus,OFFSET_REG_SSTATUS (sp) 
-  ld  sepc,OFFSET_REG_SEPC    (sp) 
-  ld  stval,OFFSET_REG_SBADADDR(sp) 
-  ld  scause,OFFSET_REG_SCAUSE  (sp) 
 
   addi sp, sp, -(OFFSET_SIZE)
   sd sp, PCB_KERNEL_SP(tp)      // updata kernel stack in PCB
