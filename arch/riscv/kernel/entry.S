@@ -5,7 +5,12 @@
 .macro SAVE_CONTEXT
   /* TODO: [p2-task3] save all general purpose registers here! */
   /* HINT: Pay attention to the function of tp and sp, and save them carefully! */
+  sd sp, PCB_USER_SP(tp)      // store user stack top in PCB
+  ld sp, PCB_KERNEL_SP(tp)        // load kernel stack top in PCB
+
   addi sp, sp, -(OFFSET_SIZE)
+  sd sp, PCB_KERNEL_SP(tp)      // updata kernel stack in PCB
+
   sd  zero,OFFSET_REG_ZERO(sp) 
   sd  ra,OFFSET_REG_RA(sp) 
   sd  gp,OFFSET_REG_GP(sp) 
@@ -45,12 +50,13 @@
    * space.
    */
   li t0, SR_SUM | SR_FS
-
   /* TODO: [p2-task3] save sstatus, sepc, stval and scause on kernel stack */
   sd  sstatus,OFFSET_REG_SSTATUS (sp) 
   sd  sepc,OFFSET_REG_SEPC    (sp) 
   sd  stval,OFFSET_REG_SBADADDR(sp) 
   sd  scause,OFFSET_REG_SCAUSE  (sp) 
+
+  csrc sstatus, t0
 .endm
 
 .macro RESTORE_CONTEXT
@@ -93,11 +99,10 @@
   ld  stval,OFFSET_REG_SBADADDR(sp) 
   ld  scause,OFFSET_REG_SCAUSE  (sp) 
 
+  addi sp, sp, -(OFFSET_SIZE)
+  sd sp, PCB_KERNEL_SP(tp)      // updata kernel stack in PCB
 
-
-
-
-
+  ld sp, PCB_USER_SP(tp)        // load user stack from PCB
 .endm
 
 ENTRY(enable_preempt)
@@ -178,7 +183,7 @@ ENTRY(ret_from_exception)
   /* HINT: remember to check your sp, does it point to the right address? */
   RESTORE_CONTEXT
 
-  sret
+  sret    // return to sepc
 
 
 ENDPROC(ret_from_exception)
@@ -197,9 +202,9 @@ ENTRY(exception_handler_entry)
   /* TODO: [p2-task3] call interrupt_helper
    * NOTE: don't forget to pass parameters for it.
    */
-  mv a0, sp
-  mv a1, stval
-  mv a2, scause
+  mv a0, sp           # *sp = regs
+  csrr a1, stval      # mv a1, stval
+  csrr a2, scause     # mv a2, scause
   j interrupt_helper
 
 ENDPROC(exception_handler_entry)

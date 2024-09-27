@@ -19,9 +19,8 @@ static long invoke_syscall(long sysno, long arg0, long arg1, long arg2,
         "mv a3, %4\n\t"
         "mv a4, %5\n\t"
         "ecall\n\t"
-        "mv %0, a0"
-        : "=r"(retval)
-        : "r"(sysno), "r"(arg0), "r"(arg1), "r"(arg2), "r"(arg3), "r"(arg4) // 输入
+        : "=r"(retval)  // return output
+        : "r"(sysno), "r"(arg0), "r"(arg1), "r"(arg2), "r"(arg3), "r"(arg4) // input arg
         : "a0", "a1", "a2", "a3", "a4", "a7" // 被修改的寄存器
         );
     return retval;

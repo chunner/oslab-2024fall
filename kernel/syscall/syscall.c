@@ -8,7 +8,7 @@
 #define OFFSET_REG_A5           120
 #define OFFSET_REG_A6           128
 #define OFFSET_REG_A7           136
-
+#define OFFSET_REG_SEPC         264
 long (*syscall[NUM_SYSCALLS])();
 
 void handle_syscall(regs_context_t *regs, uint64_t interrupt, uint64_t cause)
@@ -23,6 +23,6 @@ void handle_syscall(regs_context_t *regs, uint64_t interrupt, uint64_t cause)
         regs->regs[OFFSET_REG_A2], regs->regs[OFFSET_REG_A3], regs->regs[OFFSET_REG_A4]);
 
     regs->regs[OFFSET_REG_A0] = retval;
-
+    regs->regs[OFFSET_REG_SEPC] += 4;           // sepc += 4
     ret_from_exception();
 }

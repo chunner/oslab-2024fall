@@ -151,8 +151,6 @@ static void init_pcb(void)
 static void init_syscall(void)
 {
     // TODO: [p2-task3] initialize system call table.
-    init_exception();
-    setup_exception();
     syscall[SYSCALL_SLEEP] = (long (*)())do_sleep;
     syscall[SYSCALL_YIELD] = (long (*)())do_scheduler;
     syscall[SYSCALL_WRITE] = (long (*)())screen_write;
@@ -163,12 +161,6 @@ static void init_syscall(void)
     syscall[SYSCALL_LOCK_INIT] = (long (*)())do_mutex_lock_init;
     syscall[SYSCALL_LOCK_ACQ] = (long (*)())do_mutex_lock_acquire;
     syscall[SYSCALL_LOCK_RELEASE] = (long (*)())do_mutex_lock_release;
-
-
-
-
-
-
 }
 /************************************************************/
 
@@ -245,6 +237,8 @@ int main(void)
     add_readyqueue(taskname2pcb("print2"));
     add_readyqueue(taskname2pcb("lock1"));
     add_readyqueue(taskname2pcb("lock2"));
+    add_readyqueue(taskname2pcb("sleep"));
+    add_readyqueue(taskname2pcb("timer"));
     // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
     while (1)
     {
