@@ -24,7 +24,7 @@ pid_t process_id = 1;
 void do_scheduler(void)
 {
     // TODO: [p2-task3] Check sleep queue to wake up PCBs
-
+    check_sleeping();
     /************************************************************/
     /* Do not touch this comment. Reserved for future projects. */
     /************************************************************/
@@ -48,6 +48,9 @@ void do_sleep(uint32_t sleep_time)
     // 1. block the current_running
     // 2. set the wake up time for the blocked task
     // 3. reschedule because the current_running is blocked.
+    current_running->wakeup_time = sleep_time * get_time_base() + get_ticks();
+    do_block(&current_running->list, &sleep_queue);
+    do_scheduler();
 }
 
 void do_block(list_node_t *pcb_node, list_head *queue)
@@ -64,7 +67,7 @@ void do_block(list_node_t *pcb_node, list_head *queue)
 void do_unblock(list_node_t *pcb_node)
 {
     // TODO: [p2-task2] unblock the `pcb` from the block queue
-    pcb_node->prev->next = pcb_node->next;
+    pcb_node->prev->next = pcb_node->next;          // delete the pcb from block queue
     pcb_node->next->prev = pcb_node->prev;
     pcb_t *pcb = LIST_PCB(pcb_node);
     add_readyqueue(pcb);

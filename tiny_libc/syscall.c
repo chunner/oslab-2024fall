@@ -9,9 +9,22 @@ static long invoke_syscall(long sysno, long arg0, long arg1, long arg2,
     long arg3, long arg4)
 {
     /* TODO: [p2-task3] implement invoke_syscall via inline assembly */
-    asm volatile("nop");
-
-    return 0;
+    // asm volatile("nop");
+    long retval;
+    asm volatile (
+        "mv a7, %0\n\t"
+        "mv a0, %1\n\t"
+        "mv a1, %2\n\t"
+        "mv a2, %3\n\t"
+        "mv a3, %4\n\t"
+        "mv a4, %5\n\t"
+        "ecall\n\t"
+        "mv %0, a0"
+        : "=r"(retval)
+        : "r"(sysno), "r"(arg0), "r"(arg1), "r"(arg2), "r"(arg3), "r"(arg4) // 输入
+        : "a0", "a1", "a2", "a3", "a4", "a7" // 被修改的寄存器
+        );
+    return retval;
 }
 
 void sys_yield(void)
@@ -74,21 +87,21 @@ void sys_mutex_release(int mutex_idx)
 long sys_get_timebase(void)
 {
     /* TODO: [p2-task3] call invoke_syscall to implement sys_get_timebase */
-    //invoke_syscall((long) SYSCALL_CURSOR, (long) x, (long) y, 0, 0, 0);
+    invoke_syscall((long) SYSCALL_GET_TIMEBASE, 0, 0, 0, 0, 0);
     return 0;
 }
 
 long sys_get_tick(void)
 {
     /* TODO: [p2-task3] call invoke_syscall to implement sys_get_tick */
-    //invoke_syscall((long) SYSCALL_CURSOR, (long) x, (long) y, 0, 0, 0);
+    invoke_syscall((long) SYSCALL_GET_TICK, 0, 0, 0, 0, 0);
     return 0;
 }
 
 void sys_sleep(uint32_t time)
 {
     /* TODO: [p2-task3] call invoke_syscall to implement sys_sleep */
-    //invoke_syscall((long) SYSCALL_CURSOR, (long) x, (long) y, 0, 0, 0);
+    invoke_syscall((long) SYSCALL_SLEEP, (long) time, 0, 0, 0, 0);
 }
 
 /************************************************************/
