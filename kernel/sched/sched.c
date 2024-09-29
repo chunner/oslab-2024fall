@@ -39,9 +39,9 @@ void do_scheduler(void)
     // TODO: [p2-task1] switch_to current_running
     if (current_running != NULL)
         // switch_to(prepcb, current_running);
-        return;         //  return -> handle_syscall -> interrupt_helper -> ret_from_complete
-}                       // or return -> main -> ret_from_complete
-
+        return;         //  return -> handle_syscall -> interrupt_helper -> ret_from_exception
+}                       // or return -> main -> ret_from_exception
+                        // or return -> do_mutex_lock_acquire ->ret_from_exception
 void do_sleep(uint32_t sleep_time)
 {
     // TODO: [p2-task3] sleep(seconds)
@@ -49,9 +49,10 @@ void do_sleep(uint32_t sleep_time)
     // 1. block the current_running
     // 2. set the wake up time for the blocked task
     // 3. reschedule because the current_running is blocked.
-    current_running->wakeup_time = sleep_time * get_time_base() + get_ticks();
+    current_running->wakeup_time = sleep_time + get_timer();
     do_block(&current_running->list, &sleep_queue);
     do_scheduler();
+    // ret_from_exception();
 }
 
 void do_block(list_node_t *pcb_node, list_head *queue)

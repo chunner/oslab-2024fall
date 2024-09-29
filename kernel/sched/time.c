@@ -34,12 +34,14 @@ void latency(uint64_t time)
 void check_sleeping(void)
 {
     // TODO: [p2-task3] Pick out tasks that should wake up from the sleep queue
-    list_node_t *p = &sleep_queue;
+    list_node_t *p = sleep_queue.next;
+    list_node_t *pnext;
     while (p != &sleep_queue) {
+        pnext = p->next;
         pcb_t *pcb = LIST_PCB(p);
-        if (pcb->wakeup_time <= get_ticks()) {
+        if (pcb->wakeup_time <= get_timer()) {
             do_unblock(p);
         }
-        p = p->next;
+        p = pnext;
     }
 }

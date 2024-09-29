@@ -82,8 +82,8 @@ int sys_mutex_init(int key)
     /* TODO: [p2-task2] call call_jmptab to implement sys_mutex_init */
     //call_jmptab(MUTEX_INIT, (long) key, IGNORE, IGNORE, IGNORE, IGNORE);
     /* TODO: [p2-task3] call invoke_syscall to implement sys_mutex_init */
-    invoke_syscall((long) SYSCALL_LOCK_INIT, (long) key, IGNORE, IGNORE, IGNORE, IGNORE);
-    return 0;
+    long retval = invoke_syscall((long) SYSCALL_LOCK_INIT, (long) key, IGNORE, IGNORE, IGNORE, IGNORE);
+    return retval;
 }
 
 void sys_mutex_acquire(int mutex_idx)
@@ -105,15 +105,15 @@ void sys_mutex_release(int mutex_idx)
 long sys_get_timebase(void)
 {
     /* TODO: [p2-task3] call invoke_syscall to implement sys_get_timebase */
-    invoke_syscall((long) SYSCALL_GET_TIMEBASE, IGNORE, IGNORE, IGNORE, IGNORE, IGNORE);
-    return 0;
+    long retval = invoke_syscall((long) SYSCALL_GET_TIMEBASE, IGNORE, IGNORE, IGNORE, IGNORE, IGNORE);
+    return retval;
 }
 
 long sys_get_tick(void)
 {
     /* TODO: [p2-task3] call invoke_syscall to implement sys_get_tick */
-    invoke_syscall((long) SYSCALL_GET_TICK, IGNORE, IGNORE, IGNORE, IGNORE, IGNORE);
-    return 0;
+    long retval = invoke_syscall((long) SYSCALL_GET_TICK, IGNORE, IGNORE, IGNORE, IGNORE, IGNORE);
+    return retval;
 }
 
 void sys_sleep(uint32_t time)
