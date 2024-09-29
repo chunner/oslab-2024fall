@@ -38,7 +38,8 @@ void do_scheduler(void)
         add_readyqueue(prepcb);
     // TODO: [p2-task1] switch_to current_running
     if (current_running != NULL)
-        switch_to(prepcb, current_running);
+        // switch_to(prepcb, current_running);
+        return;         //  return -> handle_syscall -> interrupt_helper -> ret_from_complete
 }
 
 void do_sleep(uint32_t sleep_time)

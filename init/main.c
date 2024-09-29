@@ -117,18 +117,18 @@ static void init_pcb_stack(
      * NOTE: you should prepare a stack, and push some values to
      * simulate a callee-saved context.
      */
-    switchto_context_t *pt_switchto =
-        (switchto_context_t *) ((ptr_t) pt_regs - sizeof(switchto_context_t));
-    for (int i = 0; i < 14; i++) {
-        if (i == 0) { // ra
-            pt_switchto->regs[i] = entry_point;
-        } else if (i == 1) {   // sp
-            pt_switchto->regs[i] = user_stack;
-        } else {      // S0 - S11
-            pt_switchto->regs[i] = 0;
-        }
-    }
-    pcb->kernel_sp = kernel_stack - sizeof(regs_context_t) - sizeof(switchto_context_t);
+     // switchto_context_t *pt_switchto =
+     //     (switchto_context_t *) ((ptr_t) pt_regs - sizeof(switchto_context_t));
+     // for (int i = 0; i < 14; i++) {
+     //     if (i == 0) { // ra
+     //         pt_switchto->regs[i] = entry_point;
+     //     } else if (i == 1) {   // sp
+     //         pt_switchto->regs[i] = user_stack;
+     //     } else {      // S0 - S11
+     //         pt_switchto->regs[i] = 0;
+     //     }
+     // }
+    pcb->kernel_sp = kernel_stack - sizeof(regs_context_t); //  -sizeof(switchto_context_t);
 }
 
 static void init_pcb(void)

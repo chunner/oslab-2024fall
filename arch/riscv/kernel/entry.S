@@ -67,6 +67,8 @@
   /* TODO: Restore all general purpose registers and sepc, sstatus */
   /* HINT: Pay attention to sp again! */
   // restore from csr
+  ld sp, PCB_KERNEL_SP(tp)
+
   lw t0, OFFSET_REG_SSTATUS(sp) 
   lw t1, OFFSET_REG_SEPC(sp)    
   lw t2, OFFSET_REG_SBADADDR(sp)
