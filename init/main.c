@@ -107,12 +107,14 @@ static void init_pcb_stack(
             pt_regs->regs[i] = entry_point;
         else if (i == 2) // sp
             pt_regs->regs[i] = user_stack;
+        else if (i == 4) // tp
+            pt_regs->regs[i] = (reg_t) pcb;
         else
             pt_regs->regs[i] = 0;
     }
-    pt_regs->sstatus = ((pt_regs->sstatus & (~SR_SPP)) & (~SR_SPIE)) | SR_SIE;           // set spp = 0, spie = 1, sid = 0
-    pt_regs->sepc = entry_point;            // entry pointer of Interrupt handling function
-
+    pt_regs->sstatus = ((0UL & (~SR_SPP)) & (~SR_SIE)) | SR_SPIE;           // set spp = 0, spie = 1, sie = 0
+    pt_regs->sepc = entry_point;            // entry 
+    pt_regs->scause = 0UL | EXC_SYSCALL;    // IRQ 
     /* TODO: [p2-task1] set sp to simulate just returning from switch_to
      * NOTE: you should prepare a stack, and push some values to
      * simulate a callee-saved context.
@@ -244,7 +246,7 @@ int main(void)
     {
         // If you do non-preemptive scheduling, it's used to surrender control
         do_scheduler();
-
+        ret_from_exception();
         // If you do preemptive scheduling, they're used to enable CSR_SIE and wfi
         // enable_preempt();
         // asm volatile("wfi");

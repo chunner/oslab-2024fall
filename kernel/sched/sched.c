@@ -40,7 +40,7 @@ void do_scheduler(void)
     if (current_running != NULL)
         // switch_to(prepcb, current_running);
         return;         //  return -> handle_syscall -> interrupt_helper -> ret_from_complete
-}
+}                       // or return -> main -> ret_from_complete
 
 void do_sleep(uint32_t sleep_time)
 {

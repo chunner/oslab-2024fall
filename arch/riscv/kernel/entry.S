@@ -110,7 +110,7 @@
   ld  t5,OFFSET_REG_T5(sp) 
   ld  t6,OFFSET_REG_T6(sp) 
 
-  addi sp, sp, -(OFFSET_SIZE)
+  addi sp, sp, OFFSET_SIZE
   sd sp, PCB_KERNEL_SP(tp)      // updata kernel stack in PCB
 
   ld sp, PCB_USER_SP(tp)        // load user stack from PCB
@@ -193,7 +193,8 @@ ENTRY(ret_from_exception)
   /* TODO: [p2-task3] restore context via provided macro and return to sepc */
   /* HINT: remember to check your sp, does it point to the right address? */
   RESTORE_CONTEXT
-
+  csrr t0, sepc
+  csrr t1, sstatus
   sret    // return to sepc
 
 
