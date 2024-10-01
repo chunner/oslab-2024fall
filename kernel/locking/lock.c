@@ -63,7 +63,7 @@ void do_mutex_lock_acquire(int mlock_idx)
         } else {
             do_block(&current_running->list, &mlocks[mlock_idx].block_queue);
             do_scheduler();
-            ret_from_exception();
+            // ret_from_exception();
         }
     }
 }

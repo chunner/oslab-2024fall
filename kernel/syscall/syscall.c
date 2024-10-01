@@ -19,11 +19,11 @@ void handle_syscall(regs_context_t *regs, uint64_t interrupt, uint64_t cause)
      * and pay attention to the return value and sepc
      */
     long retval;
+
     retval = syscall[regs->regs[NO_REG_A7]](regs->regs[NO_REG_A0], regs->regs[NO_REG_A1], \
         regs->regs[NO_REG_A2], regs->regs[NO_REG_A3], regs->regs[NO_REG_A4]);
-
-    regs->regs[NO_REG_A0] = retval;
     regs->regs[NO_REG_SEPC] += 4;           // sepc += 4
-    //ret_from_exception();
+    regs->regs[NO_REG_A0] = retval;
+
     return;
 }

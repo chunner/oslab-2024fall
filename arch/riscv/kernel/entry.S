@@ -67,12 +67,12 @@
   /* TODO: Restore all general purpose registers and sepc, sstatus */
   /* HINT: Pay attention to sp again! */
   // restore from csr
-  ld sp, PCB_KERNEL_SP(tp)
+  // ld sp, PCB_KERNEL_SP(tp)
 
-  lw t0, OFFSET_REG_SSTATUS(sp) 
-  lw t1, OFFSET_REG_SEPC(sp)    
-  lw t2, OFFSET_REG_SBADADDR(sp)
-  lw t3, OFFSET_REG_SCAUSE(sp)  
+  ld t0, OFFSET_REG_SSTATUS(sp) 
+  ld t1, OFFSET_REG_SEPC(sp)    
+  ld t2, OFFSET_REG_SBADADDR(sp)
+  ld t3, OFFSET_REG_SCAUSE(sp)  
   csrw sstatus, t0  
   csrw sepc, t1
   csrw stval, t2 
@@ -142,59 +142,58 @@ ENDPROC(disable_interrupt)
 // NOTE: the address of previous pcb in a0
 // NOTE: the address of next pcb in a1
 ENTRY(switch_to)
-  ld t0, PCB_KERNEL_SP(a0)   # a0 = pcb_t * prev
-  addi t0, t0, -(SWITCH_TO_SIZE)
-  # addi sp, sp, -(SWITCH_TO_SIZE)
+  # ld t0, PCB_KERNEL_SP(a0)   # a0 = pcb_t * prev
+  # addi t0, t0, -(SWITCH_TO_SIZE)
+  addi sp, sp, -(SWITCH_TO_SIZE)      # sp = kernel_sp
   /* TODO: [p2-task1] save all callee save registers on kernel stack,
    * see the definition of `struct switchto_context` in sched.h*/
-  sd  ra, SWITCH_TO_RA(t0)
-  sd  sp, SWITCH_TO_SP(t0)
-  sd  s0, SWITCH_TO_S0(t0)
-  sd  s1, SWITCH_TO_S1(t0)
-  sd  s2, SWITCH_TO_S2(t0)
-  sd  s3, SWITCH_TO_S3(t0)
-  sd  s4, SWITCH_TO_S4(t0)
-  sd  s5, SWITCH_TO_S5(t0)
-  sd  s6, SWITCH_TO_S6(t0)
-  sd  s7, SWITCH_TO_S7(t0)
-  sd  s8, SWITCH_TO_S8(t0)
-  sd  s9, SWITCH_TO_S9(t0)
-  sd  s10, SWITCH_TO_S10(t0)
-  sd  s11, SWITCH_TO_S11(t0)
+  sd  ra, SWITCH_TO_RA(sp)
+  sd  sp, SWITCH_TO_SP(sp)
+  sd  s0, SWITCH_TO_S0(sp)
+  sd  s1, SWITCH_TO_S1(sp)
+  sd  s2, SWITCH_TO_S2(sp)
+  sd  s3, SWITCH_TO_S3(sp)
+  sd  s4, SWITCH_TO_S4(sp)
+  sd  s5, SWITCH_TO_S5(sp)
+  sd  s6, SWITCH_TO_S6(sp)
+  sd  s7, SWITCH_TO_S7(sp)
+  sd  s8, SWITCH_TO_S8(sp)
+  sd  s9, SWITCH_TO_S9(sp)
+  sd  s10, SWITCH_TO_S10(sp)
+  sd  s11, SWITCH_TO_S11(sp)
 
-  sd t0, PCB_KERNEL_SP(a0)    # updata pre pcb's kernel sp
+  sd sp, PCB_KERNEL_SP(a0)    # updata pre pcb's kernel sp
 
   /* TODO: [p2-task1] restore all callee save registers from kernel stack,
    * see the definition of `struct switchto_context` in sched.h*/
-  ld t0, PCB_KERNEL_SP(a1)    # a1 = pcb_t * next  
+  ld sp, PCB_KERNEL_SP(a1)    # a1 = pcb_t * next  
   
-  ld  ra, SWITCH_TO_RA(t0)
-  ld  sp, SWITCH_TO_SP(t0)
-  ld  s0, SWITCH_TO_S0(t0)
-  ld  s1, SWITCH_TO_S1(t0)
-  ld  s2, SWITCH_TO_S2(t0)
-  ld  s3, SWITCH_TO_S3(t0)
-  ld  s4, SWITCH_TO_S4(t0)
-  ld  s5, SWITCH_TO_S5(t0)
-  ld  s6, SWITCH_TO_S6(t0)
-  ld  s7, SWITCH_TO_S7(t0)
-  ld  s8, SWITCH_TO_S8(t0)
-  ld  s9, SWITCH_TO_S9(t0)
-  ld  s10, SWITCH_TO_S10(t0)
-  ld  s11, SWITCH_TO_S11(t0)
-  addi t0, t0, SWITCH_TO_SIZE
+  ld  ra, SWITCH_TO_RA(sp)
+  ld  sp, SWITCH_TO_SP(sp)
+  ld  s0, SWITCH_TO_S0(sp)
+  ld  s1, SWITCH_TO_S1(sp)
+  ld  s2, SWITCH_TO_S2(sp)
+  ld  s3, SWITCH_TO_S3(sp)
+  ld  s4, SWITCH_TO_S4(sp)
+  ld  s5, SWITCH_TO_S5(sp)
+  ld  s6, SWITCH_TO_S6(sp)
+  ld  s7, SWITCH_TO_S7(sp)
+  ld  s8, SWITCH_TO_S8(sp)
+  ld  s9, SWITCH_TO_S9(sp)
+  ld  s10, SWITCH_TO_S10(sp)
+  ld  s11, SWITCH_TO_S11(sp)
+  addi sp, sp, SWITCH_TO_SIZE
   
-  sd t0, PCB_KERNEL_SP(a1)    # updat kernel sp += SWITCH_TO_SIZE
-  #addi sp, sp, SWITCH_TO_SIZE
-  jr ra
+  sd sp, PCB_KERNEL_SP(a1)    # updat kernel sp += SWITCH_TO_SIZE
+
+  jr ra         # go back to do_scheduler (real context)
+                # or ret_from_exception   (fake context)
 ENDPROC(switch_to)
 
 ENTRY(ret_from_exception)
   /* TODO: [p2-task3] restore context via provided macro and return to sepc */
   /* HINT: remember to check your sp, does it point to the right address? */
   RESTORE_CONTEXT
-  csrr t0, sepc
-  csrr t1, sstatus
   sret    // return to sepc
 
 
@@ -217,6 +216,6 @@ ENTRY(exception_handler_entry)
   mv a0, sp           # *sp = regs
   csrr a1, stval      # mv a1, stval
   csrr a2, scause     # mv a2, scause
-  j interrupt_helper
+  j interrupt_helper    # jal x0, offset
 
 ENDPROC(exception_handler_entry)
