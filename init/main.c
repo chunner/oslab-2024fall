@@ -224,9 +224,6 @@ int main(void)
     init_screen();
     printk("> [INIT] SCREEN initialization succeeded.\n");
 
-    // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
-    // NOTE: The function of sstatus.sie is different from sie's
-
     // load all tasks from sd to mem
     for (int i = 0; i < tasknum; i++) {
         load_task_img(tasks[i].taskname);
@@ -241,14 +238,18 @@ int main(void)
     add_readyqueue(taskname2pcb("lock2"));
     add_readyqueue(taskname2pcb("sleep"));
     add_readyqueue(taskname2pcb("timer"));
+
+    // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
+    // NOTE: The function of sstatus.sie is different from sie's
+    bios_set_timer(10 * time_base);     // time irq after 10 seconds
+
     // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
     while (1)
     {
         // If you do non-preemptive scheduling, it's used to surrender control
-        do_scheduler();
-        //ret_from_exception();
+        // do_scheduler();
         // If you do preemptive scheduling, they're used to enable CSR_SIE and wfi
-        // enable_preempt();
+        enable_preempt();
         // asm volatile("wfi");
     }
 

@@ -10,5 +10,7 @@ ENTRY(setup_exception)
   li t0, SIE_SSIE
   csrs sie, t0
   /* TODO: [p2-task4] enable interrupts globally */
+  jal enable_interrupt
+
   ret
 ENDPROC(setup_exception)
