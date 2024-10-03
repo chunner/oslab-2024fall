@@ -206,7 +206,7 @@ int main(void)
     printk("> [INIT] PCB initialization succeeded.\n");
 
     // Read CPU frequency (｡•ᴗ-)_
-    time_base = bios_read_fdt(TIMEBASE);
+    time_base = bios_read_fdt(TIMEBASE);        // time_base = 10000000
 
     // Init lock mechanism o(´^｀)o
     init_locks();
@@ -241,7 +241,7 @@ int main(void)
 
     // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
     // NOTE: The function of sstatus.sie is different from sie's
-    bios_set_timer(10 * time_base);     // time irq after 10 seconds
+    bios_set_timer(10000 + get_ticks());     // time irq after 10 seconds
 
     // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
     while (1)
