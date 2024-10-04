@@ -36,8 +36,10 @@ void do_scheduler(void)
     if (prepcb->status == TASK_READY)
         add_readyqueue(prepcb);
     // TODO: [p2-task1] switch_to current_running
-    if (current_running != NULL)
+    if (current_running != LIST_PCB(&ready_queue))
         switch_to(prepcb, current_running);
+    else
+        while (1);
     // ret_from_exception();        
     return;             //  system_yeild(real context): return -> handle_syscall -> interrupt_helper -> ret_from_exception
 }                       // or main(fake context): return -> ret_from_exception
@@ -73,4 +75,8 @@ void do_unblock(list_node_t *pcb_node)
     pcb_t *pcb = LIST_PCB(pcb_node);
     add_readyqueue(pcb);
     pcb->status = TASK_READY;
+}
+
+void set_sche_workload(int remain_length) {         // updata remain_length in pcb
+    current_running->remain_length = remain_length;
 }

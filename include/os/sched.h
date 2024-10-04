@@ -81,6 +81,7 @@ typedef struct pcb
     /* cursor position */
     int cursor_x;
     int cursor_y;
+    int remain_length;
 
     /* time(seconds) to wake up sleeping PCB */
     uint64_t wakeup_time;
@@ -112,6 +113,7 @@ void do_block(list_node_t *, list_head *queue);
 void do_unblock(list_node_t *);
 
 extern void add_readyqueue(pcb_t *pcb);
+void set_sche_workload(int remain_length);
 
 /************************************************************/
 /* Do not touch this comment. Reserved for future projects. */

@@ -9,10 +9,10 @@
 
 #define CYCLE_PER_MOVE 20
 
-static char blank[] = {"                                                                               "};
-static char plane1[] = {"    \\\\   "};
-static char plane2[] = {" \\====== "};
-static char plane3[] = {"    //   "};
+static char blank[] = { "                                                                               " };
+static char plane1[] = { "    \\\\   " };
+static char plane2[] = { " \\====== " };
+static char plane3[] = { "    //   " };
 
 int main(void)
 {
@@ -28,15 +28,15 @@ int main(void)
         for (int i = 40 * CYCLE_PER_MOVE; i < 60 * CYCLE_PER_MOVE; i++)
         {
             /* move */
-            if(i % CYCLE_PER_MOVE == 0)
+            if (i % CYCLE_PER_MOVE == 0)
             {
-                sys_move_cursor(i/CYCLE_PER_MOVE, j + 0);
+                sys_move_cursor(i / CYCLE_PER_MOVE, j + 0);
                 printf("%s", plane1);
 
-                sys_move_cursor(i/CYCLE_PER_MOVE, j + 1);
+                sys_move_cursor(i / CYCLE_PER_MOVE, j + 1);
                 printf("%s", plane2);
 
-                sys_move_cursor(i/CYCLE_PER_MOVE, j + 2);
+                sys_move_cursor(i / CYCLE_PER_MOVE, j + 2);
                 printf("%s", plane3);
                 // sys_yield();
                 // for (int j=0;j<200000;j++); // wait
@@ -54,7 +54,8 @@ int main(void)
 
         clk = sys_get_tick() - clk;
         sys_move_cursor(0, 21);
-        printf("[fly2] used time per round: %d tick.",clk);
+        printf("[fly2] used time per round: %d tick.", clk);
+        //while (1);
     }
 }
 

@@ -142,6 +142,7 @@ static void init_pcb(void)
         pcb[i].pid = i + 2;  // user pid start from 2
         pcb[i].status = TASK_READY;
         pcb[i].entry_point = tasks[i].entry;
+        pcb[i].remain_length = 0;
         init_pcb_stack(pcb[i].kernel_sp, pcb[i].user_sp, pcb[i].entry_point, &pcb[i]);
     }
 
@@ -163,6 +164,7 @@ static void init_syscall(void)
     syscall[SYSCALL_LOCK_INIT] = (long (*)())do_mutex_lock_init;
     syscall[SYSCALL_LOCK_ACQ] = (long (*)())do_mutex_lock_acquire;
     syscall[SYSCALL_LOCK_RELEASE] = (long (*)())do_mutex_lock_release;
+    syscall[SYSCALL_SET_SCHE_WORKLOAD] = (long (*)())set_sche_workload;
 }
 /************************************************************/
 
@@ -231,14 +233,18 @@ int main(void)
     /* input the command */
     //manage_input();
     // task1
-    add_readyqueue(taskname2pcb("print1"));
-    add_readyqueue(taskname2pcb("fly"));
-    add_readyqueue(taskname2pcb("print2"));
-    add_readyqueue(taskname2pcb("lock1"));
-    add_readyqueue(taskname2pcb("lock2"));
-    add_readyqueue(taskname2pcb("sleep"));
-    add_readyqueue(taskname2pcb("timer"));
-
+    // add_readyqueue(taskname2pcb("print1"));
+    // add_readyqueue(taskname2pcb("fly"));
+    // add_readyqueue(taskname2pcb("print2"));
+    // add_readyqueue(taskname2pcb("lock1"));
+    // add_readyqueue(taskname2pcb("lock2"));
+    // add_readyqueue(taskname2pcb("sleep"));
+    // add_readyqueue(taskname2pcb("timer"));
+    add_readyqueue(taskname2pcb("fly1"));
+    add_readyqueue(taskname2pcb("fly2"));
+    add_readyqueue(taskname2pcb("fly3"));
+    add_readyqueue(taskname2pcb("fly4"));
+    add_readyqueue(taskname2pcb("fly5"));
     // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
     // NOTE: The function of sstatus.sie is different from sie's
     bios_set_timer(10000 + get_ticks());     // time irq after 10 seconds
