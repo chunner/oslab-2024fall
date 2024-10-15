@@ -140,7 +140,7 @@ static void init_pcb(void)
         pcb[i].kernel_sp = allocKernelPage(KernelStackPage) + KernelStackPage * PAGE_SIZE;
         pcb[i].user_sp = allocUserPage(UserStackPage) + UserStackPage * PAGE_SIZE;
         pcb[i].pid = 0;  // user pid start from 2
-        pcb[i].status = TASK_READY;
+        pcb[i].status = TASK_EXITED;
         pcb[i].entry_point = tasks[i].entry;
         pcb[i].remain_length = 0;
         init_pcb_stack(pcb[i].kernel_sp, pcb[i].user_sp, pcb[i].entry_point, &pcb[i]);
@@ -166,12 +166,14 @@ static void init_syscall(void)
     syscall[SYSCALL_LOCK_RELEASE] = (long (*)())do_mutex_lock_release;
     syscall[SYSCALL_SET_SCHE_WORKLOAD] = (long (*)())set_sche_workload;
     syscall[SYSCALL_GETCH] = (long (*)())bios_getchar;
+    syscall[SYSCALL_PS] = (long (*)())process_show;
 }
 /************************************************************/
 
 void add_readyqueue(pcb_t *pcb)        // add the tail of ready_queue
 {
     if (!pcb)   return;  // pcb = NULL
+    pcb->status = TASK_READY;
     list_node_t *p = &ready_queue;
     while (p->next != &ready_queue) {
         p = p->next;

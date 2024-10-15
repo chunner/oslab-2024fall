@@ -57,7 +57,12 @@ int main(void)
         }
         buffer[i] = '\0';
         printf("\n");
-        printf("buffer = %s\n", buffer);
+        // printf("buffer = %s\n", buffer);
+        if (strcmp(buffer, "ps") == 0) {
+            sys_ps();
+        } else {
+            printf("Error: Unkown Command %s!\n", buffer);
+        }
 
         // TODO [P3-task1]: parse input
         // note: backspace maybe 8('\b') or 127(delete)

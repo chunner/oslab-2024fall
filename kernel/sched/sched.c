@@ -7,6 +7,7 @@
 #include <printk.h>
 #include <assert.h>
 
+pcb_t *active_pcb[NUM_MAX_TASK];
 pcb_t pcb[NUM_MAX_TASK];
 const ptr_t pid0_stack = INIT_KERNEL_STACK + PAGE_SIZE;
 pcb_t pid0_pcb = {
@@ -30,7 +31,7 @@ void do_scheduler(void)
     /************************************************************/
 
     // TODO: [p2-task1] Modify the current_running pointer.
-    if (current_running->status == TASK_READY)      // put the current_runnning to the tail of ready_queue
+    if (current_running->status == TASK_RUNNING)      // put the current_runnning to the tail of ready_queue
         add_readyqueue(current_running);
 
     pcb_t *prepcb = current_running;
@@ -40,8 +41,10 @@ void do_scheduler(void)
     // TODO: [p2-task1] switch_to current_running
     if (current_running != LIST_PCB(&ready_queue)) {
         if (current_running->pid == 0) {        // the first time to exec
+            active_pcb[process_id] = current_running;
             current_running->pid = process_id++;
         }
+        current_running->status = TASK_RUNNING;
         switch_to(prepcb, current_running);
     } else
         while (1);
@@ -78,9 +81,32 @@ void do_unblock(list_node_t *pcb_node)
     pcb_node->next->prev = pcb_node->prev;
     pcb_t *pcb = LIST_PCB(pcb_node);
     add_readyqueue(pcb);
-    pcb->status = TASK_READY;
 }
 
 void set_sche_workload(int remain_length) {         // updata remain_length in pcb
     current_running->remain_length = remain_length;
+}
+void process_show() {
+    printk("[Process Table]\n");
+    for (int i = 0;i < process_id - 1;i++) {
+        printk("[%d] PID : %d   STATUS : ", i, i + 1);
+        switch (active_pcb[i + 1]->status)
+        {
+        case TASK_BLOCKED:
+            printk("TASK_BLOCKED\n");
+            break;
+        case TASK_RUNNING:
+            printk("TASK_RUNNING\n");
+            break;
+        case TASK_READY:
+            printk("TASK_READY\n");
+            break;
+        case TASK_EXITED:
+            printk("TASK_EXITED\n");
+            break;
+        default:
+            printk("ERROR\n");
+            break;
+        }
+    }
 }
