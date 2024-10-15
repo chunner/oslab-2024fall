@@ -139,7 +139,7 @@ static void init_pcb(void)
     for (int i = 0;i < tasknum; i++) {
         pcb[i].kernel_sp = allocKernelPage(KernelStackPage) + KernelStackPage * PAGE_SIZE;
         pcb[i].user_sp = allocUserPage(UserStackPage) + UserStackPage * PAGE_SIZE;
-        pcb[i].pid = i + 2;  // user pid start from 2
+        pcb[i].pid = 0;  // user pid start from 2
         pcb[i].status = TASK_READY;
         pcb[i].entry_point = tasks[i].entry;
         pcb[i].remain_length = 0;

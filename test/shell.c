@@ -37,10 +37,10 @@ int main(void)
 {
     sys_move_cursor(0, SHELL_BEGIN);
     printf("------------------- COMMAND -------------------\n");
-    printf("> root@UCAS_OS: ");
 
     while (1)
     {
+        printf("> root@UCAS_OS: ");
         // TODO [P3-task1]: call syscall to read UART port
         int c;
         char buffer[50];
@@ -57,7 +57,7 @@ int main(void)
         }
         buffer[i] = '\0';
         printf("\n");
-        printf("buffer = %s", buffer);
+        printf("buffer = %s\n", buffer);
 
         // TODO [P3-task1]: parse input
         // note: backspace maybe 8('\b') or 127(delete)

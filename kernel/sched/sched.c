@@ -38,9 +38,12 @@ void do_scheduler(void)
     current_running = LIST_PCB(ready_queue.next);
     ready_queue.next = ready_queue.next->next;       // delete current_running from ready_queue
     // TODO: [p2-task1] switch_to current_running
-    if (current_running != LIST_PCB(&ready_queue))
+    if (current_running != LIST_PCB(&ready_queue)) {
+        if (current_running->pid == 0) {        // the first time to exec
+            current_running->pid = process_id++;
+        }
         switch_to(prepcb, current_running);
-    else
+    } else
         while (1);
     return;             //  system_yeild(real context): return -> handle_syscall -> interrupt_helper -> ret_from_exception
 }                       // or main(fake context): return -> ret_from_exception
