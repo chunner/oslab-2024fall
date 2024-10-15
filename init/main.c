@@ -165,6 +165,7 @@ static void init_syscall(void)
     syscall[SYSCALL_LOCK_ACQ] = (long (*)())do_mutex_lock_acquire;
     syscall[SYSCALL_LOCK_RELEASE] = (long (*)())do_mutex_lock_release;
     syscall[SYSCALL_SET_SCHE_WORKLOAD] = (long (*)())set_sche_workload;
+    syscall[SYSCALL_GETCH] = (long (*)())bios_getchar;
 }
 /************************************************************/
 
@@ -230,21 +231,9 @@ int main(void)
     for (int i = 0; i < tasknum; i++) {
         load_task_img(tasks[i].taskname);
     }
-    /* input the command */
-    //manage_input();
-    // task1
-    // add_readyqueue(taskname2pcb("print1"));
-    // add_readyqueue(taskname2pcb("fly"));
-    // add_readyqueue(taskname2pcb("print2"));
-    // add_readyqueue(taskname2pcb("lock1"));
-    // add_readyqueue(taskname2pcb("lock2"));
-    // add_readyqueue(taskname2pcb("sleep"));
-    // add_readyqueue(taskname2pcb("timer"));
-    add_readyqueue(taskname2pcb("fly1"));
-    add_readyqueue(taskname2pcb("fly2"));
-    add_readyqueue(taskname2pcb("fly3"));
-    add_readyqueue(taskname2pcb("fly4"));
-    add_readyqueue(taskname2pcb("fly5"));
+
+    add_readyqueue(taskname2pcb("shell"));          // start shell
+
     // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
     // NOTE: The function of sstatus.sie is different from sie's
     bios_set_timer(10000 + get_ticks());     // time irq after 10 seconds

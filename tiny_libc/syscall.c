@@ -9,20 +9,8 @@ static long invoke_syscall(long sysno, long arg0, long arg1, long arg2,
     long arg3, long arg4)
 {
     /* TODO: [p2-task3] implement invoke_syscall via inline assembly */
-    // asm volatile("nop");
     long retval;
-    // asm volatile (
-    //     "mv a7, %0\n\t"
-    //     "mv a0, %1\n\t"
-    //     "mv a1, %2\n\t"
-    //     "mv a2, %3\n\t"
-    //     "mv a3, %4\n\t"
-    //     "mv a4, %5\n\t"
-    //     "ecall\n\t"
-    //     : "=r"(retval)  // return output
-    //     : "r"(sysno), "r"(arg0), "r"(arg1), "r"(arg2), "r"(arg3), "r"(arg4) // input arg
-    //     : "a0", "a1", "a2", "a3", "a4", "a7" // 被修改的寄存器
-    //     );
+
     register long r_sysno asm("a7") = sysno;
     register long r_a0 asm("a0") = arg0;
     register long r_a1 asm("a1") = arg1;
@@ -130,7 +118,7 @@ void sys_set_sche_workload(int remain_length) {
 pid_t  sys_exec(int id, int argc, uint64_t arg0, uint64_t arg1, uint64_t arg2)
 {
     /* TODO: [p3-task1] call invoke_syscall to implement sys_exec for S_CORE */
-}    
+}
 #else
 pid_t  sys_exec(char *name, int argc, char **argv)
 {
@@ -167,6 +155,8 @@ pid_t sys_getpid()
 int  sys_getchar(void)
 {
     /* TODO: [p3-task1] call invoke_syscall to implement sys_getchar */
+    int retval = invoke_syscall((long) SYSCALL_GETCH, IGNORE, IGNORE, IGNORE, IGNORE, IGNORE);
+    return retval;
 }
 
 int  sys_barrier_init(int key, int goal)
@@ -229,7 +219,7 @@ void sys_semaphore_destroy(int sema_idx)
     /* TODO: [p3-task2] call invoke_syscall to implement sys_semaphore_destroy */
 }
 
-int sys_mbox_open(char * name)
+int sys_mbox_open(char *name)
 {
     /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_open */
 }

@@ -30,17 +30,18 @@ void do_scheduler(void)
     /************************************************************/
 
     // TODO: [p2-task1] Modify the current_running pointer.
+    if (current_running->status == TASK_READY)      // put the current_runnning to the tail of ready_queue
+        add_readyqueue(current_running);
+
     pcb_t *prepcb = current_running;
+
     current_running = LIST_PCB(ready_queue.next);
     ready_queue.next = ready_queue.next->next;       // delete current_running from ready_queue
-    if (prepcb->status == TASK_READY)
-        add_readyqueue(prepcb);
     // TODO: [p2-task1] switch_to current_running
     if (current_running != LIST_PCB(&ready_queue))
         switch_to(prepcb, current_running);
     else
         while (1);
-    // ret_from_exception();        
     return;             //  system_yeild(real context): return -> handle_syscall -> interrupt_helper -> ret_from_exception
 }                       // or main(fake context): return -> ret_from_exception
                         // or do_mutex_lock_acquire(): return -> do_mutex_lock_acquire ->ret_from_exception

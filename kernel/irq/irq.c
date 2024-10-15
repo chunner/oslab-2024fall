@@ -41,7 +41,7 @@ void handle_irq_timer(regs_context_t *regs, uint64_t stval, uint64_t scause)
     if (next_pcb->remain_length) {
         time_slice = ((next_pcb->remain_length * 250) / total_reamin_length);
     } else {
-        time_slice = 50;
+        time_slice = 100000000000;
         //next_pcb->status = TASK_EXITED;
     }
     bios_set_timer(time_slice + get_ticks());

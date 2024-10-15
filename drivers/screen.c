@@ -10,8 +10,8 @@
 #define SCREEN_LOC(x, y) ((y) * SCREEN_WIDTH + (x))
 
 /* screen buffer */
-char new_screen[SCREEN_HEIGHT * SCREEN_WIDTH] = {0};
-char old_screen[SCREEN_HEIGHT * SCREEN_WIDTH] = {0};
+char new_screen[SCREEN_HEIGHT * SCREEN_WIDTH] = { 0 };
+char old_screen[SCREEN_HEIGHT * SCREEN_WIDTH] = { 0 };
 
 /* cursor position */
 static void vt100_move_cursor(int x, int y)
@@ -43,12 +43,17 @@ void screen_write_ch(char ch)
         current_running->cursor_x = 0;
         if (current_running->cursor_y < SCREEN_HEIGHT)
             current_running->cursor_y++;
-    }
-    else if (ch == '\b' || ch == '\177')
-    {	
+    } else if (ch == '\b' || ch == '\177')
+    {
         // TODO: [P3] support backspace here
-    }
-    else
+        if (current_running->cursor_x > 0) {
+            current_running->cursor_x--;
+        } else if (current_running->cursor_y > 0) {
+            current_running->cursor_y--;
+            current_running->cursor_x = SCREEN_WIDTH - 1;
+        }
+        new_screen[SCREEN_LOC(current_running->cursor_x, current_running->cursor_y)] = ' ';
+    } else
     {
         new_screen[SCREEN_LOC(current_running->cursor_x, current_running->cursor_y)] = ch;
         if (++current_running->cursor_x >= SCREEN_WIDTH)
@@ -72,13 +77,13 @@ void init_screen(void)
 void screen_clear(void)
 {
     int i, j;
-	vt100_clear();
+    vt100_clear();
     for (i = 0; i < SCREEN_HEIGHT; i++)
     {
         for (j = 0; j < SCREEN_WIDTH; j++)
         {
             new_screen[SCREEN_LOC(j, i)] = ' ';
-			old_screen[SCREEN_LOC(j, i)] = ' ';
+            old_screen[SCREEN_LOC(j, i)] = ' ';
         }
     }
     current_running->cursor_x = 0;

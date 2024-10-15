@@ -19,9 +19,8 @@
 #define SYSCALL_LOCK_INIT 40
 #define SYSCALL_LOCK_ACQ 41
 #define SYSCALL_LOCK_RELEASE 42
-<<<<<<< HEAD
-#define SYSCALL_SET_SCHE_WORKLOAD 43
-=======
+#define SYSCALL_SET_SCHE_WORKLOAD 35
+
 #define SYSCALL_SHOW_TASK 43
 #define SYSCALL_BARR_INIT 44
 #define SYSCALL_BARR_WAIT 45
@@ -35,6 +34,6 @@
 #define SYSCALL_MBOX_CLOSE 53
 #define SYSCALL_MBOX_SEND 54
 #define SYSCALL_MBOX_RECV 55
->>>>>>> start2/Project3_Interactive_OS_and_Process_Management
+#define SYSCALL_GETCH 56
 
 #endif

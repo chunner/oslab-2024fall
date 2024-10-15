@@ -19,11 +19,8 @@ typedef enum {
     MUTEX_INIT,
     MUTEX_ACQ,
     MUTEX_RELEASE,
-<<<<<<< HEAD
     SCREEN_FLUSH,
     SCREEN_WRITE,
-    NUM_ENTRIES
-=======
     NUM_ENTRIES,
     WRITE,
     CLEAR,
@@ -37,14 +34,12 @@ typedef enum {
     BARRIER_INIT,
     BARRIER_WAIT,
     BARRIER_DESTROY
->>>>>>> start2/Project3_Interactive_OS_and_Process_Management
 } jmptab_idx_t;
-
 
 static inline long call_jmptab(long which, long arg0, long arg1, long arg2, long arg3, long arg4)
 {
     unsigned long val = \
-        *(unsigned long *)(KERNEL_JMPTAB_BASE + sizeof(unsigned long) * which);
+        * (unsigned long *) (KERNEL_JMPTAB_BASE + sizeof(unsigned long) * which);
     long (*func)(long, long, long, long, long) = (long (*)(long, long, long, long, long))val;
 
     return func(arg0, arg1, arg2, arg3, arg4);
@@ -52,12 +47,12 @@ static inline long call_jmptab(long which, long arg0, long arg1, long arg2, long
 
 static inline void bios_putstr(char *str)
 {
-    call_jmptab(CONSOLE_PUTSTR, (long)str, 0, 0, 0, 0);
+    call_jmptab(CONSOLE_PUTSTR, (long) str, 0, 0, 0, 0);
 }
 
 static inline void bios_putchar(int ch)
 {
-    call_jmptab(CONSOLE_PUTCHAR, (long)ch, 0, 0, 0, 0);
+    call_jmptab(CONSOLE_PUTCHAR, (long) ch, 0, 0, 0, 0);
 }
 
 static inline int bios_getchar(void)

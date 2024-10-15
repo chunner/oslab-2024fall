@@ -42,7 +42,23 @@ int main(void)
     while (1)
     {
         // TODO [P3-task1]: call syscall to read UART port
-        
+        int c;
+        char buffer[50];
+        int i = 0;
+        while ((c = sys_getchar()) != '\n' && c != '\r') {
+            if (c >= 0 && c <= 127) {// if the input is not among ASCII
+                if (c != '\b' && c != '\177') {     // backspace
+                    buffer[i++] = c;
+                } else if (i > 0) {
+                    i--;
+                }
+                printf("%c", c);
+            }
+        }
+        buffer[i] = '\0';
+        printf("\n");
+        printf("buffer = %s", buffer);
+
         // TODO [P3-task1]: parse input
         // note: backspace maybe 8('\b') or 127(delete)
 
@@ -50,7 +66,7 @@ int main(void)
 
         /************************************************************/
         /* Do not touch this comment. Reserved for future projects. */
-        /************************************************************/    
+        /************************************************************/
     }
 
     return 0;
