@@ -167,6 +167,7 @@ static void init_syscall(void)
     syscall[SYSCALL_SET_SCHE_WORKLOAD] = (long (*)())set_sche_workload;
     syscall[SYSCALL_GETCH] = (long (*)())bios_getchar;
     syscall[SYSCALL_PS] = (long (*)())process_show;
+    syscall[SYSCALL_CLEAR] = (long (*)())screen_clear;
 }
 /************************************************************/
 

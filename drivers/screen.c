@@ -147,3 +147,7 @@ void screen_reflush(void)
     /* recover cursor position */
     vt100_move_cursor(current_running->cursor_x + 1, current_running->cursor_y + 1);
 }
+
+void clear(int x, int y) {
+
+}

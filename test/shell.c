@@ -60,6 +60,10 @@ int main(void)
         // printf("buffer = %s\n", buffer);
         if (strcmp(buffer, "ps") == 0) {
             sys_ps();
+        } else if (strcmp(buffer, "clear") == 0) {
+            sys_screen_clear();
+            sys_move_cursor(0, SHELL_BEGIN);
+            printf("------------------- COMMAND -------------------\n");
         } else {
             printf("Error: Unkown Command %s!\n", buffer);
         }

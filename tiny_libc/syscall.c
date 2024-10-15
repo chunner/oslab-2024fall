@@ -148,6 +148,9 @@ void sys_ps(void)
     invoke_syscall((long) SYSCALL_PS, IGNORE, IGNORE, IGNORE, IGNORE, IGNORE);
 }
 
+void sys_screen_clear(void) {
+    invoke_syscall((long) SYSCALL_CLEAR, IGNORE, IGNORE, IGNORE, IGNORE, IGNORE);
+}
 pid_t sys_getpid()
 {
     /* TODO: [p3-task1] call invoke_syscall to implement sys_getpid */
