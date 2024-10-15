@@ -17,12 +17,12 @@
 
 #define NBYTES2SEC(nbytes) (((nbytes) / SECTOR_SIZE) + ((nbytes) % SECTOR_SIZE != 0))
 
-#define MAXLEN 8       // the max len of task name
+#define MAX_NAME_LEN 44       // the max len of task name
 
 /* TODO: [p1-task4] design your own task_info_t */
 typedef struct {
     //int taskid;
-    char taskname[MAXLEN];
+    char taskname[MAX_NAME_LEN];
     int sector_num;
     int firstsector;
     int offset;
@@ -49,7 +49,7 @@ static uint32_t get_memsz(Elf64_Phdr phdr);
 static void write_segment(Elf64_Phdr phdr, FILE *fp, FILE *img, int *phyaddr);
 static void write_padding(FILE *img, int *phyaddr, int new_phyaddr);
 static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
-                           short tasknum, FILE *img);
+    short tasknum, FILE *img);
 
 int main(int argc, char **argv)
 {
@@ -67,7 +67,7 @@ int main(int argc, char **argv)
             options.extended = 1;
         } else {
             error("%s: invalid option\nusage: %s %s\n", progname,
-                  progname, ARGS);
+                progname, ARGS);
         }
         argc--;
         argv++;
@@ -140,12 +140,12 @@ static void create_image(int nfiles, char *files[])
          */
         if (strcmp(*files, "bootblock") == 0) {
             write_padding(img, &phyaddr, SECTOR_SIZE);
-        }else if(strcmp(*files, "main") == 0){             
-           write_padding(img, &phyaddr, phyaddr + taskinfo_size);       // keep the room for taskinfo_size
+        } else if (strcmp(*files, "main") == 0) {
+            write_padding(img, &phyaddr, phyaddr + taskinfo_size);       // keep the room for taskinfo_size
         }
 
         /* updata taskinfo */
-        if(taskidx >=0){                // taskinfo data
+        if (taskidx >= 0) {                // taskinfo data
             strcpy(taskinfo[taskidx].taskname, *files);                             // name
             taskinfo[taskidx].sector_num = NBYTES2SEC(phyaddr) - NBYTES2SEC(fi_phyaddr_begin) + 1;      // sectors num
             taskinfo[taskidx].offset = fi_phyaddr_begin % SECTOR_SIZE;                  // the offset in first sector in image
@@ -165,7 +165,7 @@ static void create_image(int nfiles, char *files[])
     printf("image size = 0x%04x byte\n", phyaddr);
 }
 
-static void read_ehdr(Elf64_Ehdr * ehdr, FILE * fp)
+static void read_ehdr(Elf64_Ehdr *ehdr, FILE *fp)
 {
     int ret;
 
@@ -176,8 +176,8 @@ static void read_ehdr(Elf64_Ehdr * ehdr, FILE * fp)
     assert(ehdr->e_ident[EI_MAG3] == 'F');
 }
 
-static void read_phdr(Elf64_Phdr * phdr, FILE * fp, int ph,
-                      Elf64_Ehdr ehdr)
+static void read_phdr(Elf64_Phdr *phdr, FILE *fp, int ph,
+    Elf64_Ehdr ehdr)
 {
     int ret;
 
@@ -236,21 +236,21 @@ static void write_padding(FILE *img, int *phyaddr, int new_phyaddr)
     }
 }
 
- static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
-                            short tasknum, FILE * img)
- {
-     // TODO: [p1-task3] & [p1-task4] write image info to some certain places
-     // NOTE: os size, infomation about app-info sector(s) ...  
-     fseek(img, nbytes_kernel + SECTOR_SIZE, SEEK_SET);         // save the taskinfo after kernel
-     int taskinfo_addr = nbytes_kernel;
-     fwrite(taskinfo,sizeof(task_info_t), tasknum, img);
-     nbytes_kernel += sizeof(task_info_t) * tasknum;
+static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
+    short tasknum, FILE *img)
+{
+    // TODO: [p1-task3] & [p1-task4] write image info to some certain places
+    // NOTE: os size, infomation about app-info sector(s) ...  
+    fseek(img, nbytes_kernel + SECTOR_SIZE, SEEK_SET);         // save the taskinfo after kernel
+    int taskinfo_addr = nbytes_kernel;
+    fwrite(taskinfo, sizeof(task_info_t), tasknum, img);
+    nbytes_kernel += sizeof(task_info_t) * tasknum;
 
     // kernel sector num
     fseek(img, OS_SIZE_LOC, SEEK_SET);
     short nsectors_kernel = NBYTES2SEC(nbytes_kernel);
     fwrite(&nsectors_kernel, sizeof(short), 1, img);            // kernel's number of sectors 
-    
+
     int tasknum_loc = 0x1f6;
     fseek(img, tasknum_loc, SEEK_SET);
     fwrite(&tasknum, sizeof(short), 1, img);                    // tasknum  0x1f6-0x1f7

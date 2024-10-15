@@ -31,6 +31,7 @@
 
 #include <type.h>
 #include <os/list.h>
+#include <os/task.h>
 
 #define NUM_MAX_TASK 16
 
@@ -91,6 +92,9 @@ typedef struct pcb
 
     /* enter_point of user */
     uint64_t entry_point;
+
+    /* name of task */
+    char taskname[MAX_NAME_LEN];
 
 } pcb_t;
 

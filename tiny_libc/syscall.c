@@ -123,6 +123,8 @@ pid_t  sys_exec(int id, int argc, uint64_t arg0, uint64_t arg1, uint64_t arg2)
 pid_t  sys_exec(char *name, int argc, char **argv)
 {
     /* TODO: [p3-task1] call invoke_syscall to implement sys_exec */
+    pid_t retval = (pid_t) invoke_syscall((long) SYSCALL_EXEC, (long) name, (long) argc, (long) argv, IGNORE, IGNORE);
+    return retval;
 }
 #endif
 

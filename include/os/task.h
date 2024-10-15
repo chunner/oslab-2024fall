@@ -7,19 +7,19 @@
 #define TASK_MAXNUM      16
 #define TASK_SIZE        0x10000
 
-#define MAXLEN 8           // max len of task name
+#define MAX_NAME_LEN 44           // max len of task name
 
 #define SECTOR_SIZE 512
 #define NBYTES2SEC(nbytes) (((nbytes) / SECTOR_SIZE) + ((nbytes) % SECTOR_SIZE != 0))
 
 /* TODO: [p1-task4] implement your own task_info_t! */
-typedef struct {
+typedef struct {    // 64 byte
     //int taskid;
-    char taskname[MAXLEN];
-    int sector_num;
-    int firstsector;
-    int offset;
-    uint64_t entry;
+    char taskname[MAX_NAME_LEN];    //    44 byte
+    int sector_num;     // 4 byte
+    int firstsector;    // 4 byte
+    int offset;         // 4 byte 
+    uint64_t entry;     // 8 byte
 } task_info_t;
 
 

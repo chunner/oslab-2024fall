@@ -86,7 +86,7 @@ void do_unblock(list_node_t *pcb_node)
 void set_sche_workload(int remain_length) {         // updata remain_length in pcb
     current_running->remain_length = remain_length;
 }
-void process_show() {
+void do_process_show() {
     printk("[Process Table]\n");
     for (int i = 0;i < process_id - 1;i++) {
         printk("[%d] PID : %d   STATUS : ", i, i + 1);
@@ -109,4 +109,20 @@ void process_show() {
             break;
         }
     }
+}
+
+pid_t do_exec(char *name, int argc, char *argv[]) {
+    // add_readyqueue(taskname2pcb(name));
+
+}
+void add_readyqueue(pcb_t *pcb)        // add the tail of ready_queue
+{
+    if (!pcb)   return;  // pcb = NULL
+    pcb->status = TASK_READY;
+    list_node_t *p = &ready_queue;
+    while (p->next != &ready_queue) {
+        p = p->next;
+    }
+    pcb->list.next = p->next;   // &ready_queue
+    p->next = &pcb->list;
 }
