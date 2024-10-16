@@ -90,6 +90,24 @@ static void init_task_info(void)
     }
 }
 
+int taskname_to_taskid(char taskname[]) {
+    int i = 0;
+    for (; i < tasknum; i++) {
+        if (strcmp(taskname, tasks[i].taskname) == 0) {
+            break;
+        }
+    }
+    if (i == tasknum) {             // task name match failed
+        port_write("taskname: \"");
+        port_write(taskname);
+        port_write("\" does not exit\n\r");
+        while (1);
+        // return NULL;
+    } else {
+        return i;
+    }
+}
+
 /************************************************************/
 static void init_pcb_stack(
     ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point,
@@ -136,19 +154,27 @@ static void init_pcb_stack(
 static void init_pcb(void)
 {
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
-    for (int i = 0;i < tasknum; i++) {
-        pcb[i].kernel_sp = allocKernelPage(KernelStackPage) + KernelStackPage * PAGE_SIZE;
-        pcb[i].user_sp = allocUserPage(UserStackPage) + UserStackPage * PAGE_SIZE;
-        pcb[i].pid = 0;  // user pid start from 2
-        pcb[i].status = TASK_EXITED;
-        pcb[i].entry_point = tasks[i].entry;
-        pcb[i].remain_length = 0;
-        init_pcb_stack(pcb[i].kernel_sp, pcb[i].user_sp, pcb[i].entry_point, &pcb[i]);
-    }
+    // for (int i = 0;i < tasknum; i++) {
+    //     pcb[i].kernel_sp = allocKernelPage(KernelStackPage) + KernelStackPage * PAGE_SIZE;
+    //     pcb[i].user_sp = allocUserPage(UserStackPage) + UserStackPage * PAGE_SIZE;
+    //     pcb[i].pid = 0;  // user pid start from 2
+    //     pcb[i].status = TASK_EXITED;
+    //     pcb[i].entry_point = tasks[i].entry;
+    //     pcb[i].remain_length = 0;
+    //     init_pcb_stack(pcb[i].kernel_sp, pcb[i].user_sp, pcb[i].entry_point, &pcb[i]);
+    // }
+    // pcb[0] is shell
+    pcb[0].kernel_sp = allocKernelPage(KernelStackPage) + KernelStackPage * PAGE_SIZE;
+    pcb[0].user_sp = allocUserPage(UserStackPage) + UserStackPage * PAGE_SIZE;
+    pcb[0].pid = 1;
+    pcb[0].status = TASK_EXITED;
+    pcb[0].entry_point = tasks[taskname_to_taskid("shell")].entry;
+    pcb[0].remain_length = 0;
+    init_pcb_stack(pcb[0].kernel_sp, pcb[0].user_sp, pcb[0].entry_point, &pcb[0]);
 
     /* TODO: [p2-task1] remember to initialize 'current_running' */
     current_running = &pid0_pcb;
-    current_running->list.next = &pcb[0].list;
+    // current_running->list.next = &pcb[0].list;
 }
 
 static void init_syscall(void)

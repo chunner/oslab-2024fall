@@ -32,8 +32,12 @@
 #include <type.h>
 #include <os/list.h>
 #include <os/task.h>
+#include <csr.h>
 
 #define NUM_MAX_TASK 16
+
+#define UserStackPage 10
+#define KernelStackPage 10
 
  /* used to save register infomation */
 typedef struct regs_context
@@ -121,8 +125,8 @@ void do_unblock(list_node_t *);
 
 extern void add_readyqueue(pcb_t *pcb);
 void set_sche_workload(int remain_length);
-void process_show();
 
+extern void ret_from_exception();
 /************************************************************/
 /* TODO [P3-TASK1] exec exit kill waitpid ps*/
 #ifdef S_CORE
