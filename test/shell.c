@@ -70,7 +70,7 @@ int main(void)
         } else if (strncmp(buffer, "exec", 4) == 0) {
             char taskname[MAX_NAME_LEN];
             int i = 5;
-            for (; buffer[i] != ' '; i++) {
+            for (; buffer[i] != ' ' && buffer[i] != '\0'; i++) {
                 taskname[i - 5] = buffer[i];
             }
             taskname[i - 5] = '\0';
@@ -86,7 +86,10 @@ int main(void)
                 }
             }
             int pid = sys_exec(taskname, argc, argv);
-            printf("Info: execute %s successfully, pid = %d ...\n", taskname, pid);
+            if (pid < 0) {
+                printf("Info: fail to excute %s\n", taskname);
+            } else
+                printf("Info: execute %s successfully, pid = %d ...\n", taskname, pid);
         } else {
             printf("Error: Unkown Command %s!\n", buffer);
         }

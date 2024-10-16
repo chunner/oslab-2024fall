@@ -98,11 +98,10 @@ int taskname_to_taskid(char taskname[]) {
         }
     }
     if (i == tasknum) {             // task name match failed
-        port_write("taskname: \"");
-        port_write(taskname);
-        port_write("\" does not exit\n\r");
-        while (1);
-        // return NULL;
+        // port_write("taskname: \"");
+        // port_write(taskname);
+        // port_write("\" does not exit\n\r");
+        return -1;
     } else {
         return i;
     }
@@ -198,23 +197,6 @@ static void init_syscall(void)
 }
 /************************************************************/
 
-static pcb_t *taskname2pcb(char taskname[]) {
-    int i = 0;
-    for (; i < tasknum; i++) {
-        if (strcmp(taskname, tasks[i].taskname) == 0) {
-            break;
-        }
-    }
-    if (i == tasknum) {             // task name match failed
-        port_write("taskname: \"");
-        port_write(taskname);
-        port_write("\" does not exit\n\r");
-        return NULL;
-    } else {
-        return &pcb[i];
-    }
-}
-
 int main(void)
 {
     // Init jump table provided by kernel and bios(ΦωΦ)
@@ -251,7 +233,7 @@ int main(void)
         load_task_img(tasks[i].taskname);
     }
 
-    add_readyqueue(taskname2pcb("shell"));          // start shell
+    add_readyqueue(&pcb[0]);          // start shell
 
     // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
     // NOTE: The function of sstatus.sie is different from sie's
