@@ -32,6 +32,9 @@
 #include <ctype.h>
 
 #define SHELL_BEGIN 20
+#define MAX_NAME_LEN 44
+#define MAX_ARGC 10
+#define MAX_ARGV_LEN 32
 
 int main(void)
 {
@@ -64,6 +67,25 @@ int main(void)
             sys_screen_clear();
             sys_move_cursor(0, SHELL_BEGIN);
             printf("------------------- COMMAND -------------------\n");
+        } else if (strncmp(buffer, "exec", 4) == 0) {
+            char taskname[MAX_NAME_LEN];
+            int i = 5;
+            for (; buffer[i] != ' '; i++) {
+                taskname[i - 5] = buffer[i];
+            }
+            taskname[i - 5] = '\0';
+            char *argv[MAX_ARGC];
+            int argc = 0;
+            char argv_base[MAX_ARGV_LEN];
+            int argv_base_i = 0;
+            while (buffer[i] != '\0') {
+                argv[argc++] = &argv_base[argv_base_i];
+                while (buffer[i] != ' ' && buffer[i] != '\0') {
+                    argv_base[argv_base_i++] = buffer[i++];
+                }
+            }
+            int pid = sys_exec(taskname, argc, argv);
+            printf("Info: execute %s successfully, pid = %d ...", taskname, pid);
         } else {
             printf("Error: Unkown Command %s!\n", buffer);
         }

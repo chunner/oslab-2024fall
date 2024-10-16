@@ -176,6 +176,8 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
         /* add to readyqueue */
         add_readyqueue(&pcb[pcb_id]);
         pcb[pcb_id].pid = ++process_id;
+        //do_scheduler();
+        return process_id;
     } else {
         while (1);
     }
