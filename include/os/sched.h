@@ -36,8 +36,6 @@
 
 #define NUM_MAX_TASK 16
 
-#define UserStackPage 10
-#define KernelStackPage 10
 
  /* used to save register infomation */
 typedef struct regs_context

@@ -76,6 +76,7 @@ int main(void)
             taskname[i - 5] = '\0';
             char *argv[MAX_ARGC];
             int argc = 0;
+            argv[argc++] = taskname;    // the first arg is task name
             char argv_base[MAX_ARGV_LEN];
             int argv_base_i = 0;
             while (buffer[i] != '\0') {

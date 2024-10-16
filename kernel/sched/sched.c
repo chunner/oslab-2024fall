@@ -144,8 +144,10 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     kernel_sp = ROUNDDOWN(kernel_sp, 16);  // alignment to 128 bit = 16 byte
     pcb[pcb_id].kernel_sp = kernel_sp;
     // init reg context
+    pcb[pcb_id].kernel_sp = pcb[pcb_id].kernel_sp - sizeof(regs_context_t) - sizeof(switchto_context_t);
+
     regs_context_t *pt_regs =
-        (regs_context_t *) (pcb[pcb_id].kernel_sp - sizeof(regs_context_t));
+        (regs_context_t *) (kernel_sp - sizeof(regs_context_t));
     for (int i = 0; i < 32; i++) {
         if (i == 1) // ra
             pt_regs->regs[i] = pcb[pcb_id].entry_point;
@@ -175,11 +177,10 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
             pt_switchto->regs[i] = 0;
         }
     }
-    pcb[pcb_id].kernel_sp = pcb[pcb_id].kernel_sp - sizeof(regs_context_t) - sizeof(switchto_context_t);
     /* add to readyqueue */
     add_readyqueue(&pcb[pcb_id]);
     pcb[pcb_id].pid = ++process_id;
-    //do_scheduler();
+    do_scheduler();
     return process_id;
 
 }

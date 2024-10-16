@@ -29,13 +29,16 @@
 #include <type.h>
 
 #define MEM_SIZE 32
-#define PAGE_SIZE 4096 // 4K
+#define PAGE_SIZE 4096 // 4K = 0x1000
 #define INIT_KERNEL_STACK 0x50500000
 #define INIT_USER_STACK 0x52500000
 #define FREEMEM_KERNEL (INIT_KERNEL_STACK+PAGE_SIZE)
 #define FREEMEM_USER INIT_USER_STACK
 
-/* Rounding; only works for n = power of two */
+#define UserStackPage 16
+#define KernelStackPage 16
+
+ /* Rounding; only works for n = power of two */
 #define ROUND(a, n)     (((((uint64_t)(a))+(n)-1)) & ~((n)-1))
 #define ROUNDDOWN(a, n) (((uint64_t)(a)) & ~((n)-1))
 

@@ -29,22 +29,22 @@ void handle_irq_timer(regs_context_t *regs, uint64_t stval, uint64_t scause)
 {
     // TODO: [p2-task4] clock interrupt handler.
     // Note: use bios_set_timer to reset the timer and remember to reschedule
-    list_node_t *h = ready_queue.next;
-    int total_reamin_length = 0;
-    pcb_t *next_pcb = LIST_PCB(ready_queue.next);
-    int time_slice;
-    while (h != &ready_queue) {
-        pcb_t *p = LIST_PCB(h);
-        total_reamin_length += p->remain_length;
-        h = h->next;
-    }
-    if (next_pcb->remain_length) {
-        time_slice = ((next_pcb->remain_length * 250) / total_reamin_length);
-    } else {
-        time_slice = 100000000000;
-        //next_pcb->status = TASK_EXITED;
-    }
-    bios_set_timer(time_slice + get_ticks());
+    // list_node_t *h = ready_queue.next;
+    // int total_reamin_length = 0;
+    // pcb_t *next_pcb = LIST_PCB(ready_queue.next);
+    // int time_slice;
+    // while (h != &ready_queue) {
+    //     pcb_t *p = LIST_PCB(h);
+    //     total_reamin_length += p->remain_length;
+    //     h = h->next;
+    // }
+    // if (next_pcb->remain_length) {
+    //     time_slice = ((next_pcb->remain_length * 250) / total_reamin_length);
+    // } else {
+    //     time_slice = time_base;
+    //     //next_pcb->status = TASK_EXITED;
+    // }
+    bios_set_timer(time_base * 100 + get_ticks());
     do_scheduler();
 }
 

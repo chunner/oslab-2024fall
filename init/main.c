@@ -26,8 +26,6 @@
 #define kernel          0x50201000
 #define tasknum_loc     0x502001f6
 
-#define UserStackPage 10
-#define KernelStackPage 10
 
 
 int version = 2; // version must between 0 and 9
@@ -237,7 +235,7 @@ int main(void)
 
     // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
     // NOTE: The function of sstatus.sie is different from sie's
-    bios_set_timer(10000 + get_ticks());     // time irq after 10 seconds
+    bios_set_timer(time_base + get_ticks());     // time irq after 10 seconds
 
     // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
     while (1)
