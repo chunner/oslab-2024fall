@@ -167,6 +167,7 @@ static void init_pcb(void)
     pcb[0].status = TASK_EXITED;
     pcb[0].entry_point = tasks[taskname_to_taskid("shell")].entry;
     pcb[0].remain_length = 0;
+    strcpy(pcb[0].taskname, "shell");
     init_pcb_stack(pcb[0].kernel_sp, pcb[0].user_sp, pcb[0].entry_point, &pcb[0]);
 
     /* TODO: [p2-task1] remember to initialize 'current_running' */

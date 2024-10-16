@@ -41,13 +41,15 @@ int do_mutex_lock_init(int key)
 {
     /* TODO: [p2-task2] initialize mutex lock */
     int i = 0;
-    for (;i <= last_lockid; i++) {
+    for (;i < last_lockid; i++) {
         if (mlocks[i].key == key) {
             break;
         }
     }
-    if (last_lockid >= LOCK_NUM) return -1;
-    mlocks[i].key = key;
+    if (i == last_lockid) { // do not exit the same key
+        if (i >= LOCK_NUM)   return -1; // mlocks are run out
+        mlocks[last_lockid++].key = key;
+    }
     return i;
 }
 

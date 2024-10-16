@@ -95,21 +95,22 @@ void do_process_show() {
         switch (pcb[i].status)
         {
         case TASK_BLOCKED:
-            printk("TASK_BLOCKED\n");
+            printk("TASK_BLOCKED");
             break;
         case TASK_RUNNING:
-            printk("TASK_RUNNING\n");
+            printk("TASK_RUNNING");
             break;
         case TASK_READY:
-            printk("TASK_READY\n");
+            printk("TASK_READY");
             break;
         case TASK_EXITED:
-            printk("TASK_EXITED\n");
+            printk("TASK_EXITED");
             break;
         default:
-            printk("ERROR\n");
+            printk("ERROR");
             break;
         }
+        printk("\tNAME : %s\n", pcb[i].taskname);
     }
 }
 
@@ -128,6 +129,7 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     pcb[pcb_id].status = TASK_EXITED;
     pcb[pcb_id].entry_point = tasks[taskid].entry;
     pcb[pcb_id].remain_length = 0;
+    strcpy(pcb[pcb_id].taskname, name);
 
     /* init pcb stack */
     // move args to stack
@@ -181,7 +183,7 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     add_readyqueue(&pcb[pcb_id]);
     pcb[pcb_id].pid = ++process_id;
     do_scheduler();
-    return process_id;
+    return pcb[pcb_id].pid;
 
 }
 void add_readyqueue(pcb_t *pcb)        // add the tail of ready_queue
