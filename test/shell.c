@@ -79,13 +79,14 @@ int main(void)
             char argv_base[MAX_ARGV_LEN];
             int argv_base_i = 0;
             while (buffer[i] != '\0') {
+                i++;
                 argv[argc++] = &argv_base[argv_base_i];
                 while (buffer[i] != ' ' && buffer[i] != '\0') {
                     argv_base[argv_base_i++] = buffer[i++];
                 }
             }
             int pid = sys_exec(taskname, argc, argv);
-            printf("Info: execute %s successfully, pid = %d ...", taskname, pid);
+            printf("Info: execute %s successfully, pid = %d ...\n", taskname, pid);
         } else {
             printf("Error: Unkown Command %s!\n", buffer);
         }

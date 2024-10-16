@@ -127,6 +127,7 @@ extern void add_readyqueue(pcb_t *pcb);
 void set_sche_workload(int remain_length);
 
 extern void ret_from_exception();
+extern int taskname_to_taskid(char taskname[]);
 /************************************************************/
 /* TODO [P3-TASK1] exec exit kill waitpid ps*/
 #ifdef S_CORE

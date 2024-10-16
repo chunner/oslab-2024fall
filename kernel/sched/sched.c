@@ -6,6 +6,7 @@
 #include <screen.h>
 #include <printk.h>
 #include <assert.h>
+#include <os/string.h>
 
 pcb_t pcb[NUM_MAX_TASK];
 const ptr_t pid0_stack = INIT_KERNEL_STACK + PAGE_SIZE;
@@ -89,9 +90,9 @@ void set_sche_workload(int remain_length) {         // updata remain_length in p
 }
 void do_process_show() {
     printk("[Process Table]\n");
-    for (int i = 0;i < process_id - 1;i++) {
+    for (int i = 0;i < process_id;i++) {
         printk("[%d] PID : %d   STATUS : ", i, pcb[i].pid);
-        switch (pcb[i + 1].status)
+        switch (pcb[i].status)
         {
         case TASK_BLOCKED:
             printk("TASK_BLOCKED\n");
@@ -114,7 +115,7 @@ void do_process_show() {
 
 pid_t do_exec(char *name, int argc, char *argv[]) {
     // add_readyqueue(taskname2pcb(name));'
-    int taskid = taskname_to_id(name);
+    int taskid = taskname_to_taskid(name);
     if (pcb_id < NUM_MAX_TASK) {
         pcb_id++;
         /* init pcb */
