@@ -197,3 +197,43 @@ void add_readyqueue(pcb_t *pcb)        // add the tail of ready_queue
     pcb->list.next = p->next;   // &ready_queue
     p->next = &pcb->list;
 }
+void remove_readyqueue(pcb_t *pcb) {
+    if (!pcb)   return;  // pcb = NULL
+    list_node_t *p = &ready_queue;
+    while (p->next != &pcb->list) {
+        p = p->next;
+    }
+    p->next = pcb->list.next;
+}
+int do_kill(pid_t pid) {
+    int i = 0;
+    for (;i <= pcb_id;i++) {
+        if (pcb[i].pid == pid) {
+            break;
+        }
+    }
+    if (i > process_id)  return 0;  // fail to find
+    // delete pcb
+    if (pcb[i].status == TASK_READY) {
+        remove_readyqueue(&pcb[i]);
+    }
+    for (int j = i;j < pcb_id;j++) {
+        pcb[j] = pcb[j + 1];
+    }
+    pcb_id--;
+    return 1;
+}
+void do_exit(void) {
+    current_running->status = TASK_EXITED;
+    do_scheduler();
+}
+int do_waitpid(pid_t pid) {
+    int i = 0;
+    for (;i <= pcb_id;i++) {
+        if (pcb[i].pid == pid) {
+            break;
+        }
+    }
+    if (i > process_id)  return 0;  // fail to find
+
+}

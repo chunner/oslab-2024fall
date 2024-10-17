@@ -199,7 +199,7 @@ ENTRY(ret_from_exception)
   jal enable_preempt
   ld ra, (sp)
   addi sp, sp, 8
-  csrr t0, sepc
+  // csrr t0, sepc
   sret    // return to sepc
 
 
