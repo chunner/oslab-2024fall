@@ -122,7 +122,8 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
 
     pcb_id++;
     /* init pcb */
-    pcb[pcb_id].kernel_stack_base = allocKernelPage(KernelStackPage) + KernelStackPage * PAGE_SIZE;
+    pcb[pcb_id].kernel_sp = allocKernelPage(KernelStackPage) + KernelStackPage * PAGE_SIZE;
+    pcb[pcb_id].kernel_stack_base = pcb[pcb_id].kernel_sp;
     pcb[pcb_id].user_sp = allocUserPage(UserStackPage) + UserStackPage * PAGE_SIZE;
     pcb[pcb_id].user_stack_base = pcb[pcb_id].user_sp;
     pcb[pcb_id].pid = 0;
@@ -135,21 +136,21 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
 
     /* init pcb stack */
     // move args to stack
-    ptr_t kernel_sp = pcb[pcb_id].kernel_stack_base - 8;    // argc_base
-    *(int64_t *) kernel_sp = (int64_t) argc;
-    kernel_sp = kernel_sp - 8 * argc;       // kernel_sp_argv_base
-    ptr_t argv_base = kernel_sp;
-    memcpy(kernel_sp, argv, 8 * argc);
+    ptr_t user_sp = pcb[pcb_id].user_stack_base - 8;    // argc_base
+    *(int64_t *) user_sp = (int64_t) argc;
+    user_sp = user_sp - 8 * argc;       // kernel_sp_argv_base
+    ptr_t argv_base = user_sp;
+    memcpy(user_sp, argv, 8 * argc);
     for (int i = 0; i < argc; i++) {
         int str_len = strlen(argv[i]) + 1;  // include '\0'
-        kernel_sp -= str_len;
-        strcpy(kernel_sp, argv[i]);
+        user_sp -= str_len;
+        strcpy(user_sp, argv[i]);
     }
-    kernel_sp = ROUNDDOWN(kernel_sp, 16);  // alignment to 128 bit = 16 byte
-    pcb[pcb_id].kernel_sp = kernel_sp;
+    user_sp = ROUNDDOWN(user_sp, 16);  // alignment to 128 bit = 16 byte
+    pcb[pcb_id].user_sp = user_sp;
     // init reg context
+    ptr_t kernel_sp = pcb[pcb_id].kernel_stack_base;
     pcb[pcb_id].kernel_sp = pcb[pcb_id].kernel_sp - sizeof(regs_context_t) - sizeof(switchto_context_t);
-
     regs_context_t *pt_regs =
         (regs_context_t *) (kernel_sp - sizeof(regs_context_t));
     for (int i = 0; i < 32; i++) {
