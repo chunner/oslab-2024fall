@@ -244,3 +244,6 @@ int do_waitpid(pid_t pid) {
     }
     return i;
 }
+pid_t do_getpid() {
+    return current_running->pid;
+}

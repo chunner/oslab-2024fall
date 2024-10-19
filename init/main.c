@@ -193,6 +193,10 @@ static void init_syscall(void)
     syscall[SYSCALL_PS] = (long (*)())do_process_show;
     syscall[SYSCALL_CLEAR] = (long (*)())screen_clear;
     syscall[SYSCALL_EXEC] = (long (*)())do_exec;
+    syscall[SYSCALL_EXIT] = (long (*)())do_exit;
+    syscall[SYSCALL_KILL] = (long (*)())do_kill;
+    syscall[SYSCALL_WAITPID] = (long (*)())do_waitpid;
+    syscall[SYSCALL_GETPID] = (long (*)())do_getpid;
 }
 /************************************************************/
 

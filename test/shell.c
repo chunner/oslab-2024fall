@@ -79,6 +79,11 @@ int main(void)
             argv[argc++] = taskname;    // the first arg is task name
             char argv_base[MAX_ARGV_LEN];
             int argv_base_i = 0;
+            int waitpid_en = 0;
+            if (buffer[i + 1] == '&') {
+                waitpid_en = 1;
+                i = i + 2;
+            }
             while (buffer[i] != '\0') {
                 i++;
                 argv[argc++] = &argv_base[argv_base_i];
@@ -87,6 +92,7 @@ int main(void)
                 }
             }
             int pid = sys_exec(taskname, argc, argv);
+            sys_waitpid(pid);
             if (pid < 0) {
                 printf("Info: fail to excute %s\n", taskname);
             } else
