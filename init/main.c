@@ -167,6 +167,8 @@ static void init_pcb(void)
     pcb[0].status = TASK_EXITED;
     pcb[0].entry_point = tasks[taskname_to_taskid("shell")].entry;
     pcb[0].remain_length = 0;
+    pcb[0].block_queue.next = &pcb[0].block_queue;
+    pcb[0].block_queue.prev = &pcb[0].block_queue;
     strcpy(pcb[0].taskname, "shell");
     init_pcb_stack(pcb[0].kernel_sp, pcb[0].user_sp, pcb[0].entry_point, &pcb[0]);
 

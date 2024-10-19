@@ -129,6 +129,8 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     pcb[pcb_id].status = TASK_EXITED;
     pcb[pcb_id].entry_point = tasks[taskid].entry;
     pcb[pcb_id].remain_length = 0;
+    pcb[pcb_id].block_queue.next = &pcb[pcb_id].block_queue;
+    pcb[pcb_id].block_queue.prev = &pcb[pcb_id].block_queue;
     strcpy(pcb[pcb_id].taskname, name);
 
     /* init pcb stack */
@@ -181,9 +183,10 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     }
     /* add to readyqueue */
     add_readyqueue(&pcb[pcb_id]);
-    pcb[pcb_id].pid = ++process_id;
+    int pid = ++process_id;
+    pcb[pcb_id].pid = pid;
     do_scheduler();
-    return pcb[pcb_id].pid;
+    return pid;
 
 }
 void add_readyqueue(pcb_t *pcb)        // add the tail of ready_queue

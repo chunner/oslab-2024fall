@@ -92,7 +92,9 @@ int main(void)
                 }
             }
             int pid = sys_exec(taskname, argc, argv);
-            sys_waitpid(pid);
+            if (waitpid_en) {
+                sys_waitpid(pid);
+            }
             if (pid < 0) {
                 printf("Info: fail to excute %s\n", taskname);
             } else
