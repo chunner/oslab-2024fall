@@ -226,6 +226,9 @@ int do_kill(pid_t pid) {
 void do_exit(void) {
     current_running->status = TASK_EXITED;
     do_scheduler();
+    while (current_running->block_queue.next != &current_running->block_queue) {
+        do_unblock(current_running->block_queue.next);
+    }
 }
 int do_waitpid(pid_t pid) {
     int i = 0;
@@ -235,5 +238,9 @@ int do_waitpid(pid_t pid) {
         }
     }
     if (i > process_id)  return 0;  // fail to find
-
+    if (pcb[i].status != TASK_EXITED) {
+        do_block(&current_running->list, &pcb[i].block_queue);
+        do_scheduler();
+    }
+    return i;
 }

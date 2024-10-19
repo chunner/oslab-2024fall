@@ -98,6 +98,8 @@ typedef struct pcb
     /* name of task */
     char taskname[MAX_NAME_LEN];
 
+    /* sys_wait (pid) */
+    list_head block_queue;
 } pcb_t;
 
 /* ready queue to run */
