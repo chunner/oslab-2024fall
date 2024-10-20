@@ -94,7 +94,7 @@ void set_sche_workload(int remain_length) {         // updata remain_length in p
 }
 void do_process_show() {
     printk("[Process Table]\n");
-    for (int i = 0;i < process_id;i++) {
+    for (int i = 0;i <= pcb_id;i++) {
         printk("[%d] PID : %d   STATUS : ", i, pcb[i].pid);
         switch (pcb[i].status)
         {
