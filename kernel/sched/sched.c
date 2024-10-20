@@ -229,10 +229,10 @@ int do_kill(pid_t pid) {
 }
 void do_exit(void) {
     current_running->status = TASK_EXITED;
-    do_scheduler();
     while (current_running->block_queue.next != &current_running->block_queue) {
         do_unblock(current_running->block_queue.next);
     }
+    do_scheduler();
 }
 int do_waitpid(pid_t pid) {
     int i = 0;

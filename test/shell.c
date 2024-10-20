@@ -99,6 +99,9 @@ int main(void)
                 printf("Info: fail to excute %s\n", taskname);
             } else
                 printf("Info: execute %s successfully, pid = %d ...\n", taskname, pid);
+        } else if (strncmp(buffer, "waitpid", 7) == 0) {
+            int pid = buffer[8] - '0';
+            sys_waitpid(pid);
         } else {
             printf("Error: Unkown Command %s!\n", buffer);
         }
