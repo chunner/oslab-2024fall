@@ -67,7 +67,6 @@ void do_mutex_lock_acquire(int mlock_idx)
         } else {
             do_block(&current_running->list, &mlocks[mlock_idx].block_queue);
             do_scheduler();
-            // ret_from_exception();
         }
     }
 }
@@ -80,7 +79,6 @@ void do_mutex_lock_release(int mlock_idx)
     while (mlocks[mlock_idx].block_queue.next != &mlocks[mlock_idx].block_queue) {
         do_unblock(mlocks[mlock_idx].block_queue.next);
     }
-    //do_scheduler();
 }
 void check_lock(pid_t pid) {
     for (int i = 0;i < last_lockid;i++) {
@@ -88,4 +86,49 @@ void check_lock(pid_t pid) {
             do_mutex_lock_release(i);
         }
     }
+}
+/*--------------------------------barrier----------------------------------------------------------------*/
+barrier_t barrier[BARRIER_NUM];
+void init_barriers(void) {
+    for (int i = 0;i < BARRIER_NUM;i++) {
+        barrier[i].status = INACTIVE;
+        barrier[i].block_queue.next = &barrier[i].block_queue;
+        barrier[i].block_queue.prev = &barrier[i].block_queue;
+    }
+}
+int do_barrier_init(int key, int goal) {
+    int bar_idx = 0;
+    for (;bar_idx < BARRIER_NUM;bar_idx++) {
+        if (barrier[bar_idx].status == INACTIVE) {
+            break;
+        }
+    }
+    if (bar_idx >= BARRIER_NUM)  return -1; // barrier are run out
+    barrier[bar_idx].status = ACTIVE;
+    barrier[bar_idx].goal = goal;
+    barrier[bar_idx].key = key;
+    barrier[bar_idx].counter = 0;
+    barrier[bar_idx].block_queue.next = &barrier[bar_idx].block_queue;
+    barrier[bar_idx].block_queue.prev = &barrier[bar_idx].block_queue;
+    return bar_idx;
+}
+void do_barrier_wait(int bar_idx) {
+    barrier[bar_idx].counter++;
+    while (1) {
+        if (barrier[bar_idx].counter >= barrier[bar_idx].goal) {
+            while (barrier[bar_idx].block_queue.next != &barrier[bar_idx].block_queue) {    // wake up block queue
+                do_unblock(barrier[bar_idx].block_queue.next);
+            }
+            return;
+        } else {
+            do_block(&current_running->list, &barrier[bar_idx].block_queue);
+            do_scheduler();
+        }
+    }
+}
+void do_barrier_destroy(int bar_idx) {
+    while (barrier[bar_idx].block_queue.next != &barrier[bar_idx].block_queue) {    // wake up block queue
+        do_unblock(barrier[bar_idx].block_queue.next);
+    }
+    barrier[bar_idx].status = INACTIVE;
 }

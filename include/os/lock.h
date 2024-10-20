@@ -64,8 +64,17 @@ void do_mutex_lock_release(int mlock_idx);
 void check_lock(pid_t pid);         // check the process exited have lock
 
 /************************************************************/
+typedef enum {
+    ACTIVE,
+    INACTIVE,
+} barrier_status_t;
 typedef struct barrier
 {
+    int key;
+    int goal;
+    int counter;
+    list_head block_queue;
+    barrier_status_t status;
     // TODO [P3-TASK2 barrier]
 } barrier_t;
 

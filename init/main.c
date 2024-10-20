@@ -199,6 +199,9 @@ static void init_syscall(void)
     syscall[SYSCALL_KILL] = (long (*)())do_kill;
     syscall[SYSCALL_WAITPID] = (long (*)())do_waitpid;
     syscall[SYSCALL_GETPID] = (long (*)())do_getpid;
+    syscall[SYSCALL_BARR_INIT] = (long (*)())do_barrier_init;
+    syscall[SYSCALL_BARR_WAIT] = (long (*)())do_barrier_wait;
+    syscall[SYSCALL_BARR_DESTROY] = (long (*)())do_barrier_destroy;
 }
 /************************************************************/
 
@@ -221,6 +224,9 @@ int main(void)
     init_locks();
     printk("> [INIT] Lock mechanism initialization succeeded.\n");
 
+    // Init barriers
+    init_barriers();
+    
     // Init interrupt (^_^)
     init_exception();
     printk("> [INIT] Interrupt processing initialization succeeded.\n");
