@@ -102,6 +102,15 @@ int main(void)
         } else if (strncmp(buffer, "waitpid", 7) == 0) {
             int pid = buffer[8] - '0';
             sys_waitpid(pid);
+            printf("Info: wait pid = %d ...\n", pid);
+        } else if (strncmp(buffer, "kill", 4) == 0) {
+            int pid = buffer[5] - '0';
+            int retval = sys_kill(pid);
+            if (retval == 1) {
+                printf("Info: kill pid = %d successfully ...\n", pid);
+            } else {
+                printf("Info: fail to find pid = %d\n", pid);
+            }
         } else {
             printf("Error: Unkown Command %s!\n", buffer);
         }
