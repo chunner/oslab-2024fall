@@ -123,7 +123,9 @@ void do_process_show() {
 }
 
 pid_t do_exec(char *name, int argc, char *argv[]) {
-    // add_readyqueue(taskname2pcb(name));'
+
+    check_exited();
+
     int taskid = taskname_to_taskid(name);
     if (taskid < 0)  return -1;
     if (pcb_id >= NUM_MAX_TASK) return -1;
@@ -227,19 +229,10 @@ int do_kill(pid_t pid) {
         }
     }
     if (i > process_id)  return 0;  // fail to find
+    // release lock
+    check_lock(pid);
     // delete pcb
-    if (pcb[i].list.next && pcb[i].list.prev) {         // if the pcb is in list
-        list_node_t *prev_node = pcb[i].list.prev;
-        list_node_t *next_node = pcb[i].list.next;
-        pcb[i].list.next = NULL;
-        pcb[i].list.prev = NULL;
-        prev_node->next = next_node;
-        next_node->prev = prev_node;
-    }
-    for (int j = i;j < pcb_id;j++) {        // delete pcb in pcb[16]
-        pcb[j] = pcb[j + 1];
-    }
-    pcb_id--;
+    delete_pcb(i);
     return 1;
 }
 void do_exit(void) {
@@ -247,6 +240,7 @@ void do_exit(void) {
     while (current_running->block_queue.next != &current_running->block_queue) {
         do_unblock(current_running->block_queue.next);
     }
+    check_lock(do_getpid());
     do_scheduler();
 }
 int do_waitpid(pid_t pid) {
@@ -265,4 +259,25 @@ int do_waitpid(pid_t pid) {
 }
 pid_t do_getpid() {
     return current_running->pid;
+}
+void check_exited() {
+    for (int i = 0; i <= pcb_id; i++) {
+        if (pcb[i].status == TASK_EXITED) {
+            delete_pcb(i);
+        }
+    }
+}
+void delete_pcb(int i) {
+    if (pcb[i].list.next && pcb[i].list.prev) {         // if the pcb is in list
+        list_node_t *prev_node = pcb[i].list.prev;
+        list_node_t *next_node = pcb[i].list.next;
+        pcb[i].list.next = NULL;
+        pcb[i].list.prev = NULL;
+        prev_node->next = next_node;
+        next_node->prev = prev_node;
+    }
+    for (int j = i;j < pcb_id;j++) {        // delete pcb in pcb[16]
+        pcb[j] = pcb[j + 1];
+    }
+    pcb_id--;
 }

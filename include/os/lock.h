@@ -45,6 +45,7 @@ typedef struct spin_lock
 typedef struct mutex_lock
 {
     spin_lock_t lock;
+    pid_t pid;          // the process which have the mutex
     list_head block_queue;
     int key;
 } mutex_lock_t;
@@ -59,6 +60,8 @@ void spin_lock_release(spin_lock_t *lock);
 int do_mutex_lock_init(int key);
 void do_mutex_lock_acquire(int mlock_idx);
 void do_mutex_lock_release(int mlock_idx);
+
+void check_lock(pid_t pid);         // check the process exited have lock
 
 /************************************************************/
 typedef struct barrier
@@ -111,8 +114,8 @@ typedef struct mailbox
 void init_mbox();
 int do_mbox_open(char *name);
 void do_mbox_close(int mbox_idx);
-int do_mbox_send(int mbox_idx, void * msg, int msg_length);
-int do_mbox_recv(int mbox_idx, void * msg, int msg_length);
+int do_mbox_send(int mbox_idx, void *msg, int msg_length);
+int do_mbox_recv(int mbox_idx, void *msg, int msg_length);
 
 /************************************************************/
 

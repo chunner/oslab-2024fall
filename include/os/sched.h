@@ -128,6 +128,8 @@ void set_sche_workload(int remain_length);
 
 extern void ret_from_exception();
 extern int taskname_to_taskid(char taskname[]);
+void check_exited();
+void delete_pcb(int i);
 /************************************************************/
 /* TODO [P3-TASK1] exec exit kill waitpid ps*/
 #ifdef S_CORE
