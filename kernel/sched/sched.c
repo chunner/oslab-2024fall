@@ -68,10 +68,13 @@ void do_sleep(uint32_t sleep_time)
 void do_block(list_node_t *pcb_node, list_head *queue)
 {
     // TODO: [p2-task2] block the pcb task into the block queue
-    queue->prev->next = pcb_node;
-    pcb_node->prev = queue->prev;
-    pcb_node->next = queue;
-    queue->prev = pcb_node;
+    list_node_t *head = queue;
+    list_node_t *tail = queue->prev;
+    tail->next = pcb_node;
+    pcb_node->prev = tail;
+    head->prev = pcb_node;
+    pcb_node->next = head;
+
     pcb_t *pcb = LIST_PCB(pcb_node);
     pcb->status = TASK_BLOCKED;
 }
@@ -79,8 +82,13 @@ void do_block(list_node_t *pcb_node, list_head *queue)
 void do_unblock(list_node_t *pcb_node)
 {
     // TODO: [p2-task2] unblock the `pcb` from the block queue
-    pcb_node->prev->next = pcb_node->next;          // delete the pcb from block queue
-    pcb_node->next->prev = pcb_node->prev;
+    list_node_t *next_node = pcb_node->next;        // delete the pcb from block queue
+    list_node_t *prev_node = pcb_node->prev;
+    pcb_node->next = NULL;
+    pcb_node->prev = NULL;
+    next_node->prev = prev_node;
+    prev_node->next = next_node;
+
     pcb_t *pcb = LIST_PCB(pcb_node);
     add_readyqueue(pcb);
 }
@@ -194,20 +202,22 @@ void add_readyqueue(pcb_t *pcb)        // add the tail of ready_queue
 {
     if (!pcb)   return;  // pcb = NULL
     pcb->status = TASK_READY;
-    list_node_t *p = &ready_queue;
-    while (p->next != &ready_queue) {
-        p = p->next;
-    }
-    pcb->list.next = p->next;   // &ready_queue
-    p->next = &pcb->list;
+    list_node_t *head = &ready_queue;
+    list_node_t *tail = ready_queue.prev;
+    tail->next = &pcb->list;
+    pcb->list.prev = tail;
+    head->prev = &pcb->list;
+    pcb->list.next = head;
 }
 void remove_readyqueue(pcb_t *pcb) {
     if (!pcb)   return;  // pcb = NULL
-    list_node_t *p = &ready_queue;
-    while (p->next != &pcb->list) {
-        p = p->next;
-    }
-    p->next = pcb->list.next;
+    list_node_t *pcb_list = &pcb->list;
+    list_node_t *next_node = pcb_list->next;
+    list_node_t *prev_node = pcb_list->prev;
+    pcb_list->next = NULL;
+    pcb_list->prev = NULL;
+    next_node->prev = prev_node;
+    prev_node->next = next_node;
 }
 int do_kill(pid_t pid) {
     int i = 0;
@@ -218,10 +228,15 @@ int do_kill(pid_t pid) {
     }
     if (i > process_id)  return 0;  // fail to find
     // delete pcb
-    if (pcb[i].status == TASK_READY) {
-        remove_readyqueue(&pcb[i]);
+    if (pcb[i].list.next && pcb[i].list.prev) {         // if the pcb is in list
+        list_node_t *prev_node = pcb[i].list.prev;
+        list_node_t *next_node = pcb[i].list.next;
+        pcb[i].list.next = NULL;
+        pcb[i].list.prev = NULL;
+        prev_node->next = next_node;
+        next_node->prev = prev_node;
     }
-    for (int j = i;j < pcb_id;j++) {
+    for (int j = i;j < pcb_id;j++) {        // delete pcb in pcb[16]
         pcb[j] = pcb[j + 1];
     }
     pcb_id--;
