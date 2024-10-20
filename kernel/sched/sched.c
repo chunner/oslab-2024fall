@@ -39,13 +39,9 @@ void do_scheduler(void)
     pcb_t *prepcb = current_running;
 
     current_running = LIST_PCB(ready_queue.next);
-    ready_queue.next = ready_queue.next->next;       // delete current_running from ready_queue
+    remove_readyqueue(current_running);         // delete current_running from ready_queue
     // TODO: [p2-task1] switch_to current_running
     if (current_running != LIST_PCB(&ready_queue)) {
-        // if (current_running->pid == 0) {        // the first time to exec
-        //     active_pcb[process_id] = current_running;
-        //     current_running->pid = process_id++;
-        // }
         current_running->status = TASK_RUNNING;
         switch_to(prepcb, current_running);
     } else
@@ -137,7 +133,7 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     pcb[pcb_id].user_sp = allocUserPage(UserStackPage) + UserStackPage * PAGE_SIZE;
     pcb[pcb_id].user_stack_base = pcb[pcb_id].user_sp;
     pcb[pcb_id].pid = 0;
-    pcb[pcb_id].status = TASK_EXITED;
+    pcb[pcb_id].status = TASK_BLOCKED;
     pcb[pcb_id].entry_point = tasks[taskid].entry;
     pcb[pcb_id].remain_length = 0;
     pcb[pcb_id].block_queue.next = &pcb[pcb_id].block_queue;
@@ -229,6 +225,10 @@ int do_kill(pid_t pid) {
         }
     }
     if (i > process_id)  return 0;  // fail to find
+    // wake up block queue
+    while (pcb[i].block_queue.next != &pcb[i].block_queue) {
+        do_unblock(pcb[i].block_queue.next);
+    }
     // release lock
     check_lock(pid);
     // delete pcb
@@ -264,6 +264,7 @@ void check_exited() {
     for (int i = 0; i <= pcb_id; i++) {
         if (pcb[i].status == TASK_EXITED) {
             delete_pcb(i);
+            i--;
         }
     }
 }
@@ -276,7 +277,7 @@ void delete_pcb(int i) {
         prev_node->next = next_node;
         next_node->prev = prev_node;
     }
-    for (int j = i;j < pcb_id;j++) {        // delete pcb in pcb[16]
+    for (int j = i;j <= pcb_id;j++) {        // delete pcb in pcb[16]
         pcb[j] = pcb[j + 1];
     }
     pcb_id--;

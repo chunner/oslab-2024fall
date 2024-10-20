@@ -164,7 +164,7 @@ static void init_pcb(void)
     pcb[0].kernel_sp = allocKernelPage(KernelStackPage) + KernelStackPage * PAGE_SIZE;
     pcb[0].user_sp = allocUserPage(UserStackPage) + UserStackPage * PAGE_SIZE;
     pcb[0].pid = 1;
-    pcb[0].status = TASK_EXITED;
+    pcb[0].status = TASK_BLOCKED;
     pcb[0].entry_point = tasks[taskname_to_taskid("shell")].entry;
     pcb[0].remain_length = 0;
     pcb[0].block_queue.next = &pcb[0].block_queue;
