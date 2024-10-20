@@ -92,13 +92,13 @@ int main(void)
                 }
             }
             int pid = sys_exec(taskname, argc, argv);
-            if (waitpid_en) {
-                sys_waitpid(pid);
-            }
             if (pid < 0) {
                 printf("Info: fail to excute %s\n", taskname);
             } else
                 printf("Info: execute %s successfully, pid = %d ...\n", taskname, pid);
+            if (waitpid_en) {
+                sys_waitpid(pid);
+            }
         } else if (strncmp(buffer, "waitpid", 7) == 0) {
             int pid = buffer[8] - '0';
             sys_waitpid(pid);
