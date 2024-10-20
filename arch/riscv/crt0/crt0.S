@@ -25,7 +25,8 @@ jump2main:
     addi sp, sp , 8
 
     /* TODO: [p1-task3] finish task and return to the kernel, replace this in p3-task2! */
-    ret
+    li a7, 1         # SYSCALL_KILL
+    ecall      # call sys_exit
     
     /************************************************************/
     /* TODO: [P3] call sys_exit */
