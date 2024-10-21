@@ -27,27 +27,30 @@ int pcb_id = 0;
 void do_scheduler(void)
 {
     // TODO: [p2-task3] Check sleep queue to wake up PCBs
-    while (1) {
-        check_sleeping();
-        /************************************************************/
-        /* Do not touch this comment. Reserved for future projects. */
-        /************************************************************/
+    check_sleeping();
+    /************************************************************/
+    /* Do not touch this comment. Reserved for future projects. */
+    /************************************************************/
+    // TODO: [p2-task1] Modify the current_running pointer.
+    if (current_running->status == TASK_RUNNING)      // put the current_runnning to the tail of ready_queue
+        add_readyqueue(current_running);
 
-        // TODO: [p2-task1] Modify the current_running pointer.
-        if (current_running->status == TASK_RUNNING)      // put the current_runnning to the tail of ready_queue
-            add_readyqueue(current_running);
-
-        pcb_t *prepcb = current_running;
-        if (ready_queue.next != &ready_queue) {     // ready queue is not blank
-            current_running = LIST_PCB(ready_queue.next);
-            remove_readyqueue(current_running);         // delete current_running from ready_queue
-            // TODO: [p2-task1] switch_to current_running
-            current_running->status = TASK_RUNNING;
-            switch_to(prepcb, current_running);
-            return;
-        }            //  system_yeild(real context): return -> handle_syscall -> interrupt_helper -> ret_from_exception
-    }                       // or main(fake context): return -> ret_from_exception
-}                        // or do_mutex_lock_acquire(): return -> do_mutex_lock_acquire ->ret_from_exception
+    pcb_t *prepcb = current_running;
+    if (ready_queue.next != &ready_queue) {     // ready queue is not blank
+        current_running = LIST_PCB(ready_queue.next);
+        remove_readyqueue(current_running);         // delete current_running from ready_queue
+        // TODO: [p2-task1] switch_to current_running
+        current_running->status = TASK_RUNNING;
+        switch_to(prepcb, current_running);
+        return;         //  system_yeild(real context): return -> handle_syscall -> interrupt_helper -> ret_from_exception
+        // or main(fake context): return -> ret_from_exception
+        // or do_mutex_lock_acquire(): return -> do_mutex_lock_acquire ->ret_from_exception
+    } else {        // ready_queue is blank
+        current_running = &pid0_pcb;
+        switch_to(prepcb, current_running);
+        return;
+    }
+}
 void do_sleep(uint32_t sleep_time)
 {
     // TODO: [p2-task3] sleep(seconds)
@@ -225,7 +228,7 @@ int do_kill(pid_t pid) {
             break;
         }
     }
-    if (i > process_id)  return 0;  // fail to find
+    if (i > pcb_id)  return 0;  // fail to find
     // wake up block queue
     while (pcb[i].block_queue.next != &pcb[i].block_queue) {
         do_unblock(pcb[i].block_queue.next);

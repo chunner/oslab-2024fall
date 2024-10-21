@@ -114,16 +114,15 @@ int do_barrier_init(int key, int goal) {
 }
 void do_barrier_wait(int bar_idx) {
     barrier[bar_idx].counter++;
-    while (1) {
-        if (barrier[bar_idx].counter >= barrier[bar_idx].goal) {
-            while (barrier[bar_idx].block_queue.next != &barrier[bar_idx].block_queue) {    // wake up block queue
-                do_unblock(barrier[bar_idx].block_queue.next);
-            }
-            return;
-        } else {
-            do_block(&current_running->list, &barrier[bar_idx].block_queue);
-            do_scheduler();
+    if (barrier[bar_idx].counter >= barrier[bar_idx].goal) {
+        while (barrier[bar_idx].block_queue.next != &barrier[bar_idx].block_queue) {    // wake up block queue
+            do_unblock(barrier[bar_idx].block_queue.next);
         }
+        barrier[bar_idx].counter = 0;
+        return;
+    } else {
+        do_block(&current_running->list, &barrier[bar_idx].block_queue);
+        do_scheduler();
     }
 }
 void do_barrier_destroy(int bar_idx) {
