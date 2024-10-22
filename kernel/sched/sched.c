@@ -148,7 +148,7 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     *(int64_t *) user_sp = (int64_t) argc;
     user_sp = user_sp - 8 * argc;       // kernel_sp_argv_base
     ptr_t argv_base = user_sp;
-    char **my_argv = argv_base;
+    char **my_argv = (char **) argv_base;
     // memcpy((uint8_t *) user_sp, (const uint8_t *) argv, 8 * argc);
     for (int i = 0; i < argc; i++) {
         int str_len = strlen(argv[i]) + 1;  // include '\0'

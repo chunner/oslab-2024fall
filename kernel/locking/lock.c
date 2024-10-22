@@ -90,7 +90,7 @@ void check_lock(pid_t pid) {
 barrier_t barrier[BARRIER_NUM];
 void init_barriers(void) {
     for (int i = 0;i < BARRIER_NUM;i++) {
-        barrier[i].status = INACTIVE;
+        barrier[i].status = BAR_INACTIVE;
         barrier[i].block_queue.next = &barrier[i].block_queue;
         barrier[i].block_queue.prev = &barrier[i].block_queue;
     }
@@ -98,12 +98,12 @@ void init_barriers(void) {
 int do_barrier_init(int key, int goal) {
     int bar_idx = 0;
     for (;bar_idx < BARRIER_NUM;bar_idx++) {
-        if (barrier[bar_idx].status == INACTIVE) {
+        if (barrier[bar_idx].status == BAR_INACTIVE) {
             break;
         }
     }
     if (bar_idx >= BARRIER_NUM)  return -1; // barrier are run out
-    barrier[bar_idx].status = ACTIVE;
+    barrier[bar_idx].status = BAR_ACTIVE;
     barrier[bar_idx].goal = goal;
     barrier[bar_idx].key = key;
     barrier[bar_idx].counter = 0;
@@ -128,7 +128,7 @@ void do_barrier_destroy(int bar_idx) {
     while (barrier[bar_idx].block_queue.next != &barrier[bar_idx].block_queue) {    // wake up block queue
         do_unblock(barrier[bar_idx].block_queue.next);
     }
-    barrier[bar_idx].status = INACTIVE;
+    barrier[bar_idx].status = BAR_INACTIVE;
 }
 
 /* ---------------------------condition-----------------------------------------*/
@@ -137,19 +137,19 @@ void init_conditions(void) {
     for (int i = 0;i < CONDITION_NUM;i++) {
         condition[i].block_queue.next = &condition[i].block_queue;
         condition[i].block_queue.prev = &condition[i].block_queue;
-        condition[i].status = INACTIVE;
+        condition[i].status = COND_INACTIVE;
     }
 }
 int do_condition_init(int key) {
     int cond_idx = 0;
     for (;cond_idx < CONDITION_NUM;cond_idx++) {
-        if (condition[cond_idx].status == INACTIVE) {
+        if (condition[cond_idx].status == COND_INACTIVE) {
             break;
         }
     }
     if (cond_idx >= CONDITION_NUM)    return -1; // condition has run out
     condition[cond_idx].key = key;
-    condition[cond_idx].status = ACTIVE;
+    condition[cond_idx].status = COND_ACTIVE;
     condition[cond_idx].block_queue.next = &condition[cond_idx].block_queue;
     condition[cond_idx].block_queue.prev = &condition[cond_idx].block_queue;
     return cond_idx;
@@ -172,5 +172,5 @@ void do_condition_broadcast(int cond_idx) {
 }
 void do_condition_destroy(int cond_idx) {
     do_condition_broadcast(cond_idx);
-    condition[cond_idx].status = INACTIVE;
+    condition[cond_idx].status = COND_INACTIVE;
 }
