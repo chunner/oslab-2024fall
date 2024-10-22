@@ -151,15 +151,16 @@ static void init_pcb_stack(
 static void init_pcb(void)
 {
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
-    // for (int i = 0;i < tasknum; i++) {
-    //     pcb[i].kernel_sp = allocKernelPage(KernelStackPage) + KernelStackPage * PAGE_SIZE;
+    for (int i = 0;i < tasknum; i++) {
+        pcb[i].pcb_status = PCB_INACTIVE;
+        //     pcb[i].kernel_sp = allocKernelPage(KernelStackPage) + KernelStackPage * PAGE_SIZE;
     //     pcb[i].user_sp = allocUserPage(UserStackPage) + UserStackPage * PAGE_SIZE;
     //     pcb[i].pid = 0;  // user pid start from 2
     //     pcb[i].status = TASK_EXITED;
     //     pcb[i].entry_point = tasks[i].entry;
     //     pcb[i].remain_length = 0;
     //     init_pcb_stack(pcb[i].kernel_sp, pcb[i].user_sp, pcb[i].entry_point, &pcb[i]);
-    // }
+    }
     // pcb[0] is shell
     pcb[0].kernel_sp = allocKernelPage(KernelStackPage) + KernelStackPage * PAGE_SIZE;
     pcb[0].user_sp = allocUserPage(UserStackPage) + UserStackPage * PAGE_SIZE;
@@ -169,6 +170,7 @@ static void init_pcb(void)
     pcb[0].remain_length = 0;
     pcb[0].block_queue.next = &pcb[0].block_queue;
     pcb[0].block_queue.prev = &pcb[0].block_queue;
+    pcb[0].pcb_status = PCB_ACTIVE;
     strcpy(pcb[0].taskname, "shell");
     init_pcb_stack(pcb[0].kernel_sp, pcb[0].user_sp, pcb[0].entry_point, &pcb[0]);
 

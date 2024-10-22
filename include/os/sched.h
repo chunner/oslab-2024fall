@@ -64,6 +64,10 @@ typedef enum {
     TASK_EXITED,
 } task_status_t;
 
+typedef enum {
+    PCB_ACTIVE,
+    PCB_INACTIVE,
+}pcb_status_t;
 /* Process Control Block */
 typedef struct pcb
 {
@@ -100,6 +104,8 @@ typedef struct pcb
 
     /* sys_wait (pid) */
     list_head block_queue;
+
+    pcb_status_t pcb_status;
 } pcb_t;
 
 /* ready queue to run */
@@ -131,7 +137,6 @@ void set_sche_workload(int remain_length);
 extern void ret_from_exception();
 extern int taskname_to_taskid(char taskname[]);
 void check_exited();
-void delete_pcb(int i);
 /************************************************************/
 /* TODO [P3-TASK1] exec exit kill waitpid ps*/
 #ifdef S_CORE
