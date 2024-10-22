@@ -152,6 +152,7 @@ int do_condition_init(int key) {
     condition[cond_idx].status = ACTIVE;
     condition[cond_idx].block_queue.next = &condition[cond_idx].block_queue;
     condition[cond_idx].block_queue.prev = &condition[cond_idx].block_queue;
+    return cond_idx;
 }
 void do_condition_wait(int cond_idx, int mutex_idx) {
     do_block(&current_running->list, &condition[cond_idx].block_queue);
