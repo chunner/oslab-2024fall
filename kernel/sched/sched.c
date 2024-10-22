@@ -21,7 +21,7 @@ LIST_HEAD(sleep_queue);
 
 /* global process id */
 pid_t process_id = 1;
-/* global process id */
+/* global pcb id */
 int pcb_id = 0;
 
 void do_scheduler(void)

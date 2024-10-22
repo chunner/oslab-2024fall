@@ -226,7 +226,8 @@ int main(void)
 
     // Init barriers
     init_barriers();
-    
+    init_conditions();
+
     // Init interrupt (^_^)
     init_exception();
     printk("> [INIT] Interrupt processing initialization succeeded.\n");

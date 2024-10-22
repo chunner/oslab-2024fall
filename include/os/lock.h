@@ -85,9 +85,16 @@ int do_barrier_init(int key, int goal);
 void do_barrier_wait(int bar_idx);
 void do_barrier_destroy(int bar_idx);
 
+typedef enum {
+    ACTIVE,
+    INACTIVE,
+} barrier_status_t;
 typedef struct condition
 {
     // TODO [P3-TASK2 condition]
+    list_head block_queue;
+    int key;
+    barrier_status_t status;
 } condition_t;
 
 #define CONDITION_NUM 16

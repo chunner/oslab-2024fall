@@ -58,7 +58,6 @@ int do_mutex_lock_init(int key)
 void do_mutex_lock_acquire(int mlock_idx)
 {
     /* TODO: [p2-task2] acquire mutex lock */
-    //spin_lock_acquire(&mlocks[mlock_idx].lock);
     while (1) {
         if (mlocks[mlock_idx].lock.status == UNLOCKED) {
             mlocks[mlock_idx].lock.status = LOCKED;
@@ -130,4 +129,47 @@ void do_barrier_destroy(int bar_idx) {
         do_unblock(barrier[bar_idx].block_queue.next);
     }
     barrier[bar_idx].status = INACTIVE;
+}
+
+/* ---------------------------condition-----------------------------------------*/
+condition_t condition[CONDITION_NUM];
+void init_conditions(void) {
+    for (int i = 0;i < CONDITION_NUM;i++) {
+        condition[i].block_queue.next = &condition[i].block_queue;
+        condition[i].block_queue.prev = &condition[i].block_queue;
+        condition[i].status = INACTIVE;
+    }
+}
+int do_condition_init(int key) {
+    int cond_idx = 0;
+    for (;cond_idx < CONDITION_NUM;cond_idx++) {
+        if (condition[cond_idx].status == INACTIVE) {
+            break;
+        }
+    }
+    if (cond_idx >= CONDITION_NUM)    return -1; // condition has run out
+    condition[cond_idx].key = key;
+    condition[cond_idx].status = ACTIVE;
+    condition[cond_idx].block_queue.next = &condition[cond_idx].block_queue;
+    condition[cond_idx].block_queue.prev = &condition[cond_idx].block_queue;
+}
+void do_condition_wait(int cond_idx, int mutex_idx) {
+    do_block(&current_running->list, &condition[cond_idx].block_queue);
+    do_mutex_lock_release(mutex_idx);
+    do_scheduler();
+    do_mutex_lock_acquire(mutex_idx);
+}
+void do_condition_signal(int cond_idx) {
+    if (condition[cond_idx].block_queue.next != &condition[cond_idx].block_queue) {
+        do_unblock(condition[cond_idx].block_queue.next);
+    }
+}
+void do_condition_broadcast(int cond_idx) {
+    while (condition[cond_idx].block_queue.next != &condition[cond_idx].block_queue) {
+        do_unblock(condition[cond_idx].block_queue.next);
+    }
+}
+void do_condition_destroy(int cond_idx) {
+    do_condition_broadcast(cond_idx);
+    condition[cond_idx].status = INACTIVE;
 }
