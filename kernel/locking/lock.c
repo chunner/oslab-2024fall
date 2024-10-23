@@ -208,6 +208,7 @@ int do_mbox_open(char *name) {
             return -1;
         // init the mailbox
         strcpy(mailbox[mbox_idx].name, name);
+        mailbox[mbox_idx].status = MBOX_ACTIVE;
         mailbox[mbox_idx].buffer_idx = 0;
         mailbox[mbox_idx].cite_num = 0;
         mailbox[mbox_idx].empty_queue.next = &mailbox[mbox_idx].empty_queue;

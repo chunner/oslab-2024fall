@@ -132,7 +132,7 @@ typedef struct mailbox
 {
     mailbox_status_t status;
     mailbox_open_t open;
-    char name[16];
+    char name[32];
     char buffer[MAX_MBOX_LENGTH];
     int  buffer_idx;        // the first invalid buffer
     int  cite_num;

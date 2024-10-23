@@ -36,7 +36,7 @@
 #define MAX_NAME_LEN 44
 #define MAX_ARGC 10
 #define MAX_ARGV_LEN 32
-#define MAX_NUM_BYTE 4
+#define MAX_NUM_BYTE 8
 
 int main(void)
 {
