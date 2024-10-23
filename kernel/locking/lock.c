@@ -229,6 +229,7 @@ void do_mbox_close(int mbox_idx) {
 }
 int do_mbox_send(int mbox_idx, void *msg, int msg_length) {
     while (1) {
+        int blockedCount = 0;
         if (mailbox[mbox_idx].buffer_idx + msg_length <= MAX_MBOX_LENGTH) {
             int start = mailbox[mbox_idx].buffer_idx;
             strncpy(&mailbox[mbox_idx].buffer[start], (char *) msg, msg_length);
@@ -237,16 +238,18 @@ int do_mbox_send(int mbox_idx, void *msg, int msg_length) {
             while (mailbox[mbox_idx].empty_queue.next != &mailbox[mbox_idx].empty_queue) {
                 do_unblock(mailbox[mbox_idx].empty_queue.next);
             }
-            return 0;
+            return blockedCount;
         } else {    // mailbox is full
             do_block(&current_running->list, &mailbox[mbox_idx].full_queue);
+            blockedCount++;
             do_scheduler();
         }
     }
 }
 int do_mbox_recv(int mbox_idx, void *msg, int msg_length) {
     while (1) {
-        if (mailbox[mbox_idx].buffer_idx - msg_length < 0) {
+        int blockedCount = 0;
+        if (mailbox[mbox_idx].buffer_idx - msg_length >= 0) {
             int start = mailbox[mbox_idx].buffer_idx - msg_length;
             strncpy((char *) msg, &mailbox[mbox_idx].buffer[start], msg_length);
             mailbox[mbox_idx].buffer_idx = start;
@@ -254,9 +257,10 @@ int do_mbox_recv(int mbox_idx, void *msg, int msg_length) {
             while (mailbox[mbox_idx].full_queue.next != &mailbox[mbox_idx].full_queue) {
                 do_unblock(mailbox[mbox_idx].full_queue.next);
             }
-            return 0;
+            return blockedCount;
         } else {
             do_block(&current_running->list, &mailbox[mbox_idx].empty_queue);
+            blockedCount++;
             do_scheduler();
         }
     }

@@ -81,9 +81,9 @@ int main(void)
             argv[argc++] = taskname;    // the first arg is task name
             char argv_base[MAX_ARGV_LEN];
             int argv_base_i = 0;
-            int waitpid_en = 0;
+            int waitpid_en = 1;
             if (buffer[i + 1] == '&') {
-                waitpid_en = 1;
+                waitpid_en = 0;
                 i = i + 2;
             }
             while (buffer[i] != '\0') {
