@@ -35,6 +35,7 @@
 #define MAX_NAME_LEN 44
 #define MAX_ARGC 10
 #define MAX_ARGV_LEN 32
+#define MAX_NUM_BYTE 4
 
 int main(void)
 {
@@ -100,11 +101,25 @@ int main(void)
                 sys_waitpid(pid);
             }
         } else if (strncmp(buffer, "waitpid", 7) == 0) {
-            int pid = buffer[8] - '0';
+            char num_str[MAX_NUM_BYTE];
+            int num_str_idx = 0;
+            int i = 8;
+            while (buffer[i] > '0' && buffer[i] < '9' && num_str_idx < MAX_NUM_BYTE - 1) {
+                num_str[num_str_idx++] = buffer[i++];
+            }
+            num_str[num_str_idx++] = '\0';
+            int pid = atoi(num_str);
             sys_waitpid(pid);
             printf("Info: wait pid = %d ...\n", pid);
         } else if (strncmp(buffer, "kill", 4) == 0) {
-            int pid = buffer[5] - '0';
+            char num_str[MAX_NUM_BYTE];
+            int num_str_idx = 0;
+            int i = 5;
+            while (buffer[i] > '0' && buffer[i] < '9' && num_str_idx < MAX_NUM_BYTE - 1) {
+                num_str[num_str_idx++] = buffer[i++];
+            }
+            num_str[num_str_idx++] = '\0';
+            int pid = atoi(num_str);
             int retval = sys_kill(pid);
             if (retval == 1) {
                 printf("Info: kill pid = %d successfully ...\n", pid);
