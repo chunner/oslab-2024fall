@@ -250,9 +250,12 @@ int do_mbox_recv(int mbox_idx, void *msg, int msg_length) {
     int blockedCount = 0;
     while (1) {
         if (mailbox[mbox_idx].buffer_idx - msg_length >= 0) {
-            int start = mailbox[mbox_idx].buffer_idx - msg_length;
-            memcpy((uint8_t *) msg, (uint8_t *) &mailbox[mbox_idx].buffer[start], msg_length);
-            mailbox[mbox_idx].buffer_idx = start;
+            // int start = mailbox[mbox_idx].buffer_idx - msg_length;
+            memcpy((uint8_t *) msg, (uint8_t *) &mailbox[mbox_idx].buffer[0], msg_length);
+            // move the valid buffer to head
+            int remain_length = mailbox[mbox_idx].buffer_idx - msg_length;
+            memcpy((uint8_t *) &mailbox[mbox_idx].buffer[0], (uint8_t *) &mailbox[mbox_idx].buffer[msg_length], remain_length);
+            mailbox[mbox_idx].buffer_idx = remain_length;
             // wake up all sender
             while (mailbox[mbox_idx].full_queue.next != &mailbox[mbox_idx].full_queue) {
                 do_unblock(mailbox[mbox_idx].full_queue.next);

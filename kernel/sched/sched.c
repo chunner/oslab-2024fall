@@ -282,17 +282,3 @@ void check_exited() {
         }
     }
 }
-// void delete_pcb(int i) {
-//     if (pcb[i].list.next && pcb[i].list.prev) {         // if the pcb is in list
-//         list_node_t *prev_node = pcb[i].list.prev;
-//         list_node_t *next_node = pcb[i].list.next;
-//         pcb[i].list.next = NULL;
-//         pcb[i].list.prev = NULL;
-//         prev_node->next = next_node;
-//         next_node->prev = prev_node;
-//     }
-//     for (int j = i;j <= pcb_id;j++) {        // delete pcb in pcb[16]
-//         pcb[j] = pcb[j + 1];
-//     }
-//     pcb_id--;
-// }
