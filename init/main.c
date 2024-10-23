@@ -151,7 +151,7 @@ static void init_pcb_stack(
 static void init_pcb(void)
 {
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
-    for (int i = 0;i < tasknum; i++) {
+    for (int i = 0;i < NUM_MAX_TASK; i++) {
         pcb[i].pcb_status = PCB_INACTIVE;
         //     pcb[i].kernel_sp = allocKernelPage(KernelStackPage) + KernelStackPage * PAGE_SIZE;
     //     pcb[i].user_sp = allocUserPage(UserStackPage) + UserStackPage * PAGE_SIZE;

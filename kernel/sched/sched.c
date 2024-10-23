@@ -236,6 +236,9 @@ int do_kill(pid_t pid) {
         }
     }
     if (i >= NUM_MAX_TASK)  return 0;  // fail to find
+    if (&pcb[i] == current_running) {
+        do_exit();
+    }
     // wake up block queue
     while (pcb[i].block_queue.next != &pcb[i].block_queue) {
         do_unblock(pcb[i].block_queue.next);
