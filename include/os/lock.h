@@ -120,9 +120,24 @@ void do_semaphore_down(int sema_idx);
 void do_semaphore_destroy(int sema_idx);
 
 #define MAX_MBOX_LENGTH (64)
-
+typedef enum {
+    MBOX_ACTIVE,
+    MBOX_INACTIVE,
+}mailbox_status_t;
+typedef enum {
+    MBOX_OPEN,
+    MBOX_CLOSE,
+}mailbox_open_t;
 typedef struct mailbox
 {
+    mailbox_status_t status;
+    mailbox_open_t open;
+    char name[16];
+    char buffer[MAX_MBOX_LENGTH];
+    int  buffer_idx;        // the first invalid buffer
+    int  cite_num;
+    list_head full_queue;
+    list_head empty_queue;
     // TODO [P3-TASK2 mailbox]
 } mailbox_t;
 

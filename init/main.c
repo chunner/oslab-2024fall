@@ -231,9 +231,10 @@ int main(void)
     init_locks();
     printk("> [INIT] Lock mechanism initialization succeeded.\n");
 
-    // Init barriers
+    // Init barriers, condition, mailbox
     init_barriers();
     init_conditions();
+    init_mbox();
 
     // Init interrupt (^_^)
     init_exception();

@@ -174,3 +174,88 @@ void do_condition_destroy(int cond_idx) {
     do_condition_broadcast(cond_idx);
     condition[cond_idx].status = COND_INACTIVE;
 }
+/*----------------------------------------mail box-----------------------------------------*/
+mailbox_t mailbox[MBOX_NUM];
+void init_mbox() {
+    for (int i = 0;i < MBOX_NUM;i++) {
+        mailbox[i].status = MBOX_INACTIVE;
+        mailbox[i].open = MBOX_CLOSE;
+        int cite_num = 0;
+        // init block queue
+        mailbox[i].empty_queue.next = &mailbox[i].empty_queue;
+        mailbox[i].empty_queue.prev = &mailbox[i].empty_queue;
+        mailbox[i].full_queue.next = &mailbox[i].full_queue;
+        mailbox[i].full_queue.prev = &mailbox[i].full_queue;
+    }
+}
+int do_mbox_open(char *name) {
+    int mbox_idx = 0;
+    // try to search a mailbox with the same name
+    for (;mbox_idx < MBOX_NUM;mbox_idx++) {
+        if (mailbox[mbox_idx].status == MBOX_ACTIVE && strcmp(mailbox[mbox_idx].name, name) == 0) {
+            break;
+        }
+    }
+    if (mbox_idx >= MBOX_NUM) { // fail to search
+        mbox_idx = 0;
+        for (;mbox_idx < MBOX_NUM;mbox_idx++) {
+            if (mailbox[mbox_idx].status == MBOX_INACTIVE) {
+                break;
+            }
+        }
+        if (mbox_idx >= MBOX_NUM)   // mailbox has run out
+            return -1;
+        // init the mailbox
+        strcpy(mailbox[mbox_idx].name, name);
+        mailbox[mbox_idx].buffer_idx = 0;
+        mailbox[mbox_idx].cite_num = 0;
+        mailbox[mbox_idx].empty_queue.next = &mailbox[mbox_idx].empty_queue;
+        mailbox[mbox_idx].empty_queue.prev = &mailbox[mbox_idx].empty_queue;
+        mailbox[mbox_idx].full_queue.next = &mailbox[mbox_idx].full_queue;
+        mailbox[mbox_idx].full_queue.prev = &mailbox[mbox_idx].full_queue;
+    }
+    mailbox[mbox_idx].cite_num++;
+    mailbox[mbox_idx].open = MBOX_OPEN;
+    return mbox_idx;
+}
+void do_mbox_close(int mbox_idx) {
+    mailbox[mbox_idx].cite_num--;
+    mailbox[mbox_idx].open = MBOX_CLOSE;
+    if (mailbox[mbox_idx].cite_num <= 0) {
+        mailbox[mbox_idx].status = MBOX_INACTIVE;
+    }
+}
+int do_mbox_send(int mbox_idx, void *msg, int msg_length) {
+    while (1) {
+        if (mailbox[mbox_idx].buffer_idx + msg_length <= MAX_MBOX_LENGTH) {
+            int start = mailbox[mbox_idx].buffer_idx;
+            strncpy(&mailbox[mbox_idx].buffer[start], (char *) msg, msg_length);
+            mailbox[mbox_idx].buffer_idx += msg_length;
+            // wake up all reciver
+            while (mailbox[mbox_idx].empty_queue.next != &mailbox[mbox_idx].empty_queue) {
+                do_unblock(mailbox[mbox_idx].empty_queue.next);
+            }
+            return 0;
+        } else {    // mailbox is full
+            do_block(&current_running, &mailbox[mbox_idx].full_queue);
+            do_scheduler();
+        }
+    }
+}
+int do_mbox_recv(int mbox_idx, void *msg, int msg_length) {
+    while (1) {
+        if (mailbox[mbox_idx].buffer_idx - msg_length < 0) {
+            int start = mailbox[mbox_idx].buffer_idx - msg_length;
+            strncpy((char *) msg, &mailbox[mbox_idx].buffer[start]);
+            mailbox[mbox_idx].buffer_idx = start;
+            // wake up all sender
+            while (mailbox[mbox_idx].full_queue.next != &mailbox[mbox_idx].full_queue) {
+                do_unblock(mailbox[mbox_idx].full_queue.next);
+            }
+            return 0;
+        } else {
+            do_block(&current_running, &mailbox[mbox_idx].empty_queue);
+            do_scheduler();
+        }
+    }
+}
