@@ -2,6 +2,7 @@
 #include <os/sched.h>
 #include <os/list.h>
 #include <atomic.h>
+#include <os/string.h>
 
 mutex_lock_t mlocks[LOCK_NUM];
 int last_lockid = 0;
@@ -180,7 +181,7 @@ void init_mbox() {
     for (int i = 0;i < MBOX_NUM;i++) {
         mailbox[i].status = MBOX_INACTIVE;
         mailbox[i].open = MBOX_CLOSE;
-        int cite_num = 0;
+        mailbox[i].cite_num = 0;
         // init block queue
         mailbox[i].empty_queue.next = &mailbox[i].empty_queue;
         mailbox[i].empty_queue.prev = &mailbox[i].empty_queue;
@@ -237,7 +238,7 @@ int do_mbox_send(int mbox_idx, void *msg, int msg_length) {
             }
             return 0;
         } else {    // mailbox is full
-            do_block(&current_running, &mailbox[mbox_idx].full_queue);
+            do_block(&current_running->list, &mailbox[mbox_idx].full_queue);
             do_scheduler();
         }
     }
@@ -246,7 +247,7 @@ int do_mbox_recv(int mbox_idx, void *msg, int msg_length) {
     while (1) {
         if (mailbox[mbox_idx].buffer_idx - msg_length < 0) {
             int start = mailbox[mbox_idx].buffer_idx - msg_length;
-            strncpy((char *) msg, &mailbox[mbox_idx].buffer[start]);
+            strncpy((char *) msg, &mailbox[mbox_idx].buffer[start], msg_length);
             mailbox[mbox_idx].buffer_idx = start;
             // wake up all sender
             while (mailbox[mbox_idx].full_queue.next != &mailbox[mbox_idx].full_queue) {
@@ -254,7 +255,7 @@ int do_mbox_recv(int mbox_idx, void *msg, int msg_length) {
             }
             return 0;
         } else {
-            do_block(&current_running, &mailbox[mbox_idx].empty_queue);
+            do_block(&current_running->list, &mailbox[mbox_idx].empty_queue);
             do_scheduler();
         }
     }

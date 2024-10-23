@@ -277,7 +277,7 @@ pid_t do_getpid() {
 }
 void check_exited() {
     for (int i = 0; i < NUM_MAX_TASK; i++) {
-        if (pcb[i].status == TASK_EXITED & pcb[i].pcb_status == PCB_ACTIVE) {
+        if (pcb[i].status == TASK_EXITED && pcb[i].pcb_status == PCB_ACTIVE) {
             pcb[i].pcb_status = PCB_INACTIVE;
         }
     }

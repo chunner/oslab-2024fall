@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
 
 #define SHELL_BEGIN 20
 #define MAX_NAME_LEN 44
