@@ -88,3 +88,11 @@ void handle_other(regs_context_t *regs, uint64_t stval, uint64_t scause)
 void handle_s_soft(regs_context_t *regs, uint64_t stval, uint64_t scause) {
     return;         // jump to ret_from_complete
 }
+void get_current_running() {
+    if (check_master_hart() == 0) {
+        current_running = current_running_0;
+    } else {
+        current_running = current_running_1;
+    }
+    return;
+}

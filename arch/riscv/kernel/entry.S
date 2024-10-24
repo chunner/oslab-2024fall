@@ -208,6 +208,8 @@ ENTRY(exception_handler_entry)
   /* TODO: [p2-task3] save context via the provided macro */
   SAVE_CONTEXT
 
+  jal get_current_running
+
   /* TODO: [p2-task3] load ret_from_exception into $ra so that we can return to
    * ret_from_exception when interrupt_help complete.
    */

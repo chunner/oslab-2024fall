@@ -115,12 +115,17 @@ extern list_head ready_queue;
 extern list_head sleep_queue;
 
 /* current running task PCB */
-register pcb_t *current_running asm("tp");
+register pcb_t *current_running_0 asm("tp");
+register pcb_t *current_running_1 asm("tp");
+pcb_t *current_running;
+
 extern pid_t process_id;
 
 extern pcb_t pcb[NUM_MAX_TASK];
 extern pcb_t pid0_pcb;
+extern pcb_t pid1_pcb;
 extern const ptr_t pid0_stack;
+extern const ptr_t pid1_stack;
 
 extern void switch_to(pcb_t *prev, pcb_t *next);
 void do_scheduler(void);

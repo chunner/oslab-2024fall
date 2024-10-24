@@ -168,7 +168,7 @@ static void init_pcb(void)
     init_pcb_stack(pcb[0].kernel_sp, pcb[0].user_sp, pcb[0].entry_point, &pcb[0]);
 
     /* TODO: [p2-task1] remember to initialize 'current_running' */
-    current_running = &pid0_pcb;
+    current_running_0 = &pid0_pcb;
 }
 
 static void init_syscall(void)
@@ -213,6 +213,7 @@ int main(void)
     int mhartid;
     if ((mhartid = check_master_hart()) != 0) { // if not master hart
         printk("mhart id : %s start work \n", mhartid);
+        current_running_1 = &pid1_pcb;
         while (1)
         {
             enable_preempt();
