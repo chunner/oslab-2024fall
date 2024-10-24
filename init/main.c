@@ -214,10 +214,10 @@ int main(void)
     if ((mhartid = check_master_hart()) != 0) { // if not master hart
         printk("mhart id : %s start work \n", mhartid);
         current_running_1 = &pid1_pcb;
+        bios_set_timer(time_base * 5 + get_ticks());
         while (1)
         {
             enable_preempt();
-            bios_set_timer(time_base * 5 + get_ticks());
         }
     }
     // Init jump table provided by kernel and bios(ΦωΦ)
