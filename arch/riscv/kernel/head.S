@@ -6,7 +6,8 @@
 #include <asm.h>
 #include <csr.h>
 
-#define KERNEL_STACK		0x50501000
+#define MASTER_KERNEL_STACK		0x50501000
+#define SLAVE_KERNEL_STACK    0x50502000
 #define tasknum_loc 0x502001f6
 #define taskinfo_offset_loc 0x502001f8 # store the offset of task_info in kernel
 #define taskinfo_size 64
@@ -18,9 +19,12 @@ ENTRY(_start)
   csrw CSR_SIE, zero
   csrw CSR_SIP, zero
 
+  csrr t0, CSR_MHARTID
+  bnez t0, slave_kernel // branch if slave mhart
+
   /* set stack pointer*/ 
 stack_set:              
-  li sp, KERNEL_STACK
+  li sp, MASTER_KERNEL_STACK
 
   /*move the task info*/
   li t0, tasknum_loc      
@@ -58,6 +62,10 @@ clear_bss:
   /* TODO: [p1-task2] setup C environment */
 jump2main:
   j main      # jump to main
+
+slave_kernel:
+  li sp, SLAVE_KERNEL_STACK
+  j main
 
 loop:
   wfi

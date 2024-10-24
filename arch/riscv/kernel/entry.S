@@ -201,8 +201,6 @@ ENTRY(ret_from_exception)
   addi sp, sp, 8
  // csrr t0, sepc
   sret    // return to sepc
-
-
 ENDPROC(ret_from_exception)
 
 ENTRY(exception_handler_entry)
@@ -225,3 +223,9 @@ ENTRY(exception_handler_entry)
   j interrupt_helper    # jal x0, offset
 
 ENDPROC(exception_handler_entry)
+
+
+ENTRY(check_master_hart)  // return 0 if master hart
+  csrr a0, CSR_MHARTID      
+  jr ra
+ENDPROC(check_master_hart)

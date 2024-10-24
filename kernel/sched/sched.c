@@ -9,18 +9,24 @@
 #include <os/string.h>
 
 pcb_t pcb[NUM_MAX_TASK];
-const ptr_t pid0_stack = INIT_KERNEL_STACK + PAGE_SIZE;
+const ptr_t pid0_stack = INIT_KERNEL_STACK + PAGE_SIZE;     // master kernel 
+const ptr_t pid1_stack = pid0_stack + PAGE_SIZE;            // slave kernel
 pcb_t pid0_pcb = {
     .pid = 0,
     .kernel_sp = (ptr_t) pid0_stack,
     .user_sp = (ptr_t) pid0_stack
+};
+pcb_t pid1_pcb = {
+    .pid = 1,
+    .kernel_sp = (ptr_t) pid1_stack,
+    .user_sp = (ptr_t) pid1_stack
 };
 
 LIST_HEAD(ready_queue);
 LIST_HEAD(sleep_queue);
 
 /* global process id */
-pid_t process_id = 1;
+pid_t process_id = 2;
 
 void do_scheduler(void)
 {
@@ -92,6 +98,7 @@ void do_unblock(list_node_t *pcb_node)
 void set_sche_workload(int remain_length) {         // updata remain_length in pcb
     current_running->remain_length = remain_length;
 }
+/* --------------------------------------process show----------------------------------------------------- */
 void do_process_show() {
     printk("[Process Table]\n");
     for (int i = 0;i < NUM_MAX_TASK;i++) {
@@ -119,7 +126,29 @@ void do_process_show() {
         }
     }
 }
-
+/*---------------------------------ready queue management ----------------------------------------------*/
+void add_readyqueue(pcb_t *pcb)        // add the tail of ready_queue
+{
+    if (!pcb)   return;  // pcb = NULL
+    pcb->status = TASK_READY;
+    list_node_t *head = &ready_queue;
+    list_node_t *tail = ready_queue.prev;
+    tail->next = &pcb->list;
+    pcb->list.prev = tail;
+    head->prev = &pcb->list;
+    pcb->list.next = head;
+}
+void remove_readyqueue(pcb_t *pcb) {
+    if (!pcb)   return;  // pcb = NULL
+    list_node_t *pcb_list = &pcb->list;
+    list_node_t *next_node = pcb_list->next;
+    list_node_t *prev_node = pcb_list->prev;
+    pcb_list->next = NULL;
+    pcb_list->prev = NULL;
+    next_node->prev = prev_node;
+    prev_node->next = next_node;
+}
+/*---------------------------------exec, kill, exit, waitpid --------------------------------------------------*/
 pid_t do_exec(char *name, int argc, char *argv[]) {
 
     // check_exited();
@@ -207,27 +236,6 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     return pid;
 
 }
-void add_readyqueue(pcb_t *pcb)        // add the tail of ready_queue
-{
-    if (!pcb)   return;  // pcb = NULL
-    pcb->status = TASK_READY;
-    list_node_t *head = &ready_queue;
-    list_node_t *tail = ready_queue.prev;
-    tail->next = &pcb->list;
-    pcb->list.prev = tail;
-    head->prev = &pcb->list;
-    pcb->list.next = head;
-}
-void remove_readyqueue(pcb_t *pcb) {
-    if (!pcb)   return;  // pcb = NULL
-    list_node_t *pcb_list = &pcb->list;
-    list_node_t *next_node = pcb_list->next;
-    list_node_t *prev_node = pcb_list->prev;
-    pcb_list->next = NULL;
-    pcb_list->prev = NULL;
-    next_node->prev = prev_node;
-    prev_node->next = next_node;
-}
 int do_kill(pid_t pid) {
     int i = 0;
     for (;i < NUM_MAX_TASK;i++) {
@@ -274,11 +282,4 @@ int do_waitpid(pid_t pid) {
 }
 pid_t do_getpid() {
     return current_running->pid;
-}
-void check_exited() {
-    for (int i = 0; i < NUM_MAX_TASK; i++) {
-        if (pcb[i].status == TASK_EXITED && pcb[i].pcb_status == PCB_ACTIVE) {
-            pcb[i].pcb_status = PCB_INACTIVE;
-        }
-    }
 }

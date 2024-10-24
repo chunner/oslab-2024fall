@@ -28,22 +28,6 @@ void interrupt_helper(regs_context_t *regs, uint64_t stval, uint64_t scause)
 void handle_irq_timer(regs_context_t *regs, uint64_t stval, uint64_t scause)
 {
     // TODO: [p2-task4] clock interrupt handler.
-    // Note: use bios_set_timer to reset the timer and remember to reschedule
-    // list_node_t *h = ready_queue.next;
-    // int total_reamin_length = 0;
-    // pcb_t *next_pcb = LIST_PCB(ready_queue.next);
-    // int time_slice;
-    // while (h != &ready_queue) {
-    //     pcb_t *p = LIST_PCB(h);
-    //     total_reamin_length += p->remain_length;
-    //     h = h->next;
-    // }
-    // if (next_pcb->remain_length) {
-    //     time_slice = ((next_pcb->remain_length * 250) / total_reamin_length);
-    // } else {
-    //     time_slice = time_base;
-    //     //next_pcb->status = TASK_EXITED;
-    // }
     bios_set_timer(time_base / 100 + get_ticks());    // 100 times per secondes
     do_scheduler();
 }
@@ -65,7 +49,7 @@ void init_exception()
     /* TODO: [p2-task4] initialize irq_table */
     /* NOTE: handle_int, handle_other, etc.*/
     irq_table[IRQC_S_TIMER] = handle_irq_timer;
-    irq_table[IRQC_U_SOFT] = handle_other;
+    irq_table[IRQC_U_SOFT] = handle_s_soft;
     irq_table[IRQC_S_SOFT] = handle_other;
     irq_table[IRQC_M_SOFT] = handle_other;
     irq_table[IRQC_U_TIMER] = handle_other;
@@ -100,4 +84,7 @@ void handle_other(regs_context_t *regs, uint64_t stval, uint64_t scause)
     printk("sepc: 0x%lx\n\r", regs->sepc);
     printk("tval: 0x%lx cause: 0x%lx\n", stval, scause);
     assert(0);
+}
+void handle_s_soft(regs_context_t *regs, uint64_t stval, uint64_t scause) {
+    return;         // jump to ret_from_complete
 }

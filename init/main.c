@@ -153,18 +153,11 @@ static void init_pcb(void)
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
     for (int i = 0;i < NUM_MAX_TASK; i++) {
         pcb[i].pcb_status = PCB_INACTIVE;
-        //     pcb[i].kernel_sp = allocKernelPage(KernelStackPage) + KernelStackPage * PAGE_SIZE;
-    //     pcb[i].user_sp = allocUserPage(UserStackPage) + UserStackPage * PAGE_SIZE;
-    //     pcb[i].pid = 0;  // user pid start from 2
-    //     pcb[i].status = TASK_EXITED;
-    //     pcb[i].entry_point = tasks[i].entry;
-    //     pcb[i].remain_length = 0;
-    //     init_pcb_stack(pcb[i].kernel_sp, pcb[i].user_sp, pcb[i].entry_point, &pcb[i]);
     }
     // pcb[0] is shell
     pcb[0].kernel_sp = allocKernelPage(KernelStackPage) + KernelStackPage * PAGE_SIZE;
     pcb[0].user_sp = allocUserPage(UserStackPage) + UserStackPage * PAGE_SIZE;
-    pcb[0].pid = 1;
+    pcb[0].pid = 2;
     pcb[0].status = TASK_BLOCKED;
     pcb[0].entry_point = tasks[taskname_to_taskid("shell")].entry;
     pcb[0].remain_length = 0;
@@ -176,7 +169,6 @@ static void init_pcb(void)
 
     /* TODO: [p2-task1] remember to initialize 'current_running' */
     current_running = &pid0_pcb;
-    // current_running->list.next = &pcb[0].list;
 }
 
 static void init_syscall(void)
@@ -218,6 +210,15 @@ static void init_syscall(void)
 
 int main(void)
 {
+    int mhartid;
+    if ((mhartid = check_master_hart()) != 0) { // if not master hart
+        printk("mhart id : %s start work \n", mhartid);
+        while (1)
+        {
+            enable_preempt();
+            bios_set_timer(time_base * 5 + get_ticks());
+        }
+    }
     // Init jump table provided by kernel and bios(ΦωΦ)
     init_jmptab();
 
@@ -252,6 +253,8 @@ int main(void)
     init_screen();
     printk("> [INIT] SCREEN initialization succeeded.\n");
 
+    printk("mhart id : %s start work \n", mhartid);
+
     // load all tasks from sd to mem
     for (int i = 0; i < tasknum; i++) {
         load_task_img(tasks[i].taskname);
@@ -261,7 +264,7 @@ int main(void)
 
     // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
     // NOTE: The function of sstatus.sie is different from sie's
-    bios_set_timer(time_base + get_ticks());     // time irq after 10 seconds
+    bios_set_timer(time_base * 5 + get_ticks());
 
     // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
     while (1)
