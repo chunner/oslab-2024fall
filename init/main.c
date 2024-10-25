@@ -169,7 +169,7 @@ static void init_pcb(void)
     init_pcb_stack(pcb[0].kernel_sp, pcb[0].user_sp, pcb[0].entry_point, &pcb[0]);
 
     /* TODO: [p2-task1] remember to initialize 'current_running' */
-    current_running = &pid0_pcb;
+    current_running_0 = &pid0_pcb;
 }
 
 static void init_syscall(void)
