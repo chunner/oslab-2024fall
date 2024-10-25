@@ -214,6 +214,7 @@ int main(void)
         current_running = current_running_0;    // get the prink position
         current_running_1 = &pid1_pcb;
         printk("mhart id : %d start work \n", mhartid);
+        setup_exception();
         bios_set_timer(time_base / 100 + get_ticks());
         while (1)
         {
