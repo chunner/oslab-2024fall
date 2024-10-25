@@ -255,7 +255,7 @@ int main(void)
     init_screen();
     printk("> [INIT] SCREEN initialization succeeded.\n");
 
-    printk("mhart id : %s start work \n", mhartid);
+    printk("mhart id : %d start work \n", mhartid);
 
     // load all tasks from sd to mem
     for (int i = 0; i < tasknum; i++) {
