@@ -51,8 +51,9 @@ secondary:
 	la t0, kernel
 	csrw stvec, t0
 	// enable software interrupt
-	li t0, 0x2	 # SIE_SSIE		
-	csrs sie, t0
+	li t0, 0x2	 
+	csrs sie, t0		# SIE_SSIE		
+	csrs sstatus, t0	# SSTATUS_SIE		
 
 wait_for_wakeup:
 	wfi

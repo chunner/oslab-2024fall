@@ -97,9 +97,6 @@ int taskname_to_taskid(char taskname[]) {
         }
     }
     if (i == tasknum) {             // task name match failed
-        // port_write("taskname: \"");
-        // port_write(taskname);
-        // port_write("\" does not exit\n\r");
         return -1;
     } else {
         return i;
@@ -170,6 +167,7 @@ static void init_pcb(void)
 
     /* TODO: [p2-task1] remember to initialize 'current_running' */
     current_running_0 = &pid0_pcb;
+    current_running = &pid0_pcb;
 }
 
 static void init_syscall(void)
