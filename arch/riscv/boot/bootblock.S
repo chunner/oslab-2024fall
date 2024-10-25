@@ -45,14 +45,14 @@ secondary:
 	 * 3. enable software interrupt for ipi
 	 */
   	/* Mask all interrupts */
-  	csrw CSR_SIE, zero
-  	csrw CSR_SIP, zero
+  	csrw sie, zero
+  	csrw sip, zero
 	// let stvec pointer to kernel_main
 	la t0, kernel
 	csrw stvec, t0
 	// enable software interrupt
-	li t0, SIE_SSIE		
-	csrs CSR_SIE, t0
+	li t0, 0x1 << 1 # SIE_SSIE		
+	csrs sie, t0
 
 wait_for_wakeup:
 	wfi

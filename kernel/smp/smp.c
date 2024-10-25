@@ -9,7 +9,7 @@ spinlock_t hart_lock = 0;
 
 
 void hart_lock_acquire() {
-    while (atomic_cmpxchg(0, 1, &hart_lock) != 0) {
+    while (atomic_cmpxchg(0, 1, (ptr_t) &hart_lock) != 0) {
     }
 }
 
@@ -28,7 +28,7 @@ void wakeup_other_hart()
     uint64_t hartid = get_current_cpu_id();
     unsigned long hart_mask = (1UL << hartid);
     hart_mask = ~hart_mask;
-    sned_ipi(&hart_mask);
+    send_ipi(&hart_mask);
     return;
 }
 

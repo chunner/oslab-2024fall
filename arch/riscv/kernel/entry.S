@@ -1,7 +1,7 @@
 #include <asm.h>
 #include <csr.h>
 #include <asm/regs.h>
-#include <smp.h>
+#include <os/smp.h>
 
 .macro SAVE_CONTEXT
   /* TODO: [p2-task3] save all general purpose registers here! */
@@ -194,6 +194,9 @@ ENDPROC(switch_to)
 ENTRY(ret_from_exception)
   /* TODO: [p2-task3] restore context via provided macro and return to sepc */
   /* HINT: remember to check your sp, does it point to the right address? */
+
+  jal save_current_running
+
   RESTORE_CONTEXT
 
   addi sp, sp, -8
@@ -218,8 +221,6 @@ ENTRY(exception_handler_entry)
 
   jal hart_lock_acquire 
 
-
-  jal get_current_running
 
   /* TODO: [p2-task3] load ret_from_exception into $ra so that we can return to
    * ret_from_exception when interrupt_help complete.

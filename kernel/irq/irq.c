@@ -15,6 +15,7 @@ handler_t exc_table[EXCC_COUNT];
 
 void interrupt_helper(regs_context_t *regs, uint64_t stval, uint64_t scause)
 {
+    get_current_running();
     // TODO: [p2-task3] & [p2-task4] interrupt handler.
     // call corresponding handler by the value of `scause`
     if (scause & SCAUSE_IRQ_FLAG) {       // Interrupt = 1
@@ -89,10 +90,18 @@ void handle_s_soft(regs_context_t *regs, uint64_t stval, uint64_t scause) {
     return;         // jump to ret_from_complete
 }
 void get_current_running() {
-    if (check_master_hart() == 0) {
+    if (get_current_cpu_id() == 0) {
         current_running = current_running_0;
     } else {
         current_running = current_running_1;
+    }
+    return;
+}
+void save_current_running() {
+    if (get_current_cpu_id() == 0) {
+        current_running_0 = current_running;
+    } else {
+        current_running_1 = current_running;
     }
     return;
 }
