@@ -50,8 +50,13 @@ void do_scheduler(void)
         // or main(fake context): return -> ret_from_exception
         // or do_mutex_lock_acquire(): return -> do_mutex_lock_acquire ->ret_from_exception
     } else {        // ready_queue is blank
-        current_running = &pid0_pcb;
-        switch_to(prepcb, current_running);
+        if (get_current_cpu_id() == 0) {
+            current_running = &pid0_pcb;
+            switch_to(prepcb, current_running);
+        } else {
+            current_running = &pid1_pcb;
+            switch_to(prepcb, current_running);
+        }
         return;
     }
 }

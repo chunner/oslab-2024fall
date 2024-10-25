@@ -214,7 +214,7 @@ int main(void)
         current_running = current_running_0;    // get the prink position
         current_running_1 = &pid1_pcb;
         printk("mhart id : %d start work \n", mhartid);
-        bios_set_timer(time_base * 5 + get_ticks());
+        bios_set_timer(time_base / 100 + get_ticks());
         while (1)
         {
             enable_preempt();
@@ -266,7 +266,7 @@ int main(void)
     wakeup_other_hart();
     // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
     // NOTE: The function of sstatus.sie is different from sie's
-    bios_set_timer(time_base * 5 + get_ticks());
+    bios_set_timer(time_base / 100 + get_ticks());
 
     // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
     while (1)
