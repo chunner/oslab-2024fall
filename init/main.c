@@ -16,6 +16,7 @@
 #include <assert.h>
 #include <type.h>
 #include <csr.h>
+#include <os/smp.h>
 
 #define VERSION_BUF 50
 #define nmultask 4

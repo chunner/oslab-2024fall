@@ -33,6 +33,7 @@ int  sys_kill(pid_t pid);
 int  sys_waitpid(pid_t pid);
 pid_t sys_getpid();
 
+int sys_taskset(char *name, pid_t pid, uint64_t mask, int mod);
 
 /* TODO: [P3 task2] barrier */
 int  sys_barrier_init(int key, int goal);

@@ -135,7 +135,6 @@ int main(void)
             char pid_str[MAX_NUM_BYTE];
             int pid_str_idx = 0;
             int pid;
-            char pid_str[MAX_NUM_BYTE];
             char taskname[MAX_NAME_LEN];
             int taskname_idx = 0;
             if (buffer[i] == '-' && buffer[i + 1] == 'p') { // taskset -p mask pid
