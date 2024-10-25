@@ -28,6 +28,19 @@ LIST_HEAD(sleep_queue);
 /* global process id */
 pid_t process_id = 2;
 
+int get_next_running() {
+    uint64_t hartid = get_current_cpu_id();
+    list_node_t *next_running_list = ready_queue.next;
+    pcb_t *next_running;
+    while (next_running_list != &ready_queue) {
+        next_running = LIST_PCB(next_running_list);
+        if (next_running->cpu_mask & 1UL << hartid) {
+            current_running = next_running;
+            return 1;
+        }
+    }
+    return 0;   // fail to get next_running
+}
 void do_scheduler(void)
 {
     // TODO: [p2-task3] Check sleep queue to wake up PCBs
@@ -40,16 +53,13 @@ void do_scheduler(void)
         add_readyqueue(current_running);
 
     pcb_t *prepcb = current_running;
-    if (ready_queue.next != &ready_queue) {     // ready queue is not blank
-        current_running = LIST_PCB(ready_queue.next);
-        remove_readyqueue(current_running);         // delete current_running from ready_queue
-        // TODO: [p2-task1] switch_to current_running
+    if (get_next_running()) {
+        remove_readyqueue(current_running);
         current_running->status = TASK_RUNNING;
+        current_running->current_cpu_id = get_current_cpu_id();
         switch_to(prepcb, current_running);
-        return;         //  system_yeild(real context): return -> handle_syscall -> interrupt_helper -> ret_from_exception
-        // or main(fake context): return -> ret_from_exception
-        // or do_mutex_lock_acquire(): return -> do_mutex_lock_acquire ->ret_from_exception
-    } else {        // ready_queue is blank
+        return;
+    } else {
         if (get_current_cpu_id() == 0) {
             current_running = &pid0_pcb;
             switch_to(prepcb, current_running);
@@ -59,6 +69,27 @@ void do_scheduler(void)
         }
         return;
     }
+    // if (ready_queue.next != &ready_queue) {     // ready queue is not blank
+    //     current_running = LIST_PCB(ready_queue.next);
+    //     remove_readyqueue(current_running);         // delete current_running from ready_queue
+    //     // TODO: [p2-task1] switch_to current_running
+    //     current_running->status = TASK_RUNNING;
+    //     current_running->current_cpu_id = get_current_cpu_id();
+
+    //     switch_to(prepcb, current_running);
+    //     return;         //  system_yeild(real context): return -> handle_syscall -> interrupt_helper -> ret_from_exception
+    //     // or main(fake context): return -> ret_from_exception
+    //     // or do_mutex_lock_acquire(): return -> do_mutex_lock_acquire ->ret_from_exception
+    // } else {        // ready_queue is blank
+    //     if (get_current_cpu_id() == 0) {
+    //         current_running = &pid0_pcb;
+    //         switch_to(prepcb, current_running);
+    //     } else {
+    //         current_running = &pid1_pcb;
+    //         switch_to(prepcb, current_running);
+    //     }
+    //     return;
+    // }
 }
 void do_sleep(uint32_t sleep_time)
 {
@@ -108,26 +139,32 @@ void do_process_show() {
     printk("[Process Table]\n");
     for (int i = 0;i < NUM_MAX_TASK;i++) {
         if (pcb[i].pcb_status == PCB_ACTIVE) {
-            printk("[%d] PID : %d   STATUS : ", i, pcb[i].pid);
+            printk("[%d] PID : %d   STATUS :", i, pcb[i].pid);
+            printk("\tNAME : %s\t", pcb[i].taskname);
             switch (pcb[i].status)
             {
             case TASK_BLOCKED:
-                printk("TASK_BLOCKED");
+                printk("TASK_BLOCKED\t");
+                printk("mask: %d\t", pcb[i].cpu_mask);
                 break;
             case TASK_RUNNING:
-                printk("TASK_RUNNING");
+                printk("TASK_RUNNING\t");
+                printk("mask: %d\t", pcb[i].cpu_mask);
+                printk("Running on core %d\t", pcb[i].current_cpu_id);
                 break;
             case TASK_READY:
-                printk("TASK_READY");
+                printk("TASK_READY\t");
+                printk("mask: %d\t", pcb[i].cpu_mask);
                 break;
             case TASK_EXITED:
-                printk("TASK_EXITED");
+                printk("TASK_EXITED\t");
+                printk("mask: %d\t", pcb[i].cpu_mask);
                 break;
             default:
-                printk("ERROR");
+                printk("ERROR\t");
                 break;
             }
-            printk("\tNAME : %s\n", pcb[i].taskname);
+            printk("\n");
         }
     }
 }
@@ -155,9 +192,6 @@ void remove_readyqueue(pcb_t *pcb) {
 }
 /*---------------------------------exec, kill, exit, waitpid --------------------------------------------------*/
 pid_t do_exec(char *name, int argc, char *argv[]) {
-
-    // check_exited();
-
     int taskid = taskname_to_taskid(name);
     if (taskid < 0)  return -1;
 
@@ -287,4 +321,25 @@ int do_waitpid(pid_t pid) {
 }
 pid_t do_getpid() {
     return current_running->pid;
+}
+
+int do_taskset(char *name, pid_t pid, uint64_t mask, int mod) {
+    if (mod == 0) { // taskset mask taskname
+        int pid = do_exec(name, 1, name);
+        int i = 0;
+        for (;i < NUM_MAX_TASK;i++) {
+            if (pcb[i].pid == pid && pcb[i].pcb_status == PCB_ACTIVE) {
+                break;
+            }
+        }
+        pcb[i].cpu_mask = mask;
+    } else {// taskset -p mask pid
+        int i = 0;
+        for (;i < NUM_MAX_TASK;i++) {
+            if (pcb[i].pid == pid && pcb[i].pcb_status == PCB_ACTIVE) {
+                break;
+            }
+        }
+        pcb[i].cpu_mask = mask;
+    }
 }

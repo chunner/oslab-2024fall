@@ -268,4 +268,8 @@ int sys_mbox_recv(int mbox_idx, void *msg, int msg_length)
     int retval = invoke_syscall((long) SYSCALL_MBOX_RECV, (long) mbox_idx, (long) msg, (long) msg_length, IGNORE, IGNORE);
     return retval;
 }
+int sys_taskset(char *name, pid_t pid, uint64_t mask, int mod) {
+    int retval = invoke_syscall((long) SYSCALL_TASKSET, (long) name, (long) pid, (long) mask, (long) mod, IGNORE);
+    return retval;
+}
 /************************************************************/

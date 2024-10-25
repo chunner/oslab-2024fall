@@ -106,6 +106,11 @@ typedef struct pcb
     list_head block_queue;
 
     pcb_status_t pcb_status;
+
+    uint64_t current_cpu_id;
+
+    uint16_t cpu_mask;
+
 } pcb_t;
 
 /* ready queue to run */
@@ -141,6 +146,7 @@ void set_sche_workload(int remain_length);
 
 extern void ret_from_exception();
 extern int taskname_to_taskid(char taskname[]);
+extern int do_taskset(char *name, pid_t pid, uint64_t mask, int mod);
 /************************************************************/
 /* TODO [P3-TASK1] exec exit kill waitpid ps*/
 #ifdef S_CORE
