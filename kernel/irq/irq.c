@@ -6,6 +6,7 @@
 #include <printk.h>
 #include <assert.h>
 #include <screen.h>
+#include <os/smp.h>
 
 #define SCAUSE_IRQ_FLAG   (1UL << 63)
 #define SCAUSE_EXC_CODE   ~(1UL << 63)

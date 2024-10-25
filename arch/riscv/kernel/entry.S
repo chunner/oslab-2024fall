@@ -1,7 +1,6 @@
 #include <asm.h>
 #include <csr.h>
 #include <asm/regs.h>
-#include <os/smp.h>
 
 .macro SAVE_CONTEXT
   /* TODO: [p2-task3] save all general purpose registers here! */

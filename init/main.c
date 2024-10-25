@@ -1,6 +1,5 @@
 #include <common.h>
 #include <asm.h>
-#include <os/smp.h>
 #include <asm/unistd.h>
 #include <os/loader.h>
 #include <os/irq.h>
@@ -33,6 +32,7 @@ int version = 2; // version must between 0 and 9
 char buf[VERSION_BUF];
 
 extern void ret_from_exception();
+extern uint64_t get_current_cpu_id();
 
 // Task info array
 task_info_t tasks[TASK_MAXNUM];
@@ -169,7 +169,7 @@ static void init_pcb(void)
     init_pcb_stack(pcb[0].kernel_sp, pcb[0].user_sp, pcb[0].entry_point, &pcb[0]);
 
     /* TODO: [p2-task1] remember to initialize 'current_running' */
-    current_running_0 = &pid0_pcb;
+    current_running = &pid0_pcb;
 }
 
 static void init_syscall(void)
@@ -211,10 +211,10 @@ static void init_syscall(void)
 
 int main(void)
 {
-    int mhartid;
+    uint64_t mhartid;
     if ((mhartid = get_current_cpu_id()) != 0) { // if not master hart
         printk("mhart id : %s start work \n", mhartid);
-        current_running_1 = &pid1_pcb;
+        current_running = &pid1_pcb;
         bios_set_timer(time_base * 5 + get_ticks());
         while (1)
         {
