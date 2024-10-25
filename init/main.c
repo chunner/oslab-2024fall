@@ -1,5 +1,6 @@
 #include <common.h>
 #include <asm.h>
+#include <os/smp.h>
 #include <asm/unistd.h>
 #include <os/loader.h>
 #include <os/irq.h>
@@ -211,7 +212,7 @@ static void init_syscall(void)
 int main(void)
 {
     int mhartid;
-    if ((mhartid = check_master_hart()) != 0) { // if not master hart
+    if ((mhartid = get_current_cpu_id()) != 0) { // if not master hart
         printk("mhart id : %s start work \n", mhartid);
         current_running_1 = &pid1_pcb;
         bios_set_timer(time_base * 5 + get_ticks());
@@ -263,6 +264,7 @@ int main(void)
 
     add_readyqueue(&pcb[0]);          // start shell
 
+    wakeup_other_hart();
     // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
     // NOTE: The function of sstatus.sie is different from sie's
     bios_set_timer(time_base * 5 + get_ticks());

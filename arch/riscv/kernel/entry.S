@@ -1,6 +1,7 @@
 #include <asm.h>
 #include <csr.h>
 #include <asm/regs.h>
+#include <smp.h>
 
 .macro SAVE_CONTEXT
   /* TODO: [p2-task3] save all general purpose registers here! */
@@ -194,6 +195,13 @@ ENTRY(ret_from_exception)
   /* TODO: [p2-task3] restore context via provided macro and return to sepc */
   /* HINT: remember to check your sp, does it point to the right address? */
   RESTORE_CONTEXT
+
+  addi sp, sp, -8
+  sd ra, (sp)
+  jal hart_lock_release
+  ld ra, (sp)
+  addi sp, sp, 8
+
   addi sp, sp, -8
   sd ra, (sp)
   jal enable_preempt
@@ -207,6 +215,9 @@ ENTRY(exception_handler_entry)
 
   /* TODO: [p2-task3] save context via the provided macro */
   SAVE_CONTEXT
+
+  jal hart_lock_acquire 
+
 
   jal get_current_running
 
@@ -226,8 +237,3 @@ ENTRY(exception_handler_entry)
 
 ENDPROC(exception_handler_entry)
 
-
-ENTRY(check_master_hart)  // return 0 if master hart
-  csrr a0, CSR_MHARTID      
-  jr ra
-ENDPROC(check_master_hart)
