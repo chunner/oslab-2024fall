@@ -211,7 +211,7 @@ int main(void)
 {
     uint64_t mhartid;
     if ((mhartid = get_current_cpu_id()) != 0) { // if not master hart
-        printk("mhart id : %s start work \n", mhartid);
+        printk("mhart id : %d start work \n", mhartid);
         current_running = &pid1_pcb;
         bios_set_timer(time_base * 5 + get_ticks());
         while (1)
