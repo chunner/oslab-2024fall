@@ -51,8 +51,8 @@ void init_exception()
     /* TODO: [p2-task4] initialize irq_table */
     /* NOTE: handle_int, handle_other, etc.*/
     irq_table[IRQC_S_TIMER] = handle_irq_timer;
-    irq_table[IRQC_U_SOFT] = handle_s_soft;
-    irq_table[IRQC_S_SOFT] = handle_other;
+    irq_table[IRQC_U_SOFT] = handle_other;
+    irq_table[IRQC_S_SOFT] = handle_s_soft;
     irq_table[IRQC_M_SOFT] = handle_other;
     irq_table[IRQC_U_TIMER] = handle_other;
     irq_table[IRQC_M_TIMER] = handle_other;
