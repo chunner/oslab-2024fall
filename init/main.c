@@ -214,8 +214,9 @@ int main(void)
 {
     uint64_t mhartid;
     if ((mhartid = get_current_cpu_id()) != 0) { // if not master hart
-        current_running = current_running_0;    // get the prink position
         current_running_1 = &pid1_pcb;
+        current_running_1->cursor_y = 3;
+        current_running = current_running_1;
         printk("mhart id : %d start work \n", mhartid);
         setup_exception();
         bios_set_timer(time_base / 100 + get_ticks());

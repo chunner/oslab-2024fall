@@ -6,8 +6,8 @@
 #include <asm.h>
 #include <csr.h>
 
-#define MASTER_KERNEL_STACK		0x50501000
-#define SLAVE_KERNEL_STACK    0x50502000
+#define MASTER_KERNEL_STACK		0x50502000
+#define SLAVE_KERNEL_STACK    0x50504000
 #define tasknum_loc 0x502001f6
 #define taskinfo_offset_loc 0x502001f8 # store the offset of task_info in kernel
 #define taskinfo_size 64

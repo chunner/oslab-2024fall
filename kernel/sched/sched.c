@@ -10,17 +10,17 @@
 
 pcb_t pcb[NUM_MAX_TASK];
 const ptr_t pid0_stack = INIT_KERNEL_STACK + PAGE_SIZE;     // master kernel 
-const ptr_t pid1_stack = pid0_stack + PAGE_SIZE;            // slave kernel
+const ptr_t pid1_stack = INIT_KERNEL_STACK + PAGE_SIZE * 3;            // slave kernel
 pcb_t pid0_pcb = {
     .pid = 0,
     .kernel_sp = (ptr_t) pid0_stack,
-    .user_sp = (ptr_t) pid0_stack,
+    .user_sp = (ptr_t) pid0_stack + PAGE_SIZE,
     .cpu_mask = 0x1
 };
 pcb_t pid1_pcb = {
     .pid = 1,
     .kernel_sp = (ptr_t) pid1_stack,
-    .user_sp = (ptr_t) pid1_stack,
+    .user_sp = (ptr_t) pid1_stack + PAGE_SIZE,
     .cpu_mask = 0x2
 };
 
@@ -46,25 +46,33 @@ int get_next_running() {
 }
 void do_scheduler(void)
 {
-    while (1) {
-        // TODO: [p2-task3] Check sleep queue to wake up PCBs
-        check_sleeping();
-        /************************************************************/
-        /* Do not touch this comment. Reserved for future projects. */
-        /************************************************************/
-        // TODO: [p2-task1] Modify the current_running pointer.
-        if (current_running->status == TASK_RUNNING)      // put the current_runnning to the tail of ready_queue
-            add_readyqueue(current_running);
+    // TODO: [p2-task3] Check sleep queue to wake up PCBs
+    check_sleeping();
+    /************************************************************/
+    /* Do not touch this comment. Reserved for future projects. */
+    /************************************************************/
+    // TODO: [p2-task1] Modify the current_running pointer.
+    if (current_running->status == TASK_RUNNING)      // put the current_runnning to the tail of ready_queue
+        add_readyqueue(current_running);
 
-        pcb_t *prepcb = current_running;
-        if (get_next_running()) {
-            remove_readyqueue(current_running);
-            current_running->status = TASK_RUNNING;
-            current_running->current_cpu_id = get_current_cpu_id();
+    pcb_t *prepcb = current_running;
+    if (get_next_running()) {
+        remove_readyqueue(current_running);
+        current_running->status = TASK_RUNNING;
+        current_running->current_cpu_id = get_current_cpu_id();
+        switch_to(prepcb, current_running);
+        return;
+    } else {
+        if (get_current_cpu_id() == 0) {
+            current_running = &pid0_pcb;
             switch_to(prepcb, current_running);
-            return;
+        } else {
+            current_running = &pid1_pcb;
+            switch_to(prepcb, current_running);
         }
+        return;
     }
+
 }
 void do_sleep(uint32_t sleep_time)
 {
