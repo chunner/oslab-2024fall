@@ -9,7 +9,10 @@ spinlock_t hart_lock = 0;
 
 
 void hart_lock_acquire() {
-    while (atomic_cmpxchg(0, 1, (ptr_t) &hart_lock) != 0) {
+    // while (atomic_cmpxchg(0, 1, (ptr_t) &hart_lock) != 0) {
+    // }
+    while (atomic_swap(1, &hart_lock) != 0) {
+
     }
     return;
 }

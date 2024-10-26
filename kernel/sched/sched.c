@@ -14,12 +14,14 @@ const ptr_t pid1_stack = pid0_stack + PAGE_SIZE;            // slave kernel
 pcb_t pid0_pcb = {
     .pid = 0,
     .kernel_sp = (ptr_t) pid0_stack,
-    .user_sp = (ptr_t) pid0_stack
+    .user_sp = (ptr_t) pid0_stack,
+    .cpu_mask = 0x1
 };
 pcb_t pid1_pcb = {
     .pid = 1,
     .kernel_sp = (ptr_t) pid1_stack,
-    .user_sp = (ptr_t) pid1_stack
+    .user_sp = (ptr_t) pid1_stack,
+    .cpu_mask = 0x2
 };
 
 LIST_HEAD(ready_queue);
@@ -44,53 +46,25 @@ int get_next_running() {
 }
 void do_scheduler(void)
 {
-    // TODO: [p2-task3] Check sleep queue to wake up PCBs
-    check_sleeping();
-    /************************************************************/
-    /* Do not touch this comment. Reserved for future projects. */
-    /************************************************************/
-    // TODO: [p2-task1] Modify the current_running pointer.
-    if (current_running->status == TASK_RUNNING)      // put the current_runnning to the tail of ready_queue
-        add_readyqueue(current_running);
+    while (1) {
+        // TODO: [p2-task3] Check sleep queue to wake up PCBs
+        check_sleeping();
+        /************************************************************/
+        /* Do not touch this comment. Reserved for future projects. */
+        /************************************************************/
+        // TODO: [p2-task1] Modify the current_running pointer.
+        if (current_running->status == TASK_RUNNING)      // put the current_runnning to the tail of ready_queue
+            add_readyqueue(current_running);
 
-    pcb_t *prepcb = current_running;
-    if (get_next_running()) {
-        remove_readyqueue(current_running);
-        current_running->status = TASK_RUNNING;
-        current_running->current_cpu_id = get_current_cpu_id();
-        switch_to(prepcb, current_running);
-        return;
-    } else {
-        if (get_current_cpu_id() == 0) {
-            current_running = &pid0_pcb;
+        pcb_t *prepcb = current_running;
+        if (get_next_running()) {
+            remove_readyqueue(current_running);
+            current_running->status = TASK_RUNNING;
+            current_running->current_cpu_id = get_current_cpu_id();
             switch_to(prepcb, current_running);
-        } else {
-            current_running = &pid1_pcb;
-            switch_to(prepcb, current_running);
+            return;
         }
-        return;
     }
-    // if (ready_queue.next != &ready_queue) {     // ready queue is not blank
-    //     current_running = LIST_PCB(ready_queue.next);
-    //     remove_readyqueue(current_running);         // delete current_running from ready_queue
-    //     // TODO: [p2-task1] switch_to current_running
-    //     current_running->status = TASK_RUNNING;
-    //     current_running->current_cpu_id = get_current_cpu_id();
-
-    //     switch_to(prepcb, current_running);
-    //     return;         //  system_yeild(real context): return -> handle_syscall -> interrupt_helper -> ret_from_exception
-    //     // or main(fake context): return -> ret_from_exception
-    //     // or do_mutex_lock_acquire(): return -> do_mutex_lock_acquire ->ret_from_exception
-    // } else {        // ready_queue is blank
-    //     if (get_current_cpu_id() == 0) {
-    //         current_running = &pid0_pcb;
-    //         switch_to(prepcb, current_running);
-    //     } else {
-    //         current_running = &pid1_pcb;
-    //         switch_to(prepcb, current_running);
-    //     }
-    //     return;
-    // }
 }
 void do_sleep(uint32_t sleep_time)
 {
@@ -141,7 +115,6 @@ void do_process_show() {
     for (int i = 0;i < NUM_MAX_TASK;i++) {
         if (pcb[i].pcb_status == PCB_ACTIVE) {
             printk("[%d] PID : %d   STATUS :", i, pcb[i].pid);
-            printk("\tNAME : %s\t", pcb[i].taskname);
             switch (pcb[i].status)
             {
             case TASK_BLOCKED:
