@@ -127,8 +127,8 @@ int main(void)
             } else {
                 printf("Info: fail to find pid = %d\n", pid);
             }
-        } else if (strncmp(buffer, "taskset", 4) == 0) {
-            int i = 5;
+        } else if (strncmp(buffer, "taskset", 7) == 0) {
+            int i = 8;
             char mask_str[16];
             int mask_str_idx = 0;
             uint64_t mask;
@@ -137,6 +137,7 @@ int main(void)
             int pid;
             char taskname[MAX_NAME_LEN];
             int taskname_idx = 0;
+            int retval;
             if (buffer[i] == '-' && buffer[i + 1] == 'p') { // taskset -p mask pid
                 i += 3;
                 //----------------decoding mask
@@ -152,7 +153,7 @@ int main(void)
                 }
                 pid_str[pid_str_idx++] = '\0';
                 pid = atoi(pid_str);
-                sys_taskset(taskname, pid, mask, 1);
+                retval = (taskname, pid, mask, 1);
             } else {    // taskset mask taskname
                 while (buffer[i] != ' ') {
                     mask_str[mask_str_idx++] = buffer[i++];
@@ -164,7 +165,12 @@ int main(void)
                     taskname[taskname_idx++] = buffer[i++];
                 }
                 taskname[taskname_idx++] = '\0';
-                sys_taskset(taskname, pid, mask, 0);
+                retval = (taskname, 0, mask, 0);
+            }
+            if (retval == 0) {
+                printf("Info: taskset successfully");
+            } else {
+                printf("Error: fail to find");
             }
         } else {
             printf("Error: Unkown Command %s!\n", buffer);

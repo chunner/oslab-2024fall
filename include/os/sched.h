@@ -109,7 +109,7 @@ typedef struct pcb
 
     uint64_t current_cpu_id;
 
-    uint16_t cpu_mask;
+    uint64_t cpu_mask;
 
 } pcb_t;
 

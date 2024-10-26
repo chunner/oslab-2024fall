@@ -327,7 +327,12 @@ pid_t do_getpid() {
 
 int do_taskset(char *name, pid_t pid, uint64_t mask, int mod) {
     if (mod == 0) { // taskset mask taskname
-        int pid = do_exec(name, 1, name);
+        char *argv[1];
+        argv[0] = name;
+        int pid = do_exec(name, 1, argv);
+        if (pid == -1) {
+            return -1;
+        }
         int i = 0;
         for (;i < NUM_MAX_TASK;i++) {
             if (pcb[i].pid == pid && pcb[i].pcb_status == PCB_ACTIVE) {
@@ -342,6 +347,8 @@ int do_taskset(char *name, pid_t pid, uint64_t mask, int mod) {
                 break;
             }
         }
+        if (i >= NUM_MAX_TASK)    return -1;
         pcb[i].cpu_mask = mask;
     }
+    return 0;
 }
