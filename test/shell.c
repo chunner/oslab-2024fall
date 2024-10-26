@@ -153,7 +153,7 @@ int main(void)
                 }
                 pid_str[pid_str_idx++] = '\0';
                 pid = atoi(pid_str);
-                retval = (taskname, pid, mask, 1);
+                retval = sys_taskset(taskname, pid, mask, 1);
             } else {    // taskset mask taskname
                 while (buffer[i] != ' ') {
                     mask_str[mask_str_idx++] = buffer[i++];
@@ -165,12 +165,12 @@ int main(void)
                     taskname[taskname_idx++] = buffer[i++];
                 }
                 taskname[taskname_idx++] = '\0';
-                retval = (taskname, 0, mask, 0);
+                retval = sys_taskset(taskname, 0, mask, 0);
             }
             if (retval == 0) {
-                printf("Info: taskset successfully");
+                printf("Info: taskset successfully\n");
             } else {
-                printf("Error: fail to find");
+                printf("Error: fail to find\n");
             }
         } else {
             printf("Error: Unkown Command %s!\n", buffer);
