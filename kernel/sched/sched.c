@@ -38,6 +38,7 @@ int get_next_running() {
             current_running = next_running;
             return 1;
         }
+        next_running_list = next_running_list->next;
     }
     return 0;   // fail to get next_running
 }
@@ -215,6 +216,7 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     pcb[pcb_id].block_queue.next = &pcb[pcb_id].block_queue;
     pcb[pcb_id].block_queue.prev = &pcb[pcb_id].block_queue;
     pcb[pcb_id].pcb_status = PCB_ACTIVE;
+    pcb[pcb_id].cpu_mask = current_running->cpu_mask;
     strcpy(pcb[pcb_id].taskname, name);
 
     /* init pcb stack */
