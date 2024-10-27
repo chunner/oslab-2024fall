@@ -126,20 +126,20 @@ void do_process_show() {
             switch (pcb[i].status)
             {
             case TASK_BLOCKED:
-                printk("TASK_BLOCKED\t");
+                printk("BLOCKED\t");
                 printk("mask: %d\t", pcb[i].cpu_mask);
                 break;
             case TASK_RUNNING:
-                printk("TASK_RUNNING\t");
+                printk("RUNNING\t");
                 printk("mask: %d\t", pcb[i].cpu_mask);
                 printk("Running on core %d\t", pcb[i].current_cpu_id);
                 break;
             case TASK_READY:
-                printk("TASK_READY\t");
+                printk("READY\t");
                 printk("mask: %d\t", pcb[i].cpu_mask);
                 break;
             case TASK_EXITED:
-                printk("TASK_EXITED\t");
+                printk("EXITED\t");
                 printk("mask: %d\t", pcb[i].cpu_mask);
                 break;
             default:
