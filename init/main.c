@@ -223,10 +223,14 @@ int main(void)
         while (1)
         {
             enable_preempt();
+            asm volatile("wfi");
         }
     }
     // Init jump table provided by kernel and bios(ΦωΦ)
     init_jmptab();
+
+    // Init smp
+    smp_init();
 
     // Init task information (〃'▽'〃)
     init_task_info();
@@ -280,7 +284,7 @@ int main(void)
         // do_scheduler();
         // If you do preemptive scheduling, they're used to enable CSR_SIE and wfi
         enable_preempt();
-        // asm volatile("wfi");
+        asm volatile("wfi");
     }
 
     return 0;
