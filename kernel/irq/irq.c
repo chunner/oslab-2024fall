@@ -32,6 +32,7 @@ void handle_irq_timer(regs_context_t *regs, uint64_t stval, uint64_t scause)
     // TODO: [p2-task4] clock interrupt handler.
     bios_set_timer(time_base / 100 + get_ticks());    // 100 times per secondes
     do_scheduler();
+    return;
 }
 
 void init_exception()

@@ -9,12 +9,13 @@
   sd ra, (sp)
   sd a0, 8(sp)
   jal get_current_cpu_id
-  bnez a0, secondary
+  bnez a0, get_slave_tp
+  # master hart
   la tp, current_running_0
   ld tp, 0(tp)
   j get_tp_end
-  
-secondary:
+  # slave hart
+get_slave_tp:
   la tp, current_running_1
   ld tp, 0(tp)
 
@@ -212,7 +213,11 @@ ENDPROC(switch_to)
 ENTRY(ret_from_exception)
   /* TODO: [p2-task3] restore context via provided macro and return to sepc */
   /* HINT: remember to check your sp, does it point to the right address? */
+  addi sp, sp, -8
+  sd ra, (sp)
   jal save_current_running
+  ld ra, (sp)
+  addi sp, sp, 8
 
   RESTORE_CONTEXT
 

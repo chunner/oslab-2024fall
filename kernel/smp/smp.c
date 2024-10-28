@@ -46,8 +46,8 @@ void unlock_kernel()
 {
     /* TODO: P3-TASK3 multicore*/
     //printl("ulock\n");
-    hart_lock = 0;
-    //atomic_swap(0, &hart_lock);
+    // hart_lock = 0;
+    atomic_swap(0, &hart_lock);
     // asm volatile(
     //     "   li t0, 0\n"
     //     "   amoswap.w.rl x0, t0, (%0)\n"
