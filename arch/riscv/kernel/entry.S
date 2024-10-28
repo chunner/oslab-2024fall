@@ -5,6 +5,25 @@
 .macro SAVE_CONTEXT
   /* TODO: [p2-task3] save all general purpose registers here! */
   /* HINT: Pay attention to the function of tp and sp, and save them carefully! */
+  addi sp, sp, -16
+  sd ra, (sp)
+  sd a0, 8(sp)
+  jal get_current_cpu_id
+  bnez a0, secondary
+  la tp, current_running_0
+  ld tp, 0(tp)
+  j get_tp_end
+  
+secondary:
+  la tp, current_running_1
+  ld tp, 0(tp)
+
+get_tp_end:
+  ld ra, (sp)
+  ld a0, 8(sp)
+  addi sp, sp, 16
+
+
   sd sp, PCB_USER_SP(tp)      // store user stack top in PCB
   ld sp, PCB_KERNEL_SP(tp)        // load kernel stack top in PCB
 
@@ -235,4 +254,3 @@ ENTRY(exception_handler_entry)
   j interrupt_helper    # jal x0, offset
 
 ENDPROC(exception_handler_entry)
-

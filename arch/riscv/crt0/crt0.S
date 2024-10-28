@@ -1,5 +1,4 @@
 #include <asm.h>
-#define USER_STACK		0x52500000
 .section ".entry_function","ax"
 ENTRY(_start)
 
