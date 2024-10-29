@@ -106,6 +106,7 @@ void init_barriers(void) {
     }
 }
 int do_barrier_init(int key, int goal) {
+    lock_kernel(&barrier_hart_lock);
     int bar_idx = 0;
     for (;bar_idx < BARRIER_NUM;bar_idx++) {
         if (barrier[bar_idx].status == BAR_INACTIVE) {
@@ -119,26 +120,33 @@ int do_barrier_init(int key, int goal) {
     barrier[bar_idx].counter = 0;
     barrier[bar_idx].block_queue.next = &barrier[bar_idx].block_queue;
     barrier[bar_idx].block_queue.prev = &barrier[bar_idx].block_queue;
+    unlock_kernel(&barrier_hart_lock);
     return bar_idx;
 }
 void do_barrier_wait(int bar_idx) {
+    lock_kernel(&barrier_hart_lock);
     barrier[bar_idx].counter++;
     if (barrier[bar_idx].counter >= barrier[bar_idx].goal) {
         while (barrier[bar_idx].block_queue.next != &barrier[bar_idx].block_queue) {    // wake up block queue
             do_unblock(barrier[bar_idx].block_queue.next);
         }
         barrier[bar_idx].counter = 0;
+        unlock_kernel(&barrier_hart_lock);
         return;
     } else {
         do_block(&current_running->list, &barrier[bar_idx].block_queue);
+        unlock_kernel(&barrier_hart_lock);
         do_scheduler();
+        return;
     }
 }
 void do_barrier_destroy(int bar_idx) {
+    lock_kernel(&barrier_hart_lock);
     while (barrier[bar_idx].block_queue.next != &barrier[bar_idx].block_queue) {    // wake up block queue
         do_unblock(barrier[bar_idx].block_queue.next);
     }
     barrier[bar_idx].status = BAR_INACTIVE;
+    unlock_kernel(&barrier_hart_lock);
 }
 
 /* ---------------------------condition-----------------------------------------*/
