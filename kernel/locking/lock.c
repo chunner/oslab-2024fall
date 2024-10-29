@@ -70,8 +70,8 @@ void do_mutex_lock_acquire(int mlock_idx)
             unlock_kernel(&mutex_hart_lock);
             return;
         } else {
-            unlock_kernel(&mutex_hart_lock);
             do_block(&current_running->list, &mlocks[mlock_idx].block_queue);
+            unlock_kernel(&mutex_hart_lock);
             do_scheduler();
             lock_kernel(&mutex_hart_lock);
         }
@@ -175,20 +175,26 @@ int do_condition_init(int key) {
     return cond_idx;
 }
 void do_condition_wait(int cond_idx, int mutex_idx) {
+    lock_kernel(&condition_hart_lock);
     do_block(&current_running->list, &condition[cond_idx].block_queue);
+    unlock_kernel(&condition_hart_lock);
     do_mutex_lock_release(mutex_idx);
     do_scheduler();
     do_mutex_lock_acquire(mutex_idx);
 }
 void do_condition_signal(int cond_idx) {
+    lock_kernel(&condition_hart_lock);
     if (condition[cond_idx].block_queue.next != &condition[cond_idx].block_queue) {
         do_unblock(condition[cond_idx].block_queue.next);
     }
+    unlock_kernel(&condition_hart_lock);
 }
 void do_condition_broadcast(int cond_idx) {
+    lock_kernel(&condition_hart_lock);
     while (condition[cond_idx].block_queue.next != &condition[cond_idx].block_queue) {
         do_unblock(condition[cond_idx].block_queue.next);
     }
+    unlock_kernel(&condition_hart_lock);
 }
 void do_condition_destroy(int cond_idx) {
     lock_kernel(&condition_hart_lock);
@@ -226,8 +232,10 @@ int do_mbox_open(char *name) {
                 break;
             }
         }
-        if (mbox_idx >= MBOX_NUM)   // mailbox has run out
+        if (mbox_idx >= MBOX_NUM) {   // mailbox has run out
+            unlock_kernel(&mailbox_hart_lock);
             return -1;
+        }
         // init the mailbox
         strcpy(mailbox[mbox_idx].name, name);
         mailbox[mbox_idx].status = MBOX_ACTIVE;

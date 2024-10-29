@@ -10,7 +10,7 @@
 static const char initReq[] = "clientInitReq";
 static const int initReqLen = sizeof(initReq);
 
-static int clientInitReq(const char* buf, int length)
+static int clientInitReq(const char *buf, int length)
 {
     if (length != initReqLen) return 0;
     for (int i = 0; i < initReqLen; ++i) {
@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
 
     // open two mailboxs
     int handle_mq = sys_mbox_open(STR_MBOX);
-    int handle_posmq = sys_mbox_open(POS_MBOX);    
+    int handle_posmq = sys_mbox_open(POS_MBOX);
 
     char msgBuffer[MAX_MBOX_LENGTH];
     MsgHeader_t header;
@@ -42,8 +42,11 @@ int main(int argc, char *argv[])
     printf("[Server] server started");
     sys_sleep(1);
 
+    uint64_t time_base = sys_get_timebase;
+
     for (;;)
     {
+        uint64_t clk = sys_get_tick();
         blockedCount += sys_mbox_recv(handle_mq, &header, sizeof(MsgHeader_t));
         blockedCount += sys_mbox_recv(handle_mq, msgBuffer, header.length);
 
@@ -53,10 +56,11 @@ int main(int argc, char *argv[])
         } else {
             errorRecvBytes += header.length;
         }
-
+        clk = sys_get_tick() - clk;
+        uint64_t speed = header.length * time_base / clk;
         sys_move_cursor(0, print_location);
-        printf("[Server]: recved msg from %d (blocked: %ld, correctBytes: %ld, errorBytes: %ld)",
-              header.sender, blockedCount, correctRecvBytes, errorRecvBytes);
+        printf("[Server]: recved msg from %d (blocked: %ld, correctBytes: %ld, errorBytes: %ld, speed: %ld)",
+            header.sender, blockedCount, correctRecvBytes, errorRecvBytes, speed);
 
         if (clientInitReq(msgBuffer, header.length)) {
             sys_mbox_send(handle_posmq, &clientPos, sizeof(int));

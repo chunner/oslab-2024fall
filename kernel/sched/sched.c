@@ -87,15 +87,17 @@ void do_sleep(uint32_t sleep_time)
     // 1. block the current_running
     // 2. set the wake up time for the blocked task
     // 3. reschedule because the current_running is blocked.
+    lock_kernel(&sleep_queue_lock);
     current_running->wakeup_time = sleep_time + get_timer();
     do_block(&current_running->list, &sleep_queue);
+    unlock_kernel(&sleep_queue_lock);
     do_scheduler();
 }
 
 void do_block(list_node_t *pcb_node, list_head *queue)
 {
     // TODO: [p2-task2] block the pcb task into the block queue
-    lock_kernel(&block_queue_lock);
+    // lock_kernel(&block_queue_lock);
     list_node_t *head = queue;
     list_node_t *tail = queue->prev;
     tail->next = pcb_node;
@@ -105,12 +107,12 @@ void do_block(list_node_t *pcb_node, list_head *queue)
 
     pcb_t *pcb = LIST_PCB(pcb_node);
     pcb->status = TASK_BLOCKED;
-    unlock_kernel(&block_queue_lock);
+    // unlock_kernel(&block_queue_lock);
 }
 
 void do_unblock(list_node_t *pcb_node)
 {
-    lock_kernel(&block_queue_lock);
+    // lock_kernel(&block_queue_lock);
     // TODO: [p2-task2] unblock the `pcb` from the block queue
     list_node_t *next_node = pcb_node->next;        // delete the pcb from block queue
     list_node_t *prev_node = pcb_node->prev;
@@ -123,7 +125,7 @@ void do_unblock(list_node_t *pcb_node)
     lock_kernel(&ready_queue_hart_lock);
     add_readyqueue(pcb);
     unlock_kernel(&ready_queue_hart_lock);
-    unlock_kernel(&block_queue_lock);
+    // unlock_kernel(&block_queue_lock);
 }
 
 void set_sche_workload(int remain_length) {         // updata remain_length in pcb
@@ -310,6 +312,7 @@ void do_exit(void) {
     do_scheduler();
 }
 int do_waitpid(pid_t pid) {
+    lock_kernel(&pcb_pid_hart_lock);
     int i = 0;
     for (;i < NUM_MAX_TASK;i++) {
         if (pcb[i].pid == pid && pcb[i].pcb_status == PCB_ACTIVE) {
@@ -319,7 +322,10 @@ int do_waitpid(pid_t pid) {
     if (i >= NUM_MAX_TASK)  return 0;  // fail to find
     if (pcb[i].status != TASK_EXITED) {
         do_block(&current_running->list, &pcb[i].block_queue);
+        unlock_kernel(&pcb_pid_hart_lock);
         do_scheduler();
+    } else {
+        unlock_kernel(&pcb_pid_hart_lock);
     }
     return i;
 }

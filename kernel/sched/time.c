@@ -35,7 +35,7 @@ void latency(uint64_t time)
 void check_sleeping(void)
 {
     // TODO: [p2-task3] Pick out tasks that should wake up from the sleep queue
-    lock_kernel(&block_queue_lock);
+    lock_kernel(&sleep_queue_lock);
     list_node_t *p = sleep_queue.next;
     list_node_t *pnext;
     while (p != &sleep_queue) {
@@ -46,5 +46,5 @@ void check_sleeping(void)
         }
         p = pnext;
     }
-    unlock_kernel(&block_queue_lock);
+    unlock_kernel(&sleep_queue_lock);
 }

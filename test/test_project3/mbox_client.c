@@ -10,12 +10,12 @@
 static const char initReq[] = "clientInitReq";
 static const int initReqLen = sizeof(initReq);
 
-static int clientSendMsg(int mq, const char* content, int length)
+static int clientSendMsg(int mq, const char *content, int length)
 {
     int i;
-    char msgBuffer[MAX_MBOX_LENGTH] = {0};
-    MsgHeader_t* header = (MsgHeader_t*)msgBuffer;
-    char* _content = msgBuffer + sizeof(MsgHeader_t);
+    char msgBuffer[MAX_MBOX_LENGTH] = { 0 };
+    MsgHeader_t *header = (MsgHeader_t *) msgBuffer;
+    char *_content = msgBuffer + sizeof(MsgHeader_t);
     header->length = length;
     header->checksum = adler32(content, length);
     header->sender = sys_getpid();
@@ -31,7 +31,7 @@ int main()
 #ifndef S_CORE
     // open two mailboxs
     int handle_mq = sys_mbox_open(STR_MBOX);
-    int handle_posmq = sys_mbox_open(POS_MBOX); 
+    int handle_posmq = sys_mbox_open(POS_MBOX);
 
     int len = 0;
     char strBuffer[MAX_MBOX_LENGTH - sizeof(MsgHeader_t)];
@@ -47,7 +47,8 @@ int main()
     sys_sleep(1);
     for (;;)
     {
-        len = (rand() % ((MAX_MBOX_LENGTH - sizeof(MsgHeader_t))/2)) + 1;
+        //len = (rand() % ((MAX_MBOX_LENGTH - sizeof(MsgHeader_t))/2)) + 1;
+        len = 10;
         generateRandomString(strBuffer, len);
         blocked += clientSendMsg(handle_mq, strBuffer, len);
         bytes += len;

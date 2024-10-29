@@ -9,8 +9,8 @@ hart_spinlock_t mutex_hart_lock;
 hart_spinlock_t barrier_hart_lock;
 hart_spinlock_t condition_hart_lock;
 hart_spinlock_t mailbox_hart_lock;
-hart_spinlock_t block_queue_lock;
 hart_spinlock_t pcb_pid_hart_lock;
+hart_spinlock_t sleep_queue_lock;
 
 
 extern void smp_init();
