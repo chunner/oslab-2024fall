@@ -38,7 +38,8 @@ stack_set:
   li t1, kernel
   add t2, t2, t1   # t2 = the addr of task_info
 
-  li t3, task_info_new_loc
+  sub sp, sp, t0
+  mv t3, sp
 
 store_taskinfo:
   lw t4, 0(t2)     # load word from mem

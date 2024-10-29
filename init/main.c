@@ -26,8 +26,8 @@
 #define task_info_new_loc 0x58000010  // user's sp + 0x10
 #define kernel          0x50201000
 #define tasknum_loc     0x502001f6
-
-
+#define taskinfo_size   64
+#define MASTER_KERNEL_STACK		0x50502000
 
 int version = 2; // version must between 0 and 9
 char buf[VERSION_BUF];
@@ -78,16 +78,38 @@ static void init_task_info(void)
 {
     // NOTE: You need to get some related arguments from bootblock first
     /* get taskinfo from memory */
-    short *tasknum_mem = (short *) tasknum_loc;
-    tasknum = *tasknum_mem;
-    task_info_t *taskinfo_mem = (task_info_t *) (task_info_new_loc);
-    for (int i = 0; i < tasknum; i++) {
-        tasks[i].sector_num = taskinfo_mem[i].sector_num;
-        tasks[i].firstsector = taskinfo_mem[i].firstsector;
-        tasks[i].offset = taskinfo_mem[i].offset;
-        tasks[i].entry = taskinfo_mem[i].entry;
-        strcpy(tasks[i].taskname, taskinfo_mem[i].taskname);
-    }
+    // short *tasknum_mem = (short *) tasknum_loc;
+    // tasknum = *tasknum_mem;
+    // task_info_t *taskinfo_mem = (task_info_t *) (task_info_new_loc);
+    // for (int i = 0; i < tasknum; i++) {
+    //     tasks[i].sector_num = taskinfo_mem[i].sector_num;
+    //     tasks[i].firstsector = taskinfo_mem[i].firstsector;
+    //     tasks[i].offset = taskinfo_mem[i].offset;
+    //     tasks[i].entry = taskinfo_mem[i].entry;
+    //     strcpy(tasks[i].taskname, taskinfo_mem[i].taskname);
+    // }
+    tasknum = *(short *) tasknum_loc;
+    asm volatile(
+        "mv  t0,%0      \n"  // Load address of tasknum_loc
+        "lh a0, 0(t0)            \n"  // Load halfword from tasknum_loc into a0
+        "mv  t1, %1    \n"  // Load the size of each task into t1
+        "mul t0, a0, t1          \n"  // t0 = task_num * task_size
+
+        "sub t3, %2, t0               \n"  // Move the stack pointer to t3
+        "la t2, tasks            \n"  // Load address of tasks into t2
+
+        "1:                      \n"    // Loop label
+        "lw t4, 0(t3)           \n"    // Load word from memory (from original location)
+        "sw t4, 0(t2)           \n"
+        "addi t2, t2, 4         \n"    // Move memory pointer to next word
+        "addi t3, t3, 4         \n"    // Move source pointer to next word
+        "addi t0, t0, -4        \n"    // Decrement size by 4
+        "bnez t0, 1b            \n"    // If t0 is not zero, repeat the loop
+        : // 输出部分，假设没有输出寄存器
+    : "r" (tasknum_loc), "r" (taskinfo_size), "r"(MASTER_KERNEL_STACK)// Input operands
+        : "t0", "t1", "t2", "t3", "t4", "memory" // 修改的寄存器和内存
+        );
+
 }
 
 int taskname_to_taskid(char taskname[]) {
