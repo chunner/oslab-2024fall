@@ -1,6 +1,7 @@
 #include <os/list.h>
 #include <os/sched.h>
 #include <type.h>
+#include <os/smp.h>
 
 uint64_t time_elapsed = 0;
 uint64_t time_base = 0;
@@ -34,6 +35,7 @@ void latency(uint64_t time)
 void check_sleeping(void)
 {
     // TODO: [p2-task3] Pick out tasks that should wake up from the sleep queue
+    lock_kernel(&block_queue_lock);
     list_node_t *p = sleep_queue.next;
     list_node_t *pnext;
     while (p != &sleep_queue) {
@@ -44,4 +46,5 @@ void check_sleeping(void)
         }
         p = pnext;
     }
+    unlock_kernel(&block_queue_lock);
 }

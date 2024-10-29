@@ -92,6 +92,7 @@ void do_sleep(uint32_t sleep_time)
 void do_block(list_node_t *pcb_node, list_head *queue)
 {
     // TODO: [p2-task2] block the pcb task into the block queue
+    lock_kernel(&block_queue_lock);
     list_node_t *head = queue;
     list_node_t *tail = queue->prev;
     tail->next = pcb_node;
@@ -101,10 +102,12 @@ void do_block(list_node_t *pcb_node, list_head *queue)
 
     pcb_t *pcb = LIST_PCB(pcb_node);
     pcb->status = TASK_BLOCKED;
+    unlock_kernel(&block_queue_lock);
 }
 
 void do_unblock(list_node_t *pcb_node)
 {
+    lock_kernel(&block_queue_lock);
     // TODO: [p2-task2] unblock the `pcb` from the block queue
     list_node_t *next_node = pcb_node->next;        // delete the pcb from block queue
     list_node_t *prev_node = pcb_node->prev;
@@ -115,6 +118,7 @@ void do_unblock(list_node_t *pcb_node)
 
     pcb_t *pcb = LIST_PCB(pcb_node);
     add_readyqueue(pcb);
+    unlock_kernel(&block_queue_lock);
 }
 
 void set_sche_workload(int remain_length) {         // updata remain_length in pcb

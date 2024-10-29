@@ -15,6 +15,7 @@ void smp_init()
     unlock_kernel(&barrier_hart_lock);
     unlock_kernel(&condition_hart_lock);
     unlock_kernel(&mailbox_hart_lock);
+    unlock_kernel(&block_queue_lock);
 }
 
 void wakeup_other_hart()

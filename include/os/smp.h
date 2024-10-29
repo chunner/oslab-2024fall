@@ -15,5 +15,6 @@ spinlock_t mutex_hart_lock;
 spinlock_t barrier_hart_lock;
 spinlock_t condition_hart_lock;
 spinlock_t mailbox_hart_lock;
+spinlock_t block_queue_lock;
 
 #endif /* SMP_H */
