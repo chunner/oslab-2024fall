@@ -11,5 +11,6 @@ extern void unlock_kernel(spinlock_t *hart_lock);
 typedef volatile uint32_t spinlock_t;
 spinlock_t ready_queue_hart_lock;
 spinlock_t screen_buffer_hart_lock;
+spinlock_t mutex_hart_lock;
 
 #endif /* SMP_H */

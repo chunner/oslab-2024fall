@@ -11,6 +11,7 @@ void smp_init()
     /* TODO: P3-TASK3 multicore*/
     unlock_kernel(&ready_queue_hart_lock);
     unlock_kernel(&screen_buffer_hart_lock);
+    unlock_kernel(&mutex_hart_lock);
 }
 
 void wakeup_other_hart()

@@ -3,6 +3,7 @@
 #include <os/list.h>
 #include <atomic.h>
 #include <os/string.h>
+#include <os/smp.h>
 
 mutex_lock_t mlocks[LOCK_NUM];
 int last_lockid = 0;
@@ -42,6 +43,7 @@ void spin_lock_release(spin_lock_t *lock)
 int do_mutex_lock_init(int key)
 {
     /* TODO: [p2-task2] initialize mutex lock */
+    lock_kernel(&mutex_hart_lock);
     int i = 0;
     for (;i < last_lockid; i++) {
         if (mlocks[i].key == key) {
@@ -52,6 +54,7 @@ int do_mutex_lock_init(int key)
         if (i >= LOCK_NUM)   return -1; // mlocks are run out
         mlocks[last_lockid++].key = key;
     }
+    unlock_kernel(&mutex_hart_lock);
     return i;
 }
 
@@ -59,14 +62,18 @@ int do_mutex_lock_init(int key)
 void do_mutex_lock_acquire(int mlock_idx)
 {
     /* TODO: [p2-task2] acquire mutex lock */
+    lock_kernel(&mutex_hart_lock);
     while (1) {
         if (mlocks[mlock_idx].lock.status == UNLOCKED) {
             mlocks[mlock_idx].lock.status = LOCKED;
             mlocks[mlock_idx].pid = do_getpid();
+            unlock_kernel(&mutex_hart_lock);
             return;
         } else {
+            unlock_kernel(&mutex_hart_lock);
             do_block(&current_running->list, &mlocks[mlock_idx].block_queue);
             do_scheduler();
+            lock_kernel(&mutex_hart_lock);
         }
     }
 }
@@ -74,11 +81,13 @@ void do_mutex_lock_acquire(int mlock_idx)
 void do_mutex_lock_release(int mlock_idx)
 {
     /* TODO: [p2-task2] release mutex lock */
+    lock_kernel(&mutex_hart_lock);
     mlocks[mlock_idx].lock.status = UNLOCKED;
     mlocks[mlock_idx].pid = 0;
     while (mlocks[mlock_idx].block_queue.next != &mlocks[mlock_idx].block_queue) {
         do_unblock(mlocks[mlock_idx].block_queue.next);
     }
+    unlock_kernel(&mutex_hart_lock);
 }
 void check_lock(pid_t pid) {
     for (int i = 0;i < last_lockid;i++) {
