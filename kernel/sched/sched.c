@@ -40,6 +40,7 @@ int get_next_running() {
         next_running = LIST_PCB(next_running_list);
         if (next_running->cpu_mask & 1UL << hartid) {
             current_running = next_running;
+            remove_readyqueue(current_running);
             unlock_kernel(&ready_queue_hart_lock);
             return 1;
         }
@@ -61,7 +62,6 @@ void do_scheduler(void)
 
     pcb_t *prepcb = current_running;
     if (get_next_running()) {
-        remove_readyqueue(current_running);
         current_running->status = TASK_RUNNING;
         current_running->current_cpu_id = get_current_cpu_id();
         switch_to(prepcb, current_running);
@@ -173,7 +173,6 @@ void add_readyqueue(pcb_t *pcb)        // add the tail of ready_queue
     unlock_kernel(&ready_queue_hart_lock);
 }
 void remove_readyqueue(pcb_t *pcb) {
-    lock_kernel(&ready_queue_hart_lock);              // lock for ready queue
     if (!pcb)   return;  // pcb = NULL
     list_node_t *pcb_list = &pcb->list;
     list_node_t *next_node = pcb_list->next;
@@ -182,7 +181,6 @@ void remove_readyqueue(pcb_t *pcb) {
     pcb_list->prev = NULL;
     next_node->prev = prev_node;
     prev_node->next = next_node;
-    unlock_kernel(&ready_queue_hart_lock);
 }
 /*---------------------------------exec, kill, exit, waitpid --------------------------------------------------*/
 pid_t do_exec(char *name, int argc, char *argv[]) {

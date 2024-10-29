@@ -213,11 +213,9 @@ ENDPROC(switch_to)
 ENTRY(ret_from_exception)
   /* TODO: [p2-task3] restore context via provided macro and return to sepc */
   /* HINT: remember to check your sp, does it point to the right address? */
-  addi sp, sp, -8
-  sd ra, (sp)
+
   jal save_current_running
-  ld ra, (sp)
-  addi sp, sp, 8
+
 
   # addi sp, sp, -8
   # sd ra, (sp)
