@@ -225,14 +225,14 @@ ENTRY(ret_from_exception)
   ld ra, (sp)
   addi sp, sp, 8
 
+  RESTORE_CONTEXT
+
   addi sp, sp, -8
   sd ra, (sp)
   jal enable_preempt
   ld ra, (sp)
   addi sp, sp, 8
   
-  RESTORE_CONTEXT
-
  // csrr t0, sepc
   sret    // return to sepc
 ENDPROC(ret_from_exception)
