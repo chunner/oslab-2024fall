@@ -28,7 +28,7 @@ void wakeup_other_hart()
     return;
 }
 
-void lock_kernel(spinlock_t *hart_lock)
+void lock_kernel(hart_spinlock_t *hart_lock)
 {
     /* TODO: P3-TASK3 multicore*/
     while (atomic_swap(1, hart_lock) != 0) {
@@ -37,7 +37,7 @@ void lock_kernel(spinlock_t *hart_lock)
     return;
 }
 
-void unlock_kernel(spinlock_t *hart_lock)
+void unlock_kernel(hart_spinlock_t *hart_lock)
 {
     /* TODO: P3-TASK3 multicore*/
     atomic_swap(0, hart_lock);
