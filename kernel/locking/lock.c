@@ -211,6 +211,7 @@ void init_mbox() {
     }
 }
 int do_mbox_open(char *name) {
+    lock_kernel(&mailbox_hart_lock);
     int mbox_idx = 0;
     // try to search a mailbox with the same name
     for (;mbox_idx < MBOX_NUM;mbox_idx++) {
@@ -239,16 +240,20 @@ int do_mbox_open(char *name) {
     }
     mailbox[mbox_idx].cite_num++;
     mailbox[mbox_idx].open = MBOX_OPEN;
+    unlock_kernel(&mailbox_hart_lock);
     return mbox_idx;
 }
 void do_mbox_close(int mbox_idx) {
+    lock_kernel(&mailbox_hart_lock);
     mailbox[mbox_idx].cite_num--;
     mailbox[mbox_idx].open = MBOX_CLOSE;
     if (mailbox[mbox_idx].cite_num <= 0) {
         mailbox[mbox_idx].status = MBOX_INACTIVE;
     }
+    unlock_kernel(&mailbox_hart_lock);
 }
 int do_mbox_send(int mbox_idx, void *msg, int msg_length) {
+    lock_kernel(&mailbox_hart_lock);
     int blockedCount = 0;
     while (1) {
         if (mailbox[mbox_idx].buffer_idx + msg_length <= MAX_MBOX_LENGTH) {
@@ -259,15 +264,19 @@ int do_mbox_send(int mbox_idx, void *msg, int msg_length) {
             while (mailbox[mbox_idx].empty_queue.next != &mailbox[mbox_idx].empty_queue) {
                 do_unblock(mailbox[mbox_idx].empty_queue.next);
             }
+            unlock_kernel(&mailbox_hart_lock);
             return blockedCount;
         } else {    // mailbox is full
             do_block(&current_running->list, &mailbox[mbox_idx].full_queue);
             blockedCount++;
+            unlock_kernel(&mailbox_hart_lock);
             do_scheduler();
+            lock_kernel(&mailbox_hart_lock);
         }
     }
 }
 int do_mbox_recv(int mbox_idx, void *msg, int msg_length) {
+    lock_kernel(&mailbox_hart_lock);
     int blockedCount = 0;
     while (1) {
         if (mailbox[mbox_idx].buffer_idx - msg_length >= 0) {
@@ -281,11 +290,14 @@ int do_mbox_recv(int mbox_idx, void *msg, int msg_length) {
             while (mailbox[mbox_idx].full_queue.next != &mailbox[mbox_idx].full_queue) {
                 do_unblock(mailbox[mbox_idx].full_queue.next);
             }
+            unlock_kernel(&mailbox_hart_lock);
             return blockedCount;
         } else {
             do_block(&current_running->list, &mailbox[mbox_idx].empty_queue);
             blockedCount++;
+            unlock_kernel(&mailbox_hart_lock);
             do_scheduler();
+            lock_kernel(&mailbox_hart_lock);
         }
     }
 }
