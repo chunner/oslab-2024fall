@@ -40,6 +40,7 @@ int get_next_running() {
         next_running = LIST_PCB(next_running_list);
         if (next_running->cpu_mask & 1UL << hartid) {
             current_running = next_running;
+            unlock_kernel(&ready_queue_hart_lock);
             return 1;
         }
         next_running_list = next_running_list->next;

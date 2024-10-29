@@ -79,9 +79,9 @@ void init_screen(void)
 
 void screen_clear(void)
 {
-    lock_kernel(&screen_buffer_hart_lock);
     int i, j;
     vt100_clear();
+    lock_kernel(&screen_buffer_hart_lock);
     for (i = 0; i < SCREEN_HEIGHT; i++)
     {
         for (j = 0; j < SCREEN_WIDTH; j++)
@@ -92,8 +92,8 @@ void screen_clear(void)
     }
     current_running->cursor_x = 0;
     current_running->cursor_y = 0;
-    screen_reflush();
     unlock_kernel(&screen_buffer_hart_lock);
+    screen_reflush();
 }
 
 void screen_move_cursor(int x, int y)
