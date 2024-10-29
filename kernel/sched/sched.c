@@ -7,6 +7,7 @@
 #include <printk.h>
 #include <assert.h>
 #include <os/string.h>
+#include <os/smp.h>
 
 pcb_t pcb[NUM_MAX_TASK];
 const ptr_t pid0_stack = INIT_KERNEL_STACK + PAGE_SIZE;     // master kernel 
@@ -31,6 +32,7 @@ LIST_HEAD(sleep_queue);
 pid_t process_id = 2;
 
 int get_next_running() {
+    lock_kernel(&ready_queue_hart_lock);          // lock for ready_queue
     uint64_t hartid = get_current_cpu_id();
     list_node_t *next_running_list = ready_queue.next;
     pcb_t *next_running;
@@ -42,6 +44,7 @@ int get_next_running() {
         }
         next_running_list = next_running_list->next;
     }
+    unlock_kernel(&ready_queue_hart_lock);
     return 0;   // fail to get next_running
 }
 void do_scheduler(void)
@@ -153,6 +156,7 @@ void do_process_show() {
 /*---------------------------------ready queue management ----------------------------------------------*/
 void add_readyqueue(pcb_t *pcb)        // add the tail of ready_queue
 {
+    lock_kernel(&ready_queue_hart_lock);              // lock for ready queue
     if (!pcb)   return;  // pcb = NULL
     pcb->status = TASK_READY;
     list_node_t *head = &ready_queue;
@@ -161,8 +165,10 @@ void add_readyqueue(pcb_t *pcb)        // add the tail of ready_queue
     pcb->list.prev = tail;
     head->prev = &pcb->list;
     pcb->list.next = head;
+    unlock_kernel(&ready_queue_hart_lock);
 }
 void remove_readyqueue(pcb_t *pcb) {
+    lock_kernel(&ready_queue_hart_lock);              // lock for ready queue
     if (!pcb)   return;  // pcb = NULL
     list_node_t *pcb_list = &pcb->list;
     list_node_t *next_node = pcb_list->next;
@@ -171,6 +177,7 @@ void remove_readyqueue(pcb_t *pcb) {
     pcb_list->prev = NULL;
     next_node->prev = prev_node;
     prev_node->next = next_node;
+    unlock_kernel(&ready_queue_hart_lock);
 }
 /*---------------------------------exec, kill, exit, waitpid --------------------------------------------------*/
 pid_t do_exec(char *name, int argc, char *argv[]) {

@@ -219,11 +219,11 @@ ENTRY(ret_from_exception)
   ld ra, (sp)
   addi sp, sp, 8
 
-  addi sp, sp, -8
-  sd ra, (sp)
-  jal unlock_kernel
-  ld ra, (sp)
-  addi sp, sp, 8
+  # addi sp, sp, -8
+  # sd ra, (sp)
+  # jal unlock_kernel
+  # ld ra, (sp)
+  # addi sp, sp, 8
 
   RESTORE_CONTEXT
 
@@ -242,7 +242,7 @@ ENTRY(exception_handler_entry)
   /* TODO: [p2-task3] save context via the provided macro */
   SAVE_CONTEXT
 
-  jal lock_kernel 
+  # jal lock_kernel 
 
 
   /* TODO: [p2-task3] load ret_from_exception into $ra so that we can return to

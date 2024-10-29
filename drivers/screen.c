@@ -4,6 +4,7 @@
 #include <os/sched.h>
 #include <os/irq.h>
 #include <os/kernel.h>
+#include <os/smp.h>
 
 #define SCREEN_WIDTH    80
 #define SCREEN_HEIGHT   50
@@ -38,6 +39,7 @@ static void vt100_hidden_cursor()
 /* write a char */
 void screen_write_ch(char ch)
 {
+    lock_kernel(&screen_buffer_hart_lock);
     if (ch == '\n')
     {
         current_running->cursor_x = 0;
@@ -63,6 +65,7 @@ void screen_write_ch(char ch)
                 current_running->cursor_y++;
         }
     }
+    unlock_kernel(&screen_buffer_hart_lock);
 }
 
 
