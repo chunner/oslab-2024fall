@@ -13,5 +13,7 @@ spinlock_t ready_queue_hart_lock;
 spinlock_t screen_buffer_hart_lock;
 spinlock_t mutex_hart_lock;
 spinlock_t barrier_hart_lock;
+spinlock_t condition_hart_lock;
+spinlock_t mailbox_hart_lock;
 
 #endif /* SMP_H */

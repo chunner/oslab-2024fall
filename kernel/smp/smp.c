@@ -13,6 +13,7 @@ void smp_init()
     unlock_kernel(&screen_buffer_hart_lock);
     unlock_kernel(&mutex_hart_lock);
     unlock_kernel(&barrier_hart_lock);
+    unlock_kernel(&condition_hart_lock);
 }
 
 void wakeup_other_hart()

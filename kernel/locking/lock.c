@@ -159,6 +159,7 @@ void init_conditions(void) {
     }
 }
 int do_condition_init(int key) {
+    lock_kernel(&condition_hart_lock);
     int cond_idx = 0;
     for (;cond_idx < CONDITION_NUM;cond_idx++) {
         if (condition[cond_idx].status == COND_INACTIVE) {
@@ -170,6 +171,7 @@ int do_condition_init(int key) {
     condition[cond_idx].status = COND_ACTIVE;
     condition[cond_idx].block_queue.next = &condition[cond_idx].block_queue;
     condition[cond_idx].block_queue.prev = &condition[cond_idx].block_queue;
+    unlock_kernel(&condition_hart_lock);
     return cond_idx;
 }
 void do_condition_wait(int cond_idx, int mutex_idx) {
@@ -189,8 +191,10 @@ void do_condition_broadcast(int cond_idx) {
     }
 }
 void do_condition_destroy(int cond_idx) {
+    lock_kernel(&condition_hart_lock);
     do_condition_broadcast(cond_idx);
     condition[cond_idx].status = COND_INACTIVE;
+    unlock_kernel(&condition_hart_lock);
 }
 /*----------------------------------------mail box-----------------------------------------*/
 mailbox_t mailbox[MBOX_NUM];
