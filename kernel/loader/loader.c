@@ -3,7 +3,6 @@
 #include <os/kernel.h>
 #include <type.h>
 
-#define task_info_new_loc 0x58000010  // user's sp + 0x10
 #define kernel          0x50201000
 #define tasknum_loc     0x502001f6
 #define SECTOR_SIZE 512

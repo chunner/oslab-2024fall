@@ -23,7 +23,7 @@
 #define COMMAND_LEN 50
 
 
-#define task_info_new_loc 0x58000010  // user's sp + 0x10
+// #define task_info_new_loc 0x58000010  // user's sp + 0x10
 #define kernel          0x50201000
 #define tasknum_loc     0x502001f6
 #define taskinfo_size   64
