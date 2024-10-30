@@ -59,8 +59,8 @@ int main(int argc, char *argv[])
         clk = sys_get_tick() - clk;
         uint64_t speed = header.length * time_base / clk;
         sys_move_cursor(0, print_location);
-        printf("[Server]: recved msg from %d (blocked: %ld, correctBytes: %ld, errorBytes: %ld, speed: %ld)",
-            header.sender, blockedCount, correctRecvBytes, errorRecvBytes, speed);
+        printf("[Server]: recved msg from %d ( error`Bytes: %ld, speed: %ld)",   //blocked: %ld, correctBytes: %ld,
+            header.sender, errorRecvBytes, speed);          //  blockedCount, correctRecvBytes
 
         if (clientInitReq(msgBuffer, header.length)) {
             sys_mbox_send(handle_posmq, &clientPos, sizeof(int));
