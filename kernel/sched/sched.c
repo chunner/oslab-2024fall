@@ -190,16 +190,20 @@ void remove_readyqueue(pcb_t *pcb) {
 pid_t do_exec(char *name, int argc, char *argv[]) {
     lock_kernel(&pcb_pid_hart_lock);
     int taskid = taskname_to_taskid(name);
-    if (taskid < 0)  return -1;
-
+    if (taskid < 0) {
+        unlock_kernel(&pcb_pid_hart_lock);
+        return -1;
+    }
     int pcb_id = 0;
     for (; pcb_id < NUM_MAX_TASK;pcb_id++) {
         if (pcb[pcb_id].pcb_status == PCB_INACTIVE) {
             break;
         }
     }
-    if (pcb_id >= NUM_MAX_TASK)  return -1; // pcb has run out
-
+    if (pcb_id >= NUM_MAX_TASK) {
+        unlock_kernel(&pcb_pid_hart_lock);
+        return -1; // pcb has run out
+    }
     /* init pcb */
     pcb[pcb_id].kernel_sp = allocKernelPage(KernelStackPage) + KernelStackPage * PAGE_SIZE;
     pcb[pcb_id].kernel_stack_base = pcb[pcb_id].kernel_sp;
@@ -319,7 +323,10 @@ int do_waitpid(pid_t pid) {
             break;
         }
     }
-    if (i >= NUM_MAX_TASK)  return 0;  // fail to find
+    if (i >= NUM_MAX_TASK) {
+        unlock_kernel(&pcb_pid_hart_lock);
+        return 0;
+    }  // fail to find
     if (pcb[i].status != TASK_EXITED) {
         do_block(&current_running->list, &pcb[i].block_queue);
         unlock_kernel(&pcb_pid_hart_lock);

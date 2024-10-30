@@ -136,8 +136,8 @@ extern void switch_to(pcb_t *prev, pcb_t *next);
 void do_scheduler(void);
 void do_sleep(uint32_t);
 
-void do_block(list_node_t *, list_head *queue);
-void do_unblock(list_node_t *);
+void do_block(list_node_t *pcb_node, list_head *queue);
+void do_unblock(list_node_t *pcb_node);
 
 extern void add_readyqueue(pcb_t *pcb);
 extern void remove_readyqueue(pcb_t *pcb);
