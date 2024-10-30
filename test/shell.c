@@ -105,7 +105,7 @@ int main(void)
             char num_str[MAX_NUM_BYTE];
             int num_str_idx = 0;
             int i = 8;
-            while (buffer[i] > '0' && buffer[i] < '9' && num_str_idx < MAX_NUM_BYTE - 1) {
+            while (buffer[i] >= '0' && buffer[i] <= '9' && num_str_idx < MAX_NUM_BYTE - 1) {
                 num_str[num_str_idx++] = buffer[i++];
             }
             num_str[num_str_idx++] = '\0';
@@ -116,7 +116,7 @@ int main(void)
             char num_str[MAX_NUM_BYTE];
             int num_str_idx = 0;
             int i = 5;
-            while (buffer[i] > '0' && buffer[i] < '9' && num_str_idx < MAX_NUM_BYTE - 1) {
+            while (buffer[i] >= '0' && buffer[i] <= '9' && num_str_idx < MAX_NUM_BYTE - 1) {
                 num_str[num_str_idx++] = buffer[i++];
             }
             num_str[num_str_idx++] = '\0';
@@ -148,7 +148,7 @@ int main(void)
                 mask = atoi(mask_str);
                 i++;
                 //---------------decoding pid
-                while (buffer[i] > '0' && buffer[i] < '9' && pid_str_idx < MAX_NUM_BYTE - 1) {
+                while (buffer[i] >= '0' && buffer[i] <= '9' && pid_str_idx < MAX_NUM_BYTE - 1) {
                     pid_str[pid_str_idx++] = buffer[i++];
                 }
                 pid_str[pid_str_idx++] = '\0';
