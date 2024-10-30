@@ -304,6 +304,7 @@ int do_kill(pid_t pid) {
     recycle_user_sp[recycle_user_sp_num++] = pcb[i].user_stack_base;
     // -------------recycle pcb
     pcb[i].status = TASK_EXITED;
+    remove_pcb_queue(&pcb[i]);
     unlock_kernel(&pcb_pid_hart_lock);
     return 1;
 }
@@ -381,4 +382,30 @@ int do_taskset(char *name, pid_t pid, uint64_t mask, int mod) {
         unlock_kernel(&pcb_pid_hart_lock);
     }
     return 0;
+}
+void remove_pcb_queue(pcb_t *pcb) {
+    if (pcb->list.next == NULL || pcb->list.next == NULL) {
+        return;
+    }
+    lock_kernel(&ready_queue_hart_lock);
+    lock_kernel(&mutex_hart_lock);
+    lock_kernel(&barrier_hart_lock);
+    lock_kernel(&condition_hart_lock);
+    lock_kernel(&mailbox_hart_lock);
+    lock_kernel(&sleep_queue_lock);
+
+    list_node_t *pcb_list = &pcb->list;
+    list_node_t *next_node = pcb_list->next;
+    list_node_t *prev_node = pcb_list->prev;
+    pcb_list->next = NULL;
+    pcb_list->prev = NULL;
+    next_node->prev = prev_node;
+    prev_node->next = next_node;
+
+    unlock_kernel(&ready_queue_hart_lock);
+    unlock_kernel(&mutex_hart_lock);
+    unlock_kernel(&barrier_hart_lock);
+    unlock_kernel(&condition_hart_lock);
+    unlock_kernel(&mailbox_hart_lock);
+    unlock_kernel(&sleep_queue_lock);
 }

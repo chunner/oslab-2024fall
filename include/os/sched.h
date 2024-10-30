@@ -141,6 +141,7 @@ void do_unblock(list_node_t *pcb_node);
 
 extern void add_readyqueue(pcb_t *pcb);
 extern void remove_readyqueue(pcb_t *pcb);
+extern void remove_pcb_queue(pcb_t *pcb);
 
 void set_sche_workload(int remain_length);
 
