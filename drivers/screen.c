@@ -70,8 +70,10 @@ void screen_write_ch(char ch)
 
 void init_screen(void)
 {
+    lock_kernel(&screen_buffer_hart_lock);
     vt100_hidden_cursor();
     vt100_clear();
+    unlock_kernel(&screen_buffer_hart_lock);
     screen_clear();
 }
 
@@ -96,6 +98,7 @@ void screen_clear(void)
 
 void screen_move_cursor(int x, int y)
 {
+    lock_kernel(&screen_buffer_hart_lock);
     if (x >= SCREEN_WIDTH)
         x = SCREEN_WIDTH - 1;
     else if (x < 0)
@@ -107,6 +110,7 @@ void screen_move_cursor(int x, int y)
     current_running->cursor_x = x;
     current_running->cursor_y = y;
     vt100_move_cursor(x + 1, y + 1);
+    unlock_kernel(&screen_buffer_hart_lock);
 }
 
 
