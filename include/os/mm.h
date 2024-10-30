@@ -45,4 +45,12 @@
 extern ptr_t allocKernelPage(int numPage);
 extern ptr_t allocUserPage(int numPage);
 
+ptr_t recycle_kernel_sp[16];
+int recycle_kernel_sp_num;
+ptr_t recycle_user_sp[16];
+int recycle_user_sp_num;
+
+ptr_t allocKernelSP();
+ptr_t allockUserSP();
+
 #endif /* MM_H */

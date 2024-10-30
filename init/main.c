@@ -176,8 +176,8 @@ static void init_pcb(void)
         pcb[i].pcb_status = PCB_INACTIVE;
     }
     // pcb[0] is shell
-    pcb[0].kernel_sp = allocKernelPage(KernelStackPage) + KernelStackPage * PAGE_SIZE;
-    pcb[0].user_sp = allocUserPage(UserStackPage) + UserStackPage * PAGE_SIZE;
+    pcb[0].kernel_sp = allocKernelSP();
+    pcb[0].user_sp = allockUserSP();
     pcb[0].pid = 2;
     pcb[0].status = TASK_BLOCKED;
     pcb[0].entry_point = tasks[taskname_to_taskid("shell")].entry;
@@ -284,6 +284,10 @@ int main(void)
     // Init screen (QAQ)
     init_screen();
     printk("> [INIT] SCREEN initialization succeeded.\n");
+
+    // init recyle stack
+    recycle_kernel_sp_num = 0;
+    recycle_user_sp_num = 0;
 
     printk("mhart id : %d start work \n", mhartid);
 

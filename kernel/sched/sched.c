@@ -207,9 +207,9 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
         return -1; // pcb has run out
     }
     /* init pcb */
-    pcb[pcb_id].kernel_sp = allocKernelPage(KernelStackPage) + KernelStackPage * PAGE_SIZE;
+    pcb[pcb_id].kernel_sp = allocKernelSP();
     pcb[pcb_id].kernel_stack_base = pcb[pcb_id].kernel_sp;
-    pcb[pcb_id].user_sp = allocUserPage(UserStackPage) + UserStackPage * PAGE_SIZE;
+    pcb[pcb_id].user_sp = allockUserSP();
     pcb[pcb_id].user_stack_base = pcb[pcb_id].user_sp;
     pcb[pcb_id].pid = 0;
     pcb[pcb_id].status = TASK_BLOCKED;
@@ -304,6 +304,9 @@ int do_kill(pid_t pid) {
     }
     // release lock
     check_lock(pid);
+    // recycle stack
+    recycle_kernel_sp[recycle_kernel_sp_num++] = pcb[i].kernel_stack_base;
+    recycle_user_sp[recycle_user_sp_num++] = pcb[i].user_stack_base;
     // delete pcb
     pcb[i].pcb_status = PCB_INACTIVE;
     unlock_kernel(&pcb_pid_hart_lock);
@@ -312,10 +315,16 @@ int do_kill(pid_t pid) {
 void do_exit(void) {
     lock_kernel(&pcb_pid_hart_lock);
     current_running->status = TASK_EXITED;
+    // wake up wait queue
     while (current_running->block_queue.next != &current_running->block_queue) {
         do_unblock(current_running->block_queue.next);
     }
+    // release lock
     check_lock(do_getpid());
+    // recycle stack
+    recycle_kernel_sp[recycle_kernel_sp_num++] = current_running->kernel_stack_base;
+    recycle_user_sp[recycle_user_sp_num++] = current_running->user_stack_base;
+    // delete pcb
     current_running->pcb_status = PCB_INACTIVE;
     unlock_kernel(&pcb_pid_hart_lock);
     do_scheduler();
