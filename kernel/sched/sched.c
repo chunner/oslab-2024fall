@@ -277,6 +277,7 @@ int do_kill(pid_t pid) {
     check_lock(pid);
     // delete pcb
     pcb[i].pcb_status = PCB_INACTIVE;
+    remove_pcb_queue(&pcb[i]);
     return 1;
 }
 void do_exit(void) {
@@ -332,4 +333,17 @@ int do_taskset(char *name, pid_t pid, uint64_t mask, int mod) {
         pcb[i].cpu_mask = mask;
     }
     return 0;
+}
+void remove_pcb_queue(pcb_t *pcb) {
+    if (pcb->list.next == NULL || pcb->list.next == NULL) {
+        return;
+    }
+    list_node_t *pcb_list = &pcb->list;
+    list_node_t *next_node = pcb_list->next;
+    list_node_t *prev_node = pcb_list->prev;
+    pcb_list->next = NULL;
+    pcb_list->prev = NULL;
+    next_node->prev = prev_node;
+    prev_node->next = next_node;
+
 }
