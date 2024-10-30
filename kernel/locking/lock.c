@@ -51,7 +51,10 @@ int do_mutex_lock_init(int key)
         }
     }
     if (i == last_lockid) { // do not exit the same key
-        if (i >= LOCK_NUM)   return -1; // mlocks are run out
+        if (i >= LOCK_NUM) {
+            unlock_kernel(&mutex_hart_lock);
+            return -1;
+        } // mlocks are run out
         mlocks[last_lockid++].key = key;
     }
     unlock_kernel(&mutex_hart_lock);
@@ -90,11 +93,18 @@ void do_mutex_lock_release(int mlock_idx)
     unlock_kernel(&mutex_hart_lock);
 }
 void check_lock(pid_t pid) {
+    lock_kernel(&mutex_hart_lock);
     for (int i = 0;i < last_lockid;i++) {
         if (mlocks[i].lock.status == LOCKED && mlocks[i].pid == pid) {
-            do_mutex_lock_release(i);
+            // do_mutex_lock_release(i);
+            mlocks[i].lock.status = UNLOCKED;
+            mlocks[i].pid = 0;
+            while (mlocks[i].block_queue.next != &mlocks[i].block_queue) {
+                do_unblock(mlocks[i].block_queue.next);
+            }
         }
     }
+    unlock_kernel(&mutex_hart_lock);
 }
 /*--------------------------------barrier----------------------------------------------------------------*/
 barrier_t barrier[BARRIER_NUM];
@@ -113,7 +123,10 @@ int do_barrier_init(int key, int goal) {
             break;
         }
     }
-    if (bar_idx >= BARRIER_NUM)  return -1; // barrier are run out
+    if (bar_idx >= BARRIER_NUM) {
+        unlock_kernel(&barrier_hart_lock);
+        return -1;
+    } // barrier are run out
     barrier[bar_idx].status = BAR_ACTIVE;
     barrier[bar_idx].goal = goal;
     barrier[bar_idx].key = key;
@@ -166,7 +179,10 @@ int do_condition_init(int key) {
             break;
         }
     }
-    if (cond_idx >= CONDITION_NUM)    return -1; // condition has run out
+    if (cond_idx >= CONDITION_NUM) {
+        unlock_kernel(&condition_hart_lock);
+        return -1;
+    } // condition has run out
     condition[cond_idx].key = key;
     condition[cond_idx].status = COND_ACTIVE;
     condition[cond_idx].block_queue.next = &condition[cond_idx].block_queue;
@@ -177,8 +193,8 @@ int do_condition_init(int key) {
 void do_condition_wait(int cond_idx, int mutex_idx) {
     lock_kernel(&condition_hart_lock);
     do_block(&current_running->list, &condition[cond_idx].block_queue);
-    unlock_kernel(&condition_hart_lock);
     do_mutex_lock_release(mutex_idx);
+    unlock_kernel(&condition_hart_lock);
     do_scheduler();
     do_mutex_lock_acquire(mutex_idx);
 }

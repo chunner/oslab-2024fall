@@ -133,6 +133,7 @@ void set_sche_workload(int remain_length) {         // updata remain_length in p
 }
 /* --------------------------------------process show----------------------------------------------------- */
 void do_process_show() {
+    lock_kernel(&pcb_pid_hart_lock);
     printk("[Process Table]\n");
     for (int i = 0;i < NUM_MAX_TASK;i++) {
         if (pcb[i].pcb_status == PCB_ACTIVE) {
@@ -163,6 +164,7 @@ void do_process_show() {
             printk("\n");
         }
     }
+    unlock_kernel(&pcb_pid_hart_lock);
 }
 /*---------------------------------ready queue management ----------------------------------------------*/
 void add_readyqueue(pcb_t *pcb)        // add the tail of ready_queue
@@ -287,7 +289,10 @@ int do_kill(pid_t pid) {
             break;
         }
     }
-    if (i >= NUM_MAX_TASK)  return 0;  // fail to find
+    if (i >= NUM_MAX_TASK) {
+        unlock_kernel(&pcb_pid_hart_lock);
+        return 0;
+    }  // fail to find
     if (&pcb[i] == current_running) {
         unlock_kernel(&pcb_pid_hart_lock);
         do_exit();
@@ -341,17 +346,14 @@ pid_t do_getpid() {
 }
 
 int do_taskset(char *name, pid_t pid, uint64_t mask, int mod) {
-    lock_kernel(&pcb_pid_hart_lock);
     if (mod == 0) { // taskset mask taskname
         char *argv[1];
         argv[0] = name;
-        unlock_kernel(&pcb_pid_hart_lock);
         int pid = do_exec(name, 1, argv);
-        lock_kernel(&pcb_pid_hart_lock);
         if (pid == -1) {
-            unlock_kernel(&pcb_pid_hart_lock);
             return -1;
         }
+        lock_kernel(&pcb_pid_hart_lock);
         int i = 0;
         for (;i < NUM_MAX_TASK;i++) {
             if (pcb[i].pid == pid && pcb[i].pcb_status == PCB_ACTIVE) {
@@ -359,7 +361,9 @@ int do_taskset(char *name, pid_t pid, uint64_t mask, int mod) {
             }
         }
         pcb[i].cpu_mask = mask;
+        unlock_kernel(&pcb_pid_hart_lock);
     } else {// taskset -p mask pid
+        lock_kernel(&pcb_pid_hart_lock);
         int i = 0;
         for (;i < NUM_MAX_TASK;i++) {
             if (pcb[i].pid == pid && pcb[i].pcb_status == PCB_ACTIVE) {
@@ -371,7 +375,7 @@ int do_taskset(char *name, pid_t pid, uint64_t mask, int mod) {
             return -1;
         }
         pcb[i].cpu_mask = mask;
+        unlock_kernel(&pcb_pid_hart_lock);
     }
-    unlock_kernel(&pcb_pid_hart_lock);
     return 0;
 }

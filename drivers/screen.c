@@ -39,7 +39,6 @@ static void vt100_hidden_cursor()
 /* write a char */
 void screen_write_ch(char ch)
 {
-    lock_kernel(&screen_buffer_hart_lock);
     if (ch == '\n')
     {
         current_running->cursor_x = 0;
@@ -65,7 +64,6 @@ void screen_write_ch(char ch)
                 current_running->cursor_y++;
         }
     }
-    unlock_kernel(&screen_buffer_hart_lock);
 }
 
 
@@ -79,9 +77,9 @@ void init_screen(void)
 
 void screen_clear(void)
 {
+    lock_kernel(&screen_buffer_hart_lock);
     int i, j;
     vt100_clear();
-    lock_kernel(&screen_buffer_hart_lock);
     for (i = 0; i < SCREEN_HEIGHT; i++)
     {
         for (j = 0; j < SCREEN_WIDTH; j++)
@@ -118,10 +116,12 @@ void screen_write(char *buff)
     int i = 0;
     int l = strlen(buff);
 
+    lock_kernel(&screen_buffer_hart_lock);
     for (i = 0; i < l; i++)
     {
         screen_write_ch(buff[i]);
     }
+    unlock_kernel(&screen_buffer_hart_lock);
 }
 
 /*
