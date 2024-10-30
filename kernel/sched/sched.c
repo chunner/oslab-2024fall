@@ -136,7 +136,7 @@ void do_process_show() {
     lock_kernel(&pcb_pid_hart_lock);
     printk("[Process Table]\n");
     for (int i = 0;i < NUM_MAX_TASK;i++) {
-        if (pcb[i].pcb_status == PCB_ACTIVE) {
+        if (pcb[i].status != TASK_EXITED) {
             printk("[%d] PID : %d   STATUS :", i, pcb[i].pid);
             switch (pcb[i].status)
             {
@@ -151,10 +151,6 @@ void do_process_show() {
                 break;
             case TASK_READY:
                 printk("READY\t");
-                printk("mask: %d\t", pcb[i].cpu_mask);
-                break;
-            case TASK_EXITED:
-                printk("EXITED\t");
                 printk("mask: %d\t", pcb[i].cpu_mask);
                 break;
             default:
@@ -198,7 +194,7 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     }
     int pcb_id = 0;
     for (; pcb_id < NUM_MAX_TASK;pcb_id++) {
-        if (pcb[pcb_id].pcb_status == PCB_INACTIVE) {
+        if (pcb[pcb_id].status == TASK_EXITED) {
             break;
         }
     }
@@ -211,13 +207,12 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     pcb[pcb_id].kernel_stack_base = pcb[pcb_id].kernel_sp;
     pcb[pcb_id].user_sp = allockUserSP();
     pcb[pcb_id].user_stack_base = pcb[pcb_id].user_sp;
-    pcb[pcb_id].pid = 0;
-    pcb[pcb_id].status = TASK_BLOCKED;
+    int pid = ++process_id;
+    pcb[pcb_id].pid = pid;
     pcb[pcb_id].entry_point = tasks[taskid].entry;
     pcb[pcb_id].remain_length = 0;
     pcb[pcb_id].block_queue.next = &pcb[pcb_id].block_queue;
     pcb[pcb_id].block_queue.prev = &pcb[pcb_id].block_queue;
-    pcb[pcb_id].pcb_status = PCB_ACTIVE;
     pcb[pcb_id].cpu_mask = current_running->cpu_mask;
     strcpy(pcb[pcb_id].taskname, name);
 
@@ -275,17 +270,16 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     lock_kernel(&ready_queue_hart_lock);
     add_readyqueue(&pcb[pcb_id]);
     unlock_kernel(&ready_queue_hart_lock);
-    int pid = ++process_id;
-    pcb[pcb_id].pid = pid;
     unlock_kernel(&pcb_pid_hart_lock);
     return pid;
 
 }
 int do_kill(pid_t pid) {
     lock_kernel(&pcb_pid_hart_lock);
+    // ----------pid to pcb_id
     int i = 0;
     for (;i < NUM_MAX_TASK;i++) {
-        if (pcb[i].pid == pid && pcb[i].pcb_status == PCB_ACTIVE) {
+        if (pcb[i].pid == pid && pcb[i].status != TASK_EXITED) {
             break;
         }
     }
@@ -293,28 +287,28 @@ int do_kill(pid_t pid) {
         unlock_kernel(&pcb_pid_hart_lock);
         return 0;
     }  // fail to find
+    // ------------kill itself, then go to exit
     if (&pcb[i] == current_running) {
         unlock_kernel(&pcb_pid_hart_lock);
         do_exit();
         return 1;
     }
-    // wake up block queue
+    // ----------wake up block queue
     while (pcb[i].block_queue.next != &pcb[i].block_queue) {
         do_unblock(pcb[i].block_queue.next);
     }
-    // release lock
+    // -----------release lock
     check_lock(pid);
-    // recycle stack
+    // ------------recycle stack
     recycle_kernel_sp[recycle_kernel_sp_num++] = pcb[i].kernel_stack_base;
     recycle_user_sp[recycle_user_sp_num++] = pcb[i].user_stack_base;
-    // delete pcb
-    pcb[i].pcb_status = PCB_INACTIVE;
+    // -------------recycle pcb
+    pcb[i].status = TASK_EXITED;
     unlock_kernel(&pcb_pid_hart_lock);
     return 1;
 }
 void do_exit(void) {
     lock_kernel(&pcb_pid_hart_lock);
-    current_running->status = TASK_EXITED;
     // wake up wait queue
     while (current_running->block_queue.next != &current_running->block_queue) {
         do_unblock(current_running->block_queue.next);
@@ -324,8 +318,8 @@ void do_exit(void) {
     // recycle stack
     recycle_kernel_sp[recycle_kernel_sp_num++] = current_running->kernel_stack_base;
     recycle_user_sp[recycle_user_sp_num++] = current_running->user_stack_base;
-    // delete pcb
-    current_running->pcb_status = PCB_INACTIVE;
+    // recycle pcb
+    current_running->status = TASK_EXITED;
     unlock_kernel(&pcb_pid_hart_lock);
     do_scheduler();
 }
@@ -333,7 +327,7 @@ int do_waitpid(pid_t pid) {
     lock_kernel(&pcb_pid_hart_lock);
     int i = 0;
     for (;i < NUM_MAX_TASK;i++) {
-        if (pcb[i].pid == pid && pcb[i].pcb_status == PCB_ACTIVE) {
+        if (pcb[i].pid == pid && pcb[i].status != TASK_EXITED) {
             break;
         }
     }
@@ -365,7 +359,7 @@ int do_taskset(char *name, pid_t pid, uint64_t mask, int mod) {
         lock_kernel(&pcb_pid_hart_lock);
         int i = 0;
         for (;i < NUM_MAX_TASK;i++) {
-            if (pcb[i].pid == pid && pcb[i].pcb_status == PCB_ACTIVE) {
+            if (pcb[i].pid == pid && pcb[i].status != TASK_EXITED) {
                 break;
             }
         }
@@ -375,7 +369,7 @@ int do_taskset(char *name, pid_t pid, uint64_t mask, int mod) {
         lock_kernel(&pcb_pid_hart_lock);
         int i = 0;
         for (;i < NUM_MAX_TASK;i++) {
-            if (pcb[i].pid == pid && pcb[i].pcb_status == PCB_ACTIVE) {
+            if (pcb[i].pid == pid && pcb[i].status == TASK_EXITED) {
                 break;
             }
         }

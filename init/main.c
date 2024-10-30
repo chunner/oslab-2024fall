@@ -173,18 +173,16 @@ static void init_pcb(void)
 {
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
     for (int i = 0;i < NUM_MAX_TASK; i++) {
-        pcb[i].pcb_status = PCB_INACTIVE;
+        pcb[i].status = TASK_EXITED;
     }
     // pcb[0] is shell
     pcb[0].kernel_sp = allocKernelSP();
     pcb[0].user_sp = allockUserSP();
     pcb[0].pid = 2;
-    pcb[0].status = TASK_BLOCKED;
     pcb[0].entry_point = tasks[taskname_to_taskid("shell")].entry;
     pcb[0].remain_length = 0;
     pcb[0].block_queue.next = &pcb[0].block_queue;
     pcb[0].block_queue.prev = &pcb[0].block_queue;
-    pcb[0].pcb_status = PCB_ACTIVE;
     pcb[0].cpu_mask = 0x3;
     strcpy(pcb[0].taskname, "shell");
     init_pcb_stack(pcb[0].kernel_sp, pcb[0].user_sp, pcb[0].entry_point, &pcb[0]);

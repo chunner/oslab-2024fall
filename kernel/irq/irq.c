@@ -19,8 +19,8 @@ void interrupt_helper(regs_context_t *regs, uint64_t stval, uint64_t scause)
     // get_current_running();
     // TODO: [p2-task3] & [p2-task4] interrupt handler.
     // call corresponding handler by the value of `scause`
-    if (current_running->pcb_status == PCB_INACTIVE || current_running->status == TASK_EXITED) {
-        do_exit();
+    if (current_running->status == TASK_EXITED) {
+        do_scheduler();
     }
     if (scause & SCAUSE_IRQ_FLAG) {       // Interrupt = 1
         irq_table[scause & SCAUSE_EXC_CODE](regs, stval, scause);

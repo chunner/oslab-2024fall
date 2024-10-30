@@ -64,10 +64,10 @@ typedef enum {
     TASK_EXITED,
 } task_status_t;
 
-typedef enum {
-    PCB_ACTIVE,
-    PCB_INACTIVE,
-}pcb_status_t;
+// typedef enum {
+//     PCB_ACTIVE,
+//     PCB_INACTIVE,
+// }pcb_status_t;
 /* Process Control Block */
 typedef struct pcb
 {
@@ -105,7 +105,7 @@ typedef struct pcb
     /* sys_wait (pid) */
     list_head block_queue;
 
-    pcb_status_t pcb_status;
+    // pcb_status_t pcb_status;
 
     uint64_t current_cpu_id;
 
