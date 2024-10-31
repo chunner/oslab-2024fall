@@ -206,7 +206,7 @@ static void init_syscall(void)
     syscall[SYSCALL_LOCK_ACQ] = (long (*)())do_mutex_lock_acquire;
     syscall[SYSCALL_LOCK_RELEASE] = (long (*)())do_mutex_lock_release;
     syscall[SYSCALL_SET_SCHE_WORKLOAD] = (long (*)())set_sche_workload;
-    syscall[SYSCALL_GETCH] = (long (*)())bios_getchar;
+    syscall[SYSCALL_READCH] = (long (*)())bios_getchar;
     syscall[SYSCALL_PS] = (long (*)())do_process_show;
     syscall[SYSCALL_CLEAR] = (long (*)())screen_clear;
     syscall[SYSCALL_EXEC] = (long (*)())do_exec;
@@ -229,6 +229,17 @@ static void init_syscall(void)
     syscall[SYSCALL_TASKSET] = (long (*)())do_taskset;
 }
 /************************************************************/
+
+/*
+ * Once a CPU core calls this function,
+ * it will stop executing!
+ */
+static void kernel_brake(void)
+{
+    disable_interrupt();
+    while (1)
+        __asm__ volatile("wfi");
+}
 
 int main(void)
 {
@@ -283,11 +294,27 @@ int main(void)
     init_screen();
     printk("> [INIT] SCREEN initialization succeeded.\n");
 
-    // init recyle stack
-    recycle_kernel_sp_num = 0;
+       // init recyle stack
+        recycle_kernel_sp_num = 0;
     recycle_user_sp_num = 0;
+    ====== =d
+        /*
+         * Just start kernel with VM and print this string
+         * in the first part of task 1 of project 4.
+         * NOTE: if you use SMP, then every CPU core should call
+         *  `kernel_brake()` to stop executing!
+         */
+        printk("> [INIT] CPU #%u has entered kernel with VM!\n",
+            (unsigned int) get_current_cpu_id());
+    // TODO: [p4-task1 cont.] remove the brake and continue to start user processes.
+    kernel_brake();
 
-    printk("mhart id : %d start work \n", mhartid);
+    // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
+    // NOTE: The function of sstatus.sie is different from sie's
+
+    >>>>>> > start2 / Project4_Virtual_Memory_Management
+
+        printk("mhart id : %d start work \n", mhartid);
 
     // load all tasks from sd to mem
     for (int i = 0; i < tasknum; i++) {
