@@ -32,15 +32,15 @@
 #define MAP_KERNEL 1
 #define MAP_USER 2
 #define MEM_SIZE 32
-// #define PAGE_SIZE 4096 // 4K = 0x1000
-// #define INIT_KERNEL_STACK 0x50500000
-// #define INIT_USER_STACK 0x52500000
-// #define FREEMEM_KERNEL (INIT_KERNEL_STACK + PAGE_SIZE * 4)
-// #define FREEMEM_USER INIT_USER_STACK
+ // #define PAGE_SIZE 4096 // 4K = 0x1000
+ // #define INIT_KERNEL_STACK 0x50500000
+ // #define INIT_USER_STACK 0x52500000
+ // #define FREEMEM_KERNEL (INIT_KERNEL_STACK + PAGE_SIZE * 4)
+ // #define FREEMEM_USER INIT_USER_STACK
 
-// #define UserStackPage 16
-// #define KernelStackPage 16
-#define PAGE_SIZE 4096 // 4K
+#define UserStackPage 16
+#define KernelStackPage 16
+#define PAGE_SIZE 4096 // 4K = 0x1000
 #define INIT_KERNEL_STACK 0xffffffc052000000
 #define FREEMEM_KERNEL (INIT_KERNEL_STACK+PAGE_SIZE)
 
@@ -64,7 +64,7 @@ extern ptr_t allocLargePage(int numPage);
 #endif
 
 // TODO [P4-task1] */
-extern void* kmalloc(size_t size);
+extern void *kmalloc(size_t size);
 extern void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir);
 extern uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir);
 

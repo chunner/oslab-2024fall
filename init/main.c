@@ -294,27 +294,25 @@ int main(void)
     init_screen();
     printk("> [INIT] SCREEN initialization succeeded.\n");
 
-       // init recyle stack
-        recycle_kernel_sp_num = 0;
+    // init recyle stack
+    recycle_kernel_sp_num = 0;
     recycle_user_sp_num = 0;
-    ====== =d
-        /*
+
+    /*
          * Just start kernel with VM and print this string
          * in the first part of task 1 of project 4.
          * NOTE: if you use SMP, then every CPU core should call
          *  `kernel_brake()` to stop executing!
          */
-        printk("> [INIT] CPU #%u has entered kernel with VM!\n",
-            (unsigned int) get_current_cpu_id());
+    printk("> [INIT] CPU #%u has entered kernel with VM!\n",
+        (unsigned int) get_current_cpu_id());
     // TODO: [p4-task1 cont.] remove the brake and continue to start user processes.
     kernel_brake();
 
     // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
     // NOTE: The function of sstatus.sie is different from sie's
 
-    >>>>>> > start2 / Project4_Virtual_Memory_Management
-
-        printk("mhart id : %d start work \n", mhartid);
+    printk("mhart id : %d start work \n", mhartid);
 
     // load all tasks from sd to mem
     for (int i = 0; i < tasknum; i++) {

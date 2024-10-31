@@ -168,7 +168,7 @@ pid_t sys_getpid()
 int  sys_getchar(void)
 {
     /* TODO: [p3-task1] call invoke_syscall to implement sys_getchar */
-    int retval = invoke_syscall((long) SYSCALL_GETCH, IGNORE, IGNORE, IGNORE, IGNORE, IGNORE);
+    int retval = invoke_syscall((long) SYSCALL_READCH, IGNORE, IGNORE, IGNORE, IGNORE, IGNORE);
     return retval;
 }
 
