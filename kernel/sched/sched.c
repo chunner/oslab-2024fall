@@ -45,6 +45,8 @@ int get_next_running() {
         if (next_running->cpu_mask & 1UL << hartid) {
             current_running = next_running;
             remove_readyqueue(current_running);
+            current_running->status = TASK_RUNNING;
+            current_running->current_cpu_id = get_current_cpu_id();
             unlock_kernel(&ready_queue_hart_lock);
             return 1;
         }
@@ -64,8 +66,6 @@ void do_scheduler(void)
 
     pcb_t *prepcb = current_running;
     if (get_next_running()) {
-        current_running->status = TASK_RUNNING;
-        current_running->current_cpu_id = get_current_cpu_id();
         switch_to(prepcb, current_running);
         return;
     } else {
@@ -370,7 +370,7 @@ int do_taskset(char *name, pid_t pid, uint64_t mask, int mod) {
         lock_kernel(&pcb_pid_hart_lock);
         int i = 0;
         for (;i < NUM_MAX_TASK;i++) {
-            if (pcb[i].pid == pid && pcb[i].status == TASK_EXITED) {
+            if (pcb[i].pid == pid && pcb[i].status != TASK_EXITED) {
                 break;
             }
         }
