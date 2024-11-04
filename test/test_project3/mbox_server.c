@@ -44,9 +44,12 @@ int main(int argc, char *argv[])
 
     uint64_t time_base = sys_get_timebase;
 
+    // uint64_t all_clk = sys_get_tick();
+    uint64_t old_clk = sys_get_tick();
+
+
     for (;;)
     {
-        uint64_t clk = sys_get_tick();
         blockedCount += sys_mbox_recv(handle_mq, &header, sizeof(MsgHeader_t));
         blockedCount += sys_mbox_recv(handle_mq, msgBuffer, header.length);
 
@@ -56,8 +59,10 @@ int main(int argc, char *argv[])
         } else {
             errorRecvBytes += header.length;
         }
-        clk = sys_get_tick() - clk;
-        uint64_t speed = header.length * time_base / clk;
+        uint64_t new_clk = sys_get_tick();
+        uint64_t speed = header.length * time_base / (new_clk - old_clk);
+        old_clk = new_clk;
+        // uint64_t all_speed = correctRecvBytes * time_base / (sys_get_tick() - all_clk);
         sys_move_cursor(0, print_location);
         printf("[Server]: recved msg from %d ( errorBytes: %ld, speed: %ld)",   //blocked: %ld, correctBytes: %ld,
             header.sender, errorRecvBytes, speed);          //  blockedCount, correctRecvBytes
