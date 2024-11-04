@@ -48,8 +48,10 @@ int main()
     for (;;)
     {
         // len = (rand() % ((MAX_MBOX_LENGTH - sizeof(MsgHeader_t))/2)) + 1;
-        len = (MAX_MBOX_LENGTH - sizeof(MsgHeader_t)) / 2 + 1;
-        //len = 10;
+        // len = (MAX_MBOX_LENGTH - sizeof(MsgHeader_t)) / 2 + 1;
+        len = 10;
+        sys_move_cursor(0, position);
+        printf("i am ready to send");
         generateRandomString(strBuffer, len);
         blocked += clientSendMsg(handle_mq, strBuffer, len);
         bytes += len;

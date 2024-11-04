@@ -49,6 +49,7 @@ int get_next_running() {
             current_running->status = TASK_RUNNING;
             current_running->current_cpu_id = get_current_cpu_id();
             unlock_kernel(&ready_queue_hart_lock);
+            unlock_kernel(&pcb_pid_hart_lock);
             return 1;
         }
         next_running_list = next_running_list->next;
