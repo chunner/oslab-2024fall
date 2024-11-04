@@ -33,6 +33,7 @@ pid_t process_id = 2;
 
 int get_next_running() {
     lock_kernel(&ready_queue_hart_lock);          // lock for ready_queue
+    lock_kernel(&pcb_pid_hart_lock);
 
     if (current_running->status == TASK_RUNNING)      // put the current_runnning to the tail of ready_queue
         add_readyqueue(current_running);
@@ -52,6 +53,7 @@ int get_next_running() {
         }
         next_running_list = next_running_list->next;
     }
+    unlock_kernel(&pcb_pid_hart_lock);
     unlock_kernel(&ready_queue_hart_lock);
     return 0;   // fail to get next_running
 }
