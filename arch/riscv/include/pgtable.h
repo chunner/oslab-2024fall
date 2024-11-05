@@ -20,13 +20,13 @@
  */
 static inline void local_flush_tlb_all(void)
 {
-    __asm__ __volatile__ ("sfence.vma" : : : "memory");
+    __asm__ __volatile__("sfence.vma" : : : "memory");
 }
 
 /* Flush one page from local TLB */
 static inline void local_flush_tlb_page(unsigned long addr)
 {
-    __asm__ __volatile__ ("sfence.vma %0" : : "r" (addr) : "memory");
+    __asm__ __volatile__("sfence.vma %0" : : "r" (addr) : "memory");
 }
 
 static inline void local_flush_icache_all(void)
@@ -38,7 +38,7 @@ static inline void set_satp(
     unsigned mode, unsigned asid, unsigned long ppn)
 {
     unsigned long __v =
-        (unsigned long)(((unsigned long)mode << SATP_MODE_SHIFT) | ((unsigned long)asid << SATP_ASID_SHIFT) | ppn);
+        (unsigned long) (((unsigned long) mode << SATP_MODE_SHIFT) | ((unsigned long) asid << SATP_ASID_SHIFT) | ppn);
     __asm__ __volatile__("sfence.vma\ncsrw satp, %0" : : "rK"(__v) : "memory");
 }
 
@@ -76,42 +76,59 @@ typedef uint64_t PTE;
 static inline uintptr_t kva2pa(uintptr_t kva)
 {
     /* TODO: [P4-task1] */
+    return kva - 0xffffffc000000000lu;
 }
 
 static inline uintptr_t pa2kva(uintptr_t pa)
 {
     /* TODO: [P4-task1] */
+    return pa + 0xffffffc000000000lu;
 }
 
 /* get physical page addr from PTE 'entry' */
 static inline uint64_t get_pa(PTE entry)
 {
     /* TODO: [P4-task1] */
+    uint64_t pa_mask = (1lu << 44) - 1;
+    uint64_t pa = (entry >> _PAGE_PFN_SHIFT) & pa_mask;
+    return pa;
 }
 
 /* Get/Set page frame number of the `entry` */
 static inline long get_pfn(PTE entry)
 {
     /* TODO: [P4-task1] */
+    uint64_t pfn_mask = (1lu << 44) - 1;
+    uint64_t pfn = entry >> _PAGE_PFN_SHIFT & pfn_mask;
+    return pfn;
 }
 static inline void set_pfn(PTE *entry, uint64_t pfn)
 {
     /* TODO: [P4-task1] */
+    uint64_t pfn_mask = (1lu << 44) - 1;
+    *entry = (*entry & ~(pfn_mask << _PAGE_PFN_SHIFT)) | (pfn << _PAGE_PFN_SHIFT);
 }
 
 /* Get/Set attribute(s) of the `entry` */
 static inline long get_attribute(PTE entry, uint64_t mask)
 {
     /* TODO: [P4-task1] */
+    uint64_t attr = entry & mask;
+    return attr;
 }
 static inline void set_attribute(PTE *entry, uint64_t bits)
 {
     /* TODO: [P4-task1] */
+    *entry = *entry | bits;
 }
 
 static inline void clear_pgdir(uintptr_t pgdir_addr)
 {
     /* TODO: [P4-task1] */
+    PTE *pte_entry = (PTE *) pgdir_addr;
+    for (int i = 0;i < NUM_PTE_ENTRY;i++) {
+        pte_entry[i] = 0ul;
+    }
 }
 
 #endif  // PGTABLE_H
