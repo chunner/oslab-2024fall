@@ -243,20 +243,20 @@ static void kernel_brake(void)
 
 int main(void)
 {
-    uint64_t mhartid;
-    if ((mhartid = get_current_cpu_id()) != 0) { // if not master hart
-        current_running_1 = &pid1_pcb;
-        current_running_1->cursor_y = 3;
-        current_running = current_running_1;
-        printk("mhart id : %d start work \n", mhartid);
-        setup_exception();
-        bios_set_timer(time_base / 100 + get_ticks());
-        while (1)
-        {
-            enable_preempt();
-            asm volatile("wfi");
-        }
-    }
+    // uint64_t mhartid;
+    // if ((mhartid = get_current_cpu_id()) != 0) { // if not master hart
+    //     current_running_1 = &pid1_pcb;
+    //     current_running_1->cursor_y = 3;
+    //     current_running = current_running_1;
+    //     printk("mhart id : %d start work \n", mhartid);
+    //     setup_exception();
+    //     bios_set_timer(time_base / 100 + get_ticks());
+    //     while (1)
+    //     {
+    //         enable_preempt();
+    //         asm volatile("wfi");
+    //     }
+    // }
     // Init jump table provided by kernel and bios(ΦωΦ)
     init_jmptab();
 
@@ -312,7 +312,7 @@ int main(void)
     // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
     // NOTE: The function of sstatus.sie is different from sie's
 
-    printk("mhart id : %d start work \n", mhartid);
+    //printk("mhart id : %d start work \n", mhartid);
 
     // load all tasks from sd to mem
     for (int i = 0; i < tasknum; i++) {

@@ -21,7 +21,7 @@ ptr_t allocLargePage(int numPage)
     // align LARGE_PAGE_SIZE
     ptr_t ret = ROUND(largePageMemCurr, LARGE_PAGE_SIZE);
     largePageMemCurr = ret + numPage * LARGE_PAGE_SIZE;
-    return ret;    
+    return ret;
 }
 #endif
 
@@ -58,17 +58,18 @@ uintptr_t shm_page_get(int key)
 void shm_page_dt(uintptr_t addr)
 {
     // TODO [P4-task4] shm_page_dt:
-}ptr_t allocKernelSP() {
-    if (recycle_kernel_sp_num >= 1) {
-        return recycle_kernel_sp[--recycle_kernel_sp_num];
-    } else {
-        return allocKernelPage(KernelStackPage) + KernelStackPage * PAGE_SIZE;
-    }
+}
+ptr_t allocKernelSP() {
+    // if (recycle_kernel_sp_num >= 1) {
+    //     return recycle_kernel_sp[--recycle_kernel_sp_num];
+    // } else {
+    //     return allocKernelPage(KernelStackPage) + KernelStackPage * PAGE_SIZE;
+    // }
 }
 ptr_t allockUserSP() {
-    if (recycle_user_sp_num >= 1) {
-        return recycle_user_sp[--recycle_user_sp_num];
-    } else {
-        return allocUserPage(UserStackPage) + UserStackPage * PAGE_SIZE;
-    }
+    // if (recycle_user_sp_num >= 1) {
+    //     return recycle_user_sp[--recycle_user_sp_num];
+    // } else {
+    //     return allocUserPage(UserStackPage) + UserStackPage * PAGE_SIZE;
+    // }
 }

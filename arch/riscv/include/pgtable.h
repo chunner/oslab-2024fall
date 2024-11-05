@@ -85,14 +85,6 @@ static inline uintptr_t pa2kva(uintptr_t pa)
     return pa + 0xffffffc000000000lu;
 }
 
-/* get physical page addr from PTE 'entry' */
-static inline uint64_t get_pa(PTE entry)
-{
-    /* TODO: [P4-task1] */
-    uint64_t pa_mask = (1lu << 44) - 1;
-    uint64_t pa = (entry >> _PAGE_PFN_SHIFT) & pa_mask;
-    return pa;
-}
 
 /* Get/Set page frame number of the `entry` */
 static inline long get_pfn(PTE entry)
@@ -102,6 +94,15 @@ static inline long get_pfn(PTE entry)
     uint64_t pfn = entry >> _PAGE_PFN_SHIFT & pfn_mask;
     return pfn;
 }
+
+/* get physical page addr from PTE 'entry' */
+static inline uint64_t get_pa(PTE entry)
+{
+    /* TODO: [P4-task1] */
+    uint64_t pfn = get_pfn(entry);
+    return pfn << NORMAL_PAGE_SHIFT;
+}
+
 static inline void set_pfn(PTE *entry, uint64_t pfn)
 {
     /* TODO: [P4-task1] */
