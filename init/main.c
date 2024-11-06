@@ -241,6 +241,15 @@ static void kernel_brake(void)
         __asm__ volatile("wfi");
 }
 
+static void cancel_temp_pgdir() {          // Cancel temporary mapping 0x5000_0000 to 0x5100_0000, in the same secondary pgdir
+    PTE *early_pgdir = (PTE *) PGDIR_PA;
+    uint64_t va = 0x50000000lu;
+    uint64_t vpn2 =
+        va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
+    clear_pgdir(get_pa(early_pgdir[vpn2]));
+    early_pgdir[vpn2] = 0ul;
+}
+
 int main(void)
 {
     // uint64_t mhartid;
@@ -257,6 +266,9 @@ int main(void)
     //         asm volatile("wfi");
     //     }
     // }
+    // Cancel temporary mapping 0x5000_0000 to 0x5100_0000
+    cancel_temp_pgdir();
+
     // Init jump table provided by kernel and bios(ΦωΦ)
     init_jmptab();
 
