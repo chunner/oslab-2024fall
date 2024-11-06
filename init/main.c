@@ -17,17 +17,16 @@
 #include <type.h>
 #include <csr.h>
 #include <os/smp.h>
+#include <pgtable.h>
 
 #define VERSION_BUF 50
 #define nmultask 4
 #define COMMAND_LEN 50
 
 
-// #define task_info_new_loc 0x58000010  // user's sp + 0x10
-#define kernel          0x50201000
-#define tasknum_loc     0x502001f6
+#define tasknum_loc     0xffffffc0502001f6
 #define taskinfo_size   64
-#define MASTER_KERNEL_STACK		0x50502000
+#define MASTER_KERNEL_STACK		0xffffffc050502000
 
 int version = 2; // version must between 0 and 9
 char buf[VERSION_BUF];
@@ -70,7 +69,6 @@ static void init_jmptab(void)
     jmptab[MUTEX_RELEASE] = (long (*)())do_mutex_lock_release;
     jmptab[SCREEN_FLUSH] = (long (*)())screen_reflush;   // reflush screen buffer
     jmptab[SCREEN_WRITE] = (long (*)())screen_write;   // screen write string
-    // TODO: [p2-task1] (S-core) initialize system call table.
 
 }
 
@@ -78,16 +76,6 @@ static void init_task_info(void)
 {
     // NOTE: You need to get some related arguments from bootblock first
     /* get taskinfo from memory */
-    // short *tasknum_mem = (short *) tasknum_loc;
-    // tasknum = *tasknum_mem;
-    // task_info_t *taskinfo_mem = (task_info_t *) (task_info_new_loc);
-    // for (int i = 0; i < tasknum; i++) {
-    //     tasks[i].sector_num = taskinfo_mem[i].sector_num;
-    //     tasks[i].firstsector = taskinfo_mem[i].firstsector;
-    //     tasks[i].offset = taskinfo_mem[i].offset;
-    //     tasks[i].entry = taskinfo_mem[i].entry;
-    //     strcpy(tasks[i].taskname, taskinfo_mem[i].taskname);
-    // }
     tasknum = *(short *) tasknum_loc;
     asm volatile(
         "mv  t0,%0      \n"  // Load address of tasknum_loc
@@ -190,6 +178,9 @@ static void init_pcb(void)
     /* TODO: [p2-task1] remember to initialize 'current_running' */
     current_running_0 = &pid0_pcb;
     current_running = &pid0_pcb;
+
+    current_running_1 = &pid1_pcb;
+    current_running_1->cursor_y = 3;
 }
 
 static void init_syscall(void)
@@ -242,32 +233,33 @@ static void kernel_brake(void)
 }
 
 static void cancel_temp_pgdir() {          // Cancel temporary mapping 0x5000_0000 to 0x5100_0000, in the same secondary pgdir
-    PTE *early_pgdir = (PTE *) PGDIR_PA;
+    PTE *lv2_pgdir = (PTE *) PGDIR_VA;
     uint64_t va = 0x50000000lu;
-    uint64_t vpn2 =
-        va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
-    clear_pgdir(get_pa(early_pgdir[vpn2]));
-    early_pgdir[vpn2] = 0ul;
+    uint64_t vpn2 = va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
+    clear_pgdir(pa2kva(get_pa(lv2_pgdir[vpn2])));     // clear whole first level page dir
+    lv2_pgdir[vpn2] = 0ul;         // Second level page table entry
 }
 
 int main(void)
 {
-    // uint64_t mhartid;
-    // if ((mhartid = get_current_cpu_id()) != 0) { // if not master hart
-    //     current_running_1 = &pid1_pcb;
-    //     current_running_1->cursor_y = 3;
-    //     current_running = current_running_1;
-    //     printk("mhart id : %d start work \n", mhartid);
-    //     setup_exception();
-    //     bios_set_timer(time_base / 100 + get_ticks());
-    //     while (1)
-    //     {
-    //         enable_preempt();
-    //         asm volatile("wfi");
-    //     }
-    // }
-    // Cancel temporary mapping 0x5000_0000 to 0x5100_0000
-    cancel_temp_pgdir();
+    uint64_t mhartid;
+    if ((mhartid = get_current_cpu_id()) != 0) { // if not master hart
+        // Cancel temporary mapping 0x5000_0000 to 0x5100_0000
+        cancel_temp_pgdir();
+
+        current_running = current_running_1;
+        setup_exception();
+
+        printk("> [INIT] CPU #%u has entered kernel with VM!\n", (unsigned int) get_current_cpu_id());
+        kernel_brake();
+
+        bios_set_timer(time_base / 100 + get_ticks());
+        while (1)
+        {
+            enable_preempt();
+            asm volatile("wfi");
+        }
+    }
 
     // Init jump table provided by kernel and bios(ΦωΦ)
     init_jmptab();
@@ -306,9 +298,9 @@ int main(void)
     init_screen();
     printk("> [INIT] SCREEN initialization succeeded.\n");
 
-    // init recyle stack
-    recycle_kernel_sp_num = 0;
-    recycle_user_sp_num = 0;
+    // // init recyle stack
+    // recycle_kernel_sp_num = 0;
+    // recycle_user_sp_num = 0;
 
     /*
          * Just start kernel with VM and print this string

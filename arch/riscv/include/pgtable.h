@@ -43,6 +43,7 @@ static inline void set_satp(
 }
 
 #define PGDIR_PA 0x51000000lu  // use 51000000 page as PGDIR
+#define PGDIR_VA 0xffffffc051000000lu
 
 /*
  * PTE format:
