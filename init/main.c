@@ -180,7 +180,6 @@ static void init_pcb(void)
     current_running = &pid0_pcb;
 
     current_running_1 = &pid1_pcb;
-    current_running_1->cursor_y = 3;
 }
 
 static void init_syscall(void)
@@ -246,6 +245,7 @@ int main(void)
     if ((mhartid = get_current_cpu_id()) != 0) { // if not master hart
         // Cancel temporary mapping 0x5000_0000 to 0x5100_0000
         cancel_temp_pgdir();
+        current_running_1->cursor_y = current_running_0->cursor_y + 1;
 
         current_running = current_running_1;
         setup_exception();

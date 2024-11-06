@@ -9,20 +9,49 @@
 // BIOS function entry (jump here to use BIOS APIs)
 .equ bios_func_entry, 0x50150000
 
+// sd card read byte per time
+.equ sd_read_size, 0x8000  // 512 * 64
+
 .text
 .global main
 
 main:
-	// fence on all memory and I/O
+// fence on all memory and I/O
 	fence
-    // a0 is mhartid
+// a0 is mhartid
 	bnez a0, secondary
 
-	// TODO: [p1-task1] call BIOS to print string "It's bootblock!"
+// call BIOS to print string "It's bootblock!"
 	li a7, BIOS_PUTSTR
 	la a0, msg					// char *str
 	jal bios_func_entry
-	// TODO: [p1-task2] call BIOS to read kernel in SD card
+// call BIOS to read kernel in SD card
+	// 64 sector per time
+	li a0, kernel				// a0: mem_address = kernel
+	li a2, 1					// unsigned block_id
+	li a7, BIOS_SDREAD
+
+	li t0, os_size_loc
+	lh t1, 0(t0)				// t1 = os_size			
+
+sd_read_loop:
+	li t2, 64
+	bltu t1, t2, final_read_sd_read 	// branch if t1: os_size <= 64
+
+	li a1, 64					// a1: num_of_block
+	jal bios_func_entry
+	li t3, sd_read_size
+	add a0, a0, t3				// mem_address += sd_read_size
+	addi t1, t1, -64			// os_size -= 64
+	addi a2, a2, 64				// sd block_id += 64
+	j sd_read_loop
+
+final_read_sd_read:
+	mv a1, t1
+	jal bios_func_entry
+
+
+
 	li a7, BIOS_SDREAD
 	li a0, kernel				// unsigned mem_address
 	li t0, os_size_loc
