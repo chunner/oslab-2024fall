@@ -12,7 +12,6 @@
 #define taskinfo_offset_loc 0xffffffc0502001f8 # store the offset of task_info in kernel
 #define taskinfo_size 64
 #define kernel 0xffffffc050202000
-# task_info_new_loc 0x58000010   # user's sp + 0x10
 .section ".entry_function","ax"
 ENTRY(_start)
   /* Mask all interrupts */
@@ -21,12 +20,11 @@ ENTRY(_start)
 
   csrr t0, CSR_MHARTID
   bnez t0, slave_kernel // branch if slave mhart
-
-  /* set stack pointer*/ 
+  /*--------------------------set stack pointer-------------------------------------*/ 
 stack_set:              
   li sp, MASTER_KERNEL_STACK
 
-  /*move the task info*/
+  /*--------------------------move the task info----------------------------------*/
   li t0, tasknum_loc      
   lh a0, 0(t0)          # load task num
   li t1, taskinfo_size  
@@ -38,8 +36,7 @@ stack_set:
   li t1, kernel
   add t2, t2, t1   # t2 = the addr of task_info
 
-  sub sp, sp, t0
-  mv t3, sp
+  la t3, tasks    # t3 = &tasks[0]
 
 store_taskinfo:
   lw t4, 0(t2)     # load word from mem
@@ -49,21 +46,20 @@ store_taskinfo:
   addi t0, t0, -4   # size -=4
   bnez t0, store_taskinfo
 
-
-  /* TODO: [p1-task2] clear BSS for flat non-ELF images */
+  /*------------------------ clear BSS for flat non-ELF images---------------------- */
   la a0, __bss_start        # load .bss 's start and end addr
   la a1, __BSS_END__
-
 clear_bss:
   bge a0, a1, jump2main;
   sd zero, 0(a0)
   addi a0, a0, 8            # a0 move forward 8 byte
   j clear_bss               # clear next 64 bit mem
 
-  /* TODO: [p1-task2] setup C environment */
+  /*----------------------jump to main-------------------------------------------*/
 jump2main:
-  j main      # jump to main
+  j main      
 
+  /*----------------------slave_kernel-------------------------------------------*/
 slave_kernel:
   li sp, SLAVE_KERNEL_STACK
   j main
