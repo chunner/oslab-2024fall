@@ -218,14 +218,14 @@ int main(void)
     if ((mhartid = get_current_cpu_id()) != 0) { // if not master hart
         // Cancel temporary mapping 0x5000_0000 to 0x5100_0000
         cancel_temp_pgdir();
+        // move the slave hart cursor
         current_running_1->cursor_y = current_running_0->cursor_y + 1;
-
         current_running = current_running_1;
+        // set stvec, sie, sstatus
         setup_exception();
 
         printk("> [INIT] CPU #%u has entered kernel with VM!\n", (unsigned int) get_current_cpu_id());
         kernel_brake();
-
         bios_set_timer(time_base / 100 + get_ticks());
         while (1)
         {
@@ -271,9 +271,6 @@ int main(void)
     init_screen();
     printk("> [INIT] SCREEN initialization succeeded.\n");
 
-    // // init recyle stack
-    // recycle_kernel_sp_num = 0;
-    // recycle_user_sp_num = 0;
 
     /*
          * Just start kernel with VM and print this string
@@ -287,10 +284,6 @@ int main(void)
     // TODO: [p4-task1 cont.] remove the brake and continue to start user processes.
     kernel_brake();
 
-    // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
-    // NOTE: The function of sstatus.sie is different from sie's
-
-    //printk("mhart id : %d start work \n", mhartid);
 
     // load all tasks from sd to mem
     for (int i = 0; i < tasknum; i++) {
@@ -299,15 +292,12 @@ int main(void)
 
     add_readyqueue(&pcb[0]);          // start shell
 
-    // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
-    // NOTE: The function of sstatus.sie is different from sie's
+    // Setup timer interrupt and enable all interrupt globally
     bios_set_timer(time_base / 100 + get_ticks());
 
     // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
     while (1)
     {
-        // If you do non-preemptive scheduling, it's used to surrender control
-        // do_scheduler();
         // If you do preemptive scheduling, they're used to enable CSR_SIE and wfi
         enable_preempt();
         asm volatile("wfi");

@@ -17,16 +17,15 @@
 
 #define NBYTES2SEC(nbytes) (((nbytes) / SECTOR_SIZE) + ((nbytes) % SECTOR_SIZE != 0))
 
-#define MAX_NAME_LEN 44       // the max len of task name
+#define MAX_NAME_LEN 40       // the max len of task name
 
-/* TODO: [p1-task4] design your own task_info_t */
 typedef struct {
-    //int taskid;
     char taskname[MAX_NAME_LEN];
-    int sector_num;
-    int firstsector;
-    int offset;
-    uint64_t entry;
+    uint32_t sector_num;
+    uint32_t firstsector;
+    uint32_t offset;
+    uint64_t entrypoint;
+    uint32_t p_memsz;
 } task_info_t;
 
 #define TASK_MAXNUM 16
@@ -150,10 +149,8 @@ static void create_image(int nfiles, char *files[])
             taskinfo[taskidx].sector_num = NBYTES2SEC(phyaddr) - NBYTES2SEC(fi_phyaddr_begin) + 1;      // sectors num
             taskinfo[taskidx].offset = fi_phyaddr_begin % SECTOR_SIZE;                  // the offset in first sector in image
             taskinfo[taskidx].firstsector = NBYTES2SEC(fi_phyaddr_begin) - 1;
-            taskinfo[taskidx].entry = get_entrypoint(ehdr);                     // entry point in mem
+            taskinfo[taskidx].entrypoint = get_entrypoint(ehdr);                     // entry point in mem
         }
-
-
 
         fclose(fp);
         files++;
@@ -161,8 +158,6 @@ static void create_image(int nfiles, char *files[])
     write_img_info(nbytes_kernel, taskinfo, tasknum, img);
 
     fclose(img);
-
-    printf("image size = 0x%04x byte\n", phyaddr);
 }
 
 static void read_ehdr(Elf64_Ehdr *ehdr, FILE *fp)
