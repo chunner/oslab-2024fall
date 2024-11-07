@@ -2,8 +2,6 @@
 
 // NOTE: A/C-core
 static ptr_t kernMemCurr = FREEMEM_KERNEL;
-//static ptr_t userMemCurr = FREEMEM_USER;
-
 
 ptr_t allocPage(int numPage)
 {
@@ -48,6 +46,30 @@ void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir)
 uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir)
 {
     // TODO [P4-task1] alloc_page_helper:
+    PTE *lv3_pgdir = (PTE *) pgdir;
+    va &= VA_MASK;
+    uint64_t vpn2 = va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
+    uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (va >> (NORMAL_PAGE_SHIFT + PPN_BITS));
+    uint64_t vpn0 = (va >> NORMAL_PAGE_SHIFT) ^ (vpn2 << (2 * PPN_BITS)) ^ (vpn1 << PPN_BITS);
+    if (lv3_pgdir[vpn2] == 0) {     // alloc a new second-level page directory
+        PTE *lv2_pgdir = allocPage(1);
+        set_pfn(&lv3_pgdir[vpn2], kva2pa(lv2_pgdir) >> NORMAL_PAGE_SHIFT);
+        set_attribute(&lv3_pgdir[vpn2], _PAGE_PRESENT);
+        clear_pgdir(lv2_pgdir);   // clear second-level pgdir page
+    }
+    PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
+    if (lv2_pgdir[vpn1] == 0) {     // alloc a new first_level page directory
+        PTE *lv1_pgdir = allocPage(1);
+        set_pfn(&lv2_pgdir[vpn1], kva2pa(lv1_pgdir) >> NORMAL_PAGE_SHIFT);
+        set_attribute(&lv2_pgdir[vpn1], _PAGE_PRESENT);
+        clear_pgdir(lv1_pgdir);   // clear second-level pgdir page
+    }
+    PTE *lv1_pgdir = (PTE *) pa2kva(get_pa(lv2_pgdir[vpn1]));
+    uint32_t upa = allocPage(1);
+    set_pfn(&lv1_pgdir[vpn0], upa >> NORMAL_PAGE_SHIFT);
+    set_attribute(
+        &lv1_pgdir[vpn0], _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE |
+        _PAGE_EXEC | _PAGE_USER | _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_DIRTY);
 }
 
 uintptr_t shm_page_get(int key)
@@ -58,18 +80,4 @@ uintptr_t shm_page_get(int key)
 void shm_page_dt(uintptr_t addr)
 {
     // TODO [P4-task4] shm_page_dt:
-}
-ptr_t allocKernelSP() {
-    // if (recycle_kernel_sp_num >= 1) {
-    //     return recycle_kernel_sp[--recycle_kernel_sp_num];
-    // } else {
-    //     return allocKernelPage(KernelStackPage) + KernelStackPage * PAGE_SIZE;
-    // }
-}
-ptr_t allockUserSP() {
-    // if (recycle_user_sp_num >= 1) {
-    //     return recycle_user_sp[--recycle_user_sp_num];
-    // } else {
-    //     return allocUserPage(UserStackPage) + UserStackPage * PAGE_SIZE;
-    // }
 }

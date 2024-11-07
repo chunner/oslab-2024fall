@@ -35,7 +35,8 @@
 #include <csr.h>
 
 #define NUM_MAX_TASK 16
-
+#define KERNEL_STACK_BASE 0xf0000f000lu     // kernel sp : 0xf_0000_f000 - 0xf_0001_0000
+#define USER_STACK_BASE 0xf0001f000lu       // user sp : 0xf_0001_f000 - 0xf_0002_0000
 
  /* used to save register infomation */
 typedef struct regs_context
@@ -105,11 +106,10 @@ typedef struct pcb
     /* sys_wait (pid) */
     list_head block_queue;
 
-    // pcb_status_t pcb_status;
-
     uint64_t current_cpu_id;
-
     uint64_t cpu_mask;
+
+    uintptr_t pgdir;        // the address of the base of page table
 
 } pcb_t;
 

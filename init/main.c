@@ -73,20 +73,6 @@ static void init_task_info(void)
     tasknum = *(short *) tasknum_loc;
 }
 
-int taskname_to_taskid(char taskname[]) {
-    int i = 0;
-    for (; i < tasknum; i++) {
-        if (strcmp(taskname, tasks[i].taskname) == 0) {
-            break;
-        }
-    }
-    if (i == tasknum) {             // task name match failed
-        return -1;
-    } else {
-        return i;
-    }
-}
-
 /************************************************************/
 static void init_pcb_stack(
     ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point,
@@ -139,13 +125,13 @@ static void init_pcb(void)
     // pcb[0] is shell
     // pcb[0].kernel_sp = allocKernelSP();
     // pcb[0].user_sp = allockUserSP();
-    pcb[0].pid = 2;
-    pcb[0].entry_point = tasks[taskname_to_taskid("shell")].entry;
-    pcb[0].remain_length = 0;
-    pcb[0].block_queue.next = &pcb[0].block_queue;
-    pcb[0].block_queue.prev = &pcb[0].block_queue;
-    pcb[0].cpu_mask = 0x3;
-    strcpy(pcb[0].taskname, "shell");
+    // pcb[0].pid = 2;
+    // pcb[0].entry_point = tasks[taskname_to_taskid("shell")].entry;
+    // pcb[0].remain_length = 0;
+    // pcb[0].block_queue.next = &pcb[0].block_queue;
+    // pcb[0].block_queue.prev = &pcb[0].block_queue;
+    // pcb[0].cpu_mask = 0x3;
+    // strcpy(pcb[0].taskname, "shell");
     //init_pcb_stack(pcb[0].kernel_sp, pcb[0].user_sp, pcb[0].entry_point, &pcb[0]);
 
     /* TODO: [p2-task1] remember to initialize 'current_running' */
@@ -157,7 +143,7 @@ static void init_pcb(void)
 
 static void init_syscall(void)
 {
-    // TODO: [p2-task3] initialize system call table.
+    // initialize system call table.
     syscall[SYSCALL_SLEEP] = (long (*)())do_sleep;
     syscall[SYSCALL_YIELD] = (long (*)())do_scheduler;
     syscall[SYSCALL_WRITE] = (long (*)())screen_write;

@@ -37,16 +37,18 @@
  // #define INIT_USER_STACK 0x52500000
  // #define FREEMEM_KERNEL (INIT_KERNEL_STACK + PAGE_SIZE * 4)
  // #define FREEMEM_USER INIT_USER_STACK
+// #define UserStackPage 16
+// #define KernelStackPage 16
 
-#define UserStackPage 16
-#define KernelStackPage 16
 #define PAGE_SIZE 4096 // 4K = 0x1000
 #define INIT_KERNEL_STACK 0xffffffc052000000
-#define FREEMEM_KERNEL (INIT_KERNEL_STACK+PAGE_SIZE)
+#define FREEMEM_KERNEL (INIT_KERNEL_STACK + 4*PAGE_SIZE)
 
  /* Rounding; only works for n = power of two */
 #define ROUND(a, n)     (((((uint64_t)(a))+(n)-1)) & ~((n)-1))
 #define ROUNDDOWN(a, n) (((uint64_t)(a)) & ~((n)-1))
+
+#define NBYTES2PAGE(nbytes) (((nbytes) / PAGE_SIZE) + ((nbytes) % PAGE_SIZE != 0))
 
 extern ptr_t allocPage(int numPage);
 // TODO [P4-task1] */
@@ -73,13 +75,5 @@ uintptr_t shm_page_get(int key);
 void shm_page_dt(uintptr_t addr);
 
 
-
-ptr_t recycle_kernel_sp[16];
-int recycle_kernel_sp_num;
-ptr_t recycle_user_sp[16];
-int recycle_user_sp_num;
-
-ptr_t allocKernelSP();
-ptr_t allockUserSP();
 
 #endif /* MM_H */

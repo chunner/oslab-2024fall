@@ -16,22 +16,24 @@ pcb_t pid0_pcb = {
     .pid = 0,
     .kernel_sp = (ptr_t) pid0_stack,
     .user_sp = (ptr_t) pid0_stack + PAGE_SIZE,
-    .cpu_mask = 0x1
+    .cpu_mask = 0x1,
+    .pgdir = PGDIR_VA
 };
 pcb_t pid1_pcb = {
     .pid = 1,
     .kernel_sp = (ptr_t) pid1_stack,
     .user_sp = (ptr_t) pid1_stack + PAGE_SIZE,
-    .cpu_mask = 0x2
+    .cpu_mask = 0x2,
+    .pgdir = PGDIR_VA
 };
 
 LIST_HEAD(ready_queue);
 LIST_HEAD(sleep_queue);
 
 /* global process id */
-pid_t process_id = 2;
+pid_t process_id = 1;
 
-int get_next_running() {
+int get_next_running() {    //  Modify the current_running pointer.
     lock_kernel(&ready_queue_hart_lock);          // lock for ready_queue
     lock_kernel(&pcb_pid_hart_lock);
 
@@ -65,8 +67,6 @@ void do_scheduler(void)
     /************************************************************/
     /* Do not touch this comment. Reserved for future projects. */
     /************************************************************/
-    // TODO: [p2-task1] Modify the current_running pointer.
-
     pcb_t *prepcb = current_running;
     if (get_next_running()) {
         switch_to(prepcb, current_running);
@@ -100,35 +100,33 @@ void do_sleep(uint32_t sleep_time)
 void do_block(list_node_t *pcb_node, list_head *queue)
 {
     // TODO: [p2-task2] block the pcb task into the block queue
-    // lock_kernel(&block_queue_lock);
     list_node_t *head = queue;
     list_node_t *tail = queue->prev;
+    // insert pcb_node in the circular queue
     tail->next = pcb_node;
     pcb_node->prev = tail;
     head->prev = pcb_node;
     pcb_node->next = head;
-
+    // modify the pcb task_status
     pcb_t *pcb = LIST_PCB(pcb_node);
     pcb->status = TASK_BLOCKED;
-    // unlock_kernel(&block_queue_lock);
 }
 
 void do_unblock(list_node_t *pcb_node)
 {
-    // lock_kernel(&block_queue_lock);
-    // TODO: [p2-task2] unblock the `pcb` from the block queue
-    list_node_t *next_node = pcb_node->next;        // delete the pcb from block queue
+    // unblock the `pcb` from the block queue
+    list_node_t *next_node = pcb_node->next;
     list_node_t *prev_node = pcb_node->prev;
+    // delete the pcb from block queue (circular queue)
     pcb_node->next = NULL;
     pcb_node->prev = NULL;
     next_node->prev = prev_node;
     prev_node->next = next_node;
-
+    // insert pcb_node in the circular queue
     pcb_t *pcb = LIST_PCB(pcb_node);
     lock_kernel(&ready_queue_hart_lock);
     add_readyqueue(pcb);
     unlock_kernel(&ready_queue_hart_lock);
-    // unlock_kernel(&block_queue_lock);
 }
 
 void set_sche_workload(int remain_length) {         // updata remain_length in pcb
@@ -165,10 +163,30 @@ void do_process_show() {
     }
     unlock_kernel(&pcb_pid_hart_lock);
 }
+int taskname_to_taskid(char taskname[]) {
+    int i = 0;
+    for (; i < tasknum; i++) {
+        if (strcmp(taskname, tasks[i].taskname) == 0) {
+            return i;
+        }
+    }
+    return -1;  // task name match failed
+}
+int pid_to_pcb_id() {
+
+}
+int get_free_pcb() {
+    int pcb_id = 0;
+    for (; pcb_id < NUM_MAX_TASK;pcb_id++) {
+        if (pcb[pcb_id].status == TASK_EXITED) {
+            return pcb_id;  // success to find
+        }
+    }
+    return -1;  // fail to find
+}
 /*---------------------------------ready queue management ----------------------------------------------*/
 void add_readyqueue(pcb_t *pcb)        // add the tail of ready_queue
 {
-    if (!pcb)   return;  // pcb = NULL
     pcb->status = TASK_READY;
     list_node_t *head = &ready_queue;
     list_node_t *tail = ready_queue.prev;
@@ -178,7 +196,6 @@ void add_readyqueue(pcb_t *pcb)        // add the tail of ready_queue
     pcb->list.next = head;
 }
 void remove_readyqueue(pcb_t *pcb) {
-    if (!pcb)   return;  // pcb = NULL
     list_node_t *pcb_list = &pcb->list;
     list_node_t *next_node = pcb_list->next;
     list_node_t *prev_node = pcb_list->prev;
@@ -188,32 +205,46 @@ void remove_readyqueue(pcb_t *pcb) {
     prev_node->next = next_node;
 }
 /*---------------------------------exec, kill, exit, waitpid --------------------------------------------------*/
+void setup_pcb_vm(pcb_t pcb, task_info_t task) {
+    /* setup page directory*/
+    pcb.pgdir = allocPage(1);   // alloc 4KB for user pgdir
+    clear_pgdir(pcb.pgdir);
+    memcpy((uint8_t *) pcb.pgdir, (uint8_t *) PGDIR_VA, PAGE_SIZE); // copy kernel pgdir
+    /* setup code and data segement vm */
+    uint32_t pagenum = NBYTES2PAGE(task.memsize);
+    uint64_t uva = task.entrypoint;
+    for (int i = 0;i < pagenum;i++) {
+        alloc_page_helper(uva, pcb.pgdir);
+        uva += 0x200000lu;
+    }
+    /* setup stack vm */
+    uint64_t kernel_sp = KERNEL_STACK_BASE;     // kernel sp : 0xf_0000_f000 - 0xf_0001_0000
+    uint64_t user_sp = USER_STACK_BASE;       // user sp : 0xf_0001_f000 - 0xf_0002_0000
+    alloc_page_helper(kernel_sp, pcb.pgdir);
+    alloc_page_helper(user_sp, pcb.pgdir);
+}
 pid_t do_exec(char *name, int argc, char *argv[]) {
     lock_kernel(&pcb_pid_hart_lock);
-    int taskid = taskname_to_taskid(name);
-    if (taskid < 0) {
+    /* get taskid and pcb_id */
+    int taskid;
+    if ((taskid = taskname_to_taskid(name)) == -1) {
         unlock_kernel(&pcb_pid_hart_lock);
-        return -1;
+        return -1;  // fail to find valid task
     }
-    int pcb_id = 0;
-    for (; pcb_id < NUM_MAX_TASK;pcb_id++) {
-        if (pcb[pcb_id].status == TASK_EXITED) {
-            break;
-        }
-    }
-    if (pcb_id >= NUM_MAX_TASK) {
+    int pcb_id;
+    if ((pcb_id = get_free_pcb()) == -1) {
         unlock_kernel(&pcb_pid_hart_lock);
-        return -1; // pcb has run out
+        return -1; // fail to find free pcb
     }
+    /* alloc pgdir  */
+    setup_pcb_vm(pcb[pcb_id], tasks[taskid]);
     /* init pcb */
-    pcb[pcb_id].kernel_sp = allocKernelSP();
-    pcb[pcb_id].kernel_stack_base = pcb[pcb_id].kernel_sp;
-    pcb[pcb_id].user_sp = allockUserSP();
-    pcb[pcb_id].user_stack_base = pcb[pcb_id].user_sp;
-    int pid = ++process_id;
-    pcb[pcb_id].pid = pid;
-    pcb[pcb_id].entry_point = tasks[taskid].entry;
-    pcb[pcb_id].remain_length = 0;
+    pcb[pcb_id].kernel_sp = KERNEL_STACK_BASE;
+    pcb[pcb_id].kernel_stack_base = KERNEL_STACK_BASE;
+    pcb[pcb_id].user_sp = USER_STACK_BASE;
+    pcb[pcb_id].user_stack_base = USER_STACK_BASE;
+    pcb[pcb_id].pid = ++process_id;
+    pcb[pcb_id].entry_point = tasks[taskid].entrypoint;
     pcb[pcb_id].block_queue.next = &pcb[pcb_id].block_queue;
     pcb[pcb_id].block_queue.prev = &pcb[pcb_id].block_queue;
     pcb[pcb_id].cpu_mask = current_running->cpu_mask;
@@ -274,7 +305,7 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     add_readyqueue(&pcb[pcb_id]);
     unlock_kernel(&ready_queue_hart_lock);
     unlock_kernel(&pcb_pid_hart_lock);
-    return pid;
+    return pcb[pcb_id].pid;
 
 }
 int do_kill(pid_t pid) {
@@ -303,8 +334,8 @@ int do_kill(pid_t pid) {
     // -----------release lock
     check_lock(pid);
     // ------------recycle stack
-    recycle_kernel_sp[recycle_kernel_sp_num++] = pcb[i].kernel_stack_base;
-    recycle_user_sp[recycle_user_sp_num++] = pcb[i].user_stack_base;
+    // recycle_kernel_sp[recycle_kernel_sp_num++] = pcb[i].kernel_stack_base;
+    // recycle_user_sp[recycle_user_sp_num++] = pcb[i].user_stack_base;
     // -------------recycle pcb
     pcb[i].status = TASK_EXITED;
     remove_pcb_queue(&pcb[i]);
@@ -320,8 +351,8 @@ void do_exit(void) {
     // release lock
     check_lock(do_getpid());
     // recycle stack
-    recycle_kernel_sp[recycle_kernel_sp_num++] = current_running->kernel_stack_base;
-    recycle_user_sp[recycle_user_sp_num++] = current_running->user_stack_base;
+    // recycle_kernel_sp[recycle_kernel_sp_num++] = current_running->kernel_stack_base;
+    // recycle_user_sp[recycle_user_sp_num++] = current_running->user_stack_base;
     // recycle pcb
     current_running->status = TASK_EXITED;
     unlock_kernel(&pcb_pid_hart_lock);
