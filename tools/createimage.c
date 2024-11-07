@@ -25,8 +25,8 @@ typedef struct {
     uint32_t firstsector;
     uint32_t offset;
     uint64_t entrypoint;
-    uint32_t p_memsz;
-} task_info_t;
+    uint32_t memsize;
+} task_info_t;      // size == 64 B
 
 #define TASK_MAXNUM 16
 static task_info_t taskinfo[TASK_MAXNUM];
@@ -102,8 +102,8 @@ static void create_image(int nfiles, char *files[])
     for (int fidx = 0; fidx < nfiles; ++fidx) {
 
         int fi_phyaddr_begin = phyaddr;
-
         int taskidx = fidx - 2;
+        int memsize = 0;
 
         /* open input file */
         fp = fopen(*files, "r");
@@ -128,6 +128,9 @@ static void create_image(int nfiles, char *files[])
             if (strcmp(*files, "main") == 0) {
                 nbytes_kernel += get_filesz(phdr);
             }
+
+            /* update mem filesz */
+            memsize += get_memsz(phdr);
         }
 
         /* write padding bytes */
@@ -150,6 +153,7 @@ static void create_image(int nfiles, char *files[])
             taskinfo[taskidx].offset = fi_phyaddr_begin % SECTOR_SIZE;                  // the offset in first sector in image
             taskinfo[taskidx].firstsector = NBYTES2SEC(fi_phyaddr_begin) - 1;
             taskinfo[taskidx].entrypoint = get_entrypoint(ehdr);                     // entry point in mem
+            taskinfo[taskidx].memsize = memsize;
         }
 
         fclose(fp);
