@@ -20,9 +20,6 @@
 #include <pgtable.h>
 
 #define VERSION_BUF 50
-#define nmultask 4
-#define COMMAND_LEN 50
-
 
 #define tasknum_loc     0xffffffc0502001f6
 
@@ -95,7 +92,7 @@ static void init_pcb_stack(
     ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point,
     pcb_t *pcb)
 {
-    /* TODO: [p2-task3] initialization of registers on kernel stack
+    /* initialization of registers on kernel stack
      * HINT: sp, ra, sepc, sstatus
      * NOTE: To run the task in user mode, you should set corresponding bits
      *     of sstatus(SPP, SPIE, etc.).
@@ -116,7 +113,7 @@ static void init_pcb_stack(
     pt_regs->sstatus = ((0UL & (~SR_SPP)) & (~SR_SIE)) | SR_SPIE;           // set spp = 0, spie = 1, sie = 0
     pt_regs->sepc = entry_point;            // entry 
     pt_regs->scause = 0UL | EXC_SYSCALL;    // IRQ 
-    /* TODO: [p2-task1] set sp to simulate just returning from switch_to
+    /* set sp to simulate just returning from switch_to
      * NOTE: you should prepare a stack, and push some values to
      * simulate a callee-saved context.
      */

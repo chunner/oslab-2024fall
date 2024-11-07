@@ -28,7 +28,7 @@ stack_set:
   li t0, tasknum_loc      
   lh a0, 0(t0)          # load task num
   li t1, taskinfo_size  
-  mul t0, a0, t1        # t0 = task_num * task_size
+  mul t0, a0, t1        # t0 = task_num * task_size = sizeof(task[16])
 
   # get taskinfo addr
   li t1, taskinfo_offset_loc
@@ -39,11 +39,11 @@ stack_set:
   la t3, tasks    # t3 = &tasks[0]
 
 store_taskinfo:
-  lw t4, 0(t2)     # load word from mem
-  sw t4, 0(t3)      # store word to sp
-  addi t2, t2, 4    # move mem pointer
-  addi t3, t3, 4    # move stack point
-  addi t0, t0, -4   # size -=4
+  ld t4, 0(t2)     # load from mem
+  sd t4, 0(t3)      # store to tasks 
+  addi t2, t2, 8    # move mem pointer
+  addi t3, t3, 8    # move tasks point
+  addi t0, t0, -8   # size -=4
   bnez t0, store_taskinfo
 
   /*------------------------ clear BSS for flat non-ELF images---------------------- */
