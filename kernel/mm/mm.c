@@ -65,7 +65,7 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir)
         clear_pgdir(lv1_pgdir);   // clear second-level pgdir page
     }
     PTE *lv1_pgdir = (PTE *) pa2kva(get_pa(lv2_pgdir[vpn1]));
-    uint32_t upa = allocPage(1);
+    uint32_t upa = kva2pa(allocPage(1));
     set_pfn(&lv1_pgdir[vpn0], upa >> NORMAL_PAGE_SHIFT);
     set_attribute(
         &lv1_pgdir[vpn0], _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE |

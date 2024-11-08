@@ -205,13 +205,13 @@ void remove_readyqueue(pcb_t *pcb) {
     prev_node->next = next_node;
 }
 /*---------------------------------exec, kill, exit, waitpid --------------------------------------------------*/
-void setup_pcb_vm(pcb_t pcb, task_info_t task) {
+void setup_process_vm(pcb_t pcb, task_info_t task) {
     /* setup page directory*/
     pcb.pgdir = allocPage(1);   // alloc 4KB for user pgdir
     clear_pgdir(pcb.pgdir);
     memcpy((uint8_t *) pcb.pgdir, (uint8_t *) PGDIR_VA, PAGE_SIZE); // copy kernel pgdir
     /* setup code and data segement vm */
-    uint32_t pagenum = NBYTES2PAGE(task.memsize);
+    uint32_t pagenum = NBYTES2PAGE(task.memsize + SECTOR_SIZE); // spare 512 B to handle the offset in image
     uint64_t uva = task.entrypoint;
     for (int i = 0;i < pagenum;i++) {
         alloc_page_helper(uva, pcb.pgdir);
@@ -222,6 +222,47 @@ void setup_pcb_vm(pcb_t pcb, task_info_t task) {
     uint64_t user_sp = USER_STACK_BASE;       // user sp : 0xf_0001_f000 - 0xf_0002_0000
     alloc_page_helper(kernel_sp, pcb.pgdir);
     alloc_page_helper(user_sp, pcb.pgdir);
+}
+void setup_process_pcb(pcb_t *pcb, task_info_t task) {
+    pcb->kernel_sp = KERNEL_STACK_BASE;
+    pcb->kernel_stack_base = KERNEL_STACK_BASE;
+    pcb->user_sp = USER_STACK_BASE;
+    pcb->user_stack_base = USER_STACK_BASE;
+    pcb->pid = ++process_id;
+    pcb->entry_point = task.entrypoint;
+    pcb->block_queue.next = &pcb->block_queue;
+    pcb->block_queue.prev = &pcb->block_queue;
+    pcb->cpu_mask = current_running->cpu_mask;
+    strcpy(pcb->taskname, task.taskname);
+}
+void setup_process_pcb_stack(pcb_t *pcb) {
+    /* initialization of registers on kernel stack*/
+    pcb->kernel_sp = pcb->kernel_sp - sizeof(regs_context_t) - sizeof(switchto_context_t);
+    regs_context_t *pt_regs = (regs_context_t *) (pcb->kernel_sp + sizeof(switchto_context_t));
+    for (int i = 0; i < 32; i++) {
+        if (i == 1) // ra
+            pt_regs->regs[i] = pcb->entry_point;
+        else if (i == 2) // sp
+            pt_regs->regs[i] = pcb->user_sp;
+        else if (i == 4) // tp
+            pt_regs->regs[i] = (reg_t) pcb;
+        else
+            pt_regs->regs[i] = 0;
+    }
+    pt_regs->sstatus = ((0UL & (~SR_SPP)) & (~SR_SIE)) | SR_SPIE;           // set spp = 0, spie = 1, sie = 0
+    pt_regs->sepc = pcb->entry_point;            // entry 
+    pt_regs->scause = 0UL | EXC_SYSCALL;    // IRQ 
+    /* set sp to simulate just returning from switch_to */
+    switchto_context_t *pt_switchto = (switchto_context_t *) (pcb->kernel_sp);
+    for (int i = 0; i < 14; i++) {
+        if (i == 0) { // ra
+            pt_switchto->regs[i] = (reg_t) ret_from_exception;
+        } else if (i == 1) {   // sp
+            pt_switchto->regs[i] = pcb->kernel_sp;
+        } else {      // S0 - S11
+            pt_switchto->regs[i] = 0;
+        }
+    }
 }
 pid_t do_exec(char *name, int argc, char *argv[]) {
     lock_kernel(&pcb_pid_hart_lock);
@@ -237,27 +278,18 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
         return -1; // fail to find free pcb
     }
     /* alloc pgdir  */
-    setup_pcb_vm(pcb[pcb_id], tasks[taskid]);
+    setup_process_vm(pcb[pcb_id], tasks[taskid]);
     /* init pcb */
-    pcb[pcb_id].kernel_sp = KERNEL_STACK_BASE;
-    pcb[pcb_id].kernel_stack_base = KERNEL_STACK_BASE;
-    pcb[pcb_id].user_sp = USER_STACK_BASE;
-    pcb[pcb_id].user_stack_base = USER_STACK_BASE;
-    pcb[pcb_id].pid = ++process_id;
-    pcb[pcb_id].entry_point = tasks[taskid].entrypoint;
-    pcb[pcb_id].block_queue.next = &pcb[pcb_id].block_queue;
-    pcb[pcb_id].block_queue.prev = &pcb[pcb_id].block_queue;
-    pcb[pcb_id].cpu_mask = current_running->cpu_mask;
-    strcpy(pcb[pcb_id].taskname, name);
-
+    setup_process_pcb(&pcb[pcb_id], tasks[taskid]);;
     /* init pcb stack */
+    set_satp(SATP_MODE_SV39, pcb[pcb_id].pid, kva2pa(pcb[pcb_id].pgdir) >> NORMAL_PAGE_SHIFT);    // Temporarily switch satp
+    local_flush_tlb_all();
     // move args to stack
     ptr_t user_sp = pcb[pcb_id].user_stack_base - 8;    // argc_base
     *(int64_t *) user_sp = (int64_t) argc;
     user_sp = user_sp - 8 * argc;       // kernel_sp_argv_base
     ptr_t argv_base = user_sp;
     char **my_argv = (char **) argv_base;
-    // memcpy((uint8_t *) user_sp, (const uint8_t *) argv, 8 * argc);
     for (int i = 0; i < argc; i++) {
         int str_len = strlen(argv[i]) + 1;  // include '\0'
         user_sp -= str_len;
@@ -267,39 +299,11 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     user_sp = ROUNDDOWN(user_sp, 16);  // alignment to 128 bit = 16 byte
     pcb[pcb_id].user_sp = user_sp;
     // init reg context
-    ptr_t kernel_sp = pcb[pcb_id].kernel_stack_base;
-    pcb[pcb_id].kernel_sp = pcb[pcb_id].kernel_sp - sizeof(regs_context_t) - sizeof(switchto_context_t);
-    regs_context_t *pt_regs =
-        (regs_context_t *) (kernel_sp - sizeof(regs_context_t));
-    for (int i = 0; i < 32; i++) {
-        if (i == 1) // ra
-            pt_regs->regs[i] = pcb[pcb_id].entry_point;
-        else if (i == 2) // sp
-            pt_regs->regs[i] = pcb[pcb_id].user_sp;
-        else if (i == 4) // tp
-            pt_regs->regs[i] = (reg_t) &pcb[pcb_id];
-        else if (i == 10) // a0
-            pt_regs->regs[i] = argc;
-        else if (i == 11) // a1
-            pt_regs->regs[i] = argv_base;
-        else
-            pt_regs->regs[i] = 0;
-    }
-    pt_regs->sstatus = ((0UL & (~SR_SPP)) & (~SR_SIE)) | SR_SPIE;           // set spp = 0, spie = 1, sie = 0
-    pt_regs->sepc = pcb[pcb_id].entry_point;            // entry 
-    pt_regs->scause = 0UL | EXC_SYSCALL;    // IRQ 
-
-    switchto_context_t *pt_switchto =
-        (switchto_context_t *) ((ptr_t) pt_regs - sizeof(switchto_context_t));
-    for (int i = 0; i < 14; i++) {
-        if (i == 0) { // ra
-            pt_switchto->regs[i] = (reg_t) ret_from_exception;
-        } else if (i == 1) {   // sp
-            pt_switchto->regs[i] = pcb[pcb_id].kernel_sp;
-        } else {      // S0 - S11
-            pt_switchto->regs[i] = 0;
-        }
-    }
+    setup_process_pcb_stack(&pcb[pcb_id]);
+    /* load task from sd card*/
+    load_task_img(taskid);
+    set_satp(SATP_MODE_SV39, current_running->pid, kva2pa(current_running->pgdir) >> NORMAL_PAGE_SHIFT);    // switch satp back
+    local_flush_tlb_all();
     /* add to readyqueue */
     lock_kernel(&ready_queue_hart_lock);
     add_readyqueue(&pcb[pcb_id]);

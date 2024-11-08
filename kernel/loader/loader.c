@@ -2,42 +2,28 @@
 #include <os/string.h>
 #include <os/kernel.h>
 #include <type.h>
+#include <os/mm.h>
 
-#define kernel          0x50201000
-#define tasknum_loc     0x502001f6
-#define SECTOR_SIZE 512
-int i;
-
-uint64_t load_task_img(char taskname[])
+uint64_t load_task_img(int taskid)
 {
-    /**
-     * TODO:
-     * 1. [p1-task3] load task from image via task id, and return its entrypoint
-     * 2. [p1-task4] load task via task name, thus the arg should be 'char *taskname'
-     */
-    //short * tasknum = (short *) tasknum_loc;
-    //task_info_t *taskinfo = (task_info_t *)(task_info_new_loc);
-     i = 0;      // task index
-    for(; i < tasknum; i ++){
-        if(strcmp(taskname, tasks[i].taskname) == 0){
-            break;
-        }
+    uint64_t memaddr = tasks[taskid].entrypoint;
+    uint32_t sector_num = tasks[taskid].sector_num;
+    uint32_t sector_pointer = tasks[taskid].firstsector;
+    while (sector_num * SECTOR_SIZE > PAGE_SIZE) {      // read a page per time
+        bios_sd_read(memaddr, PAGE_SIZE / SECTOR_SIZE, sector_pointer); // mem_address, num_of_blocks, block_id
+        memaddr += PAGE_SIZE;
+        sector_num -= PAGE_SIZE / SECTOR_SIZE;
+        sector_pointer += PAGE_SIZE / SECTOR_SIZE;
     }
-    if(i == tasknum){             // task name match failed
-        port_write("taskname: \"");
-        port_write(taskname);
-        port_write("\" does not exit\n\r");
-        return -1;
+    if (sector_num > 0) {   // Reading less than a page
+        bios_sd_read(memaddr, sector_num, sector_pointer);
     }
+    // counteract the offset in the image
+    uint8_t *dest = (uint8_t *) tasks[taskid].entrypoint;
+    uint8_t *src = (uint8_t *) (tasks[taskid].entrypoint + tasks[taskid].offset);
+    uint32_t len = SECTOR_SIZE * tasks[taskid].sector_num - tasks[taskid].offset;
+    memcpy(dest, src, len);
 
-    bios_sd_read(tasks[i].entry, tasks[i].sector_num, tasks[i].firstsector);         
-    // mem_address = 0x52000000 + 10000* taskid, num_of_blocks == 15, block_id = taskid * 15 + 15: bootloder(0), kernel(1-15), task(16+)
-    
-    // move forward to the entry
-    uint8_t *dest = (uint8_t *) tasks[i].entry;
-    uint8_t *src = (uint8_t *) (tasks[i].entry + tasks[i].offset);
-    memcpy(dest, src, SECTOR_SIZE * tasks[i].sector_num - tasks[i].offset);
-    
-    
-    return tasks[i].entry;
+    return tasks[taskid].entrypoint;
 }
+
