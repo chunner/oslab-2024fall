@@ -207,7 +207,7 @@ int main(void)
         // move the slave hart cursor
         current_running_1->cursor_y = current_running_0->cursor_y + 1;
         current_running = current_running_1;
-        // set stvec, sie, sstatus
+        // set stvec,  sstatus: enable interrupts globally
         setup_exception();
 
         printk("> [INIT] CPU #%u has entered kernel with VM!\n", (unsigned int) get_current_cpu_id());
