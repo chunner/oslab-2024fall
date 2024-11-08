@@ -211,7 +211,7 @@ int main(void)
         setup_exception();
 
         printk("> [INIT] CPU #%u has entered kernel with VM!\n", (unsigned int) get_current_cpu_id());
-        kernel_brake();
+        //kernel_brake();
         bios_set_timer(time_base / 100 + get_ticks());
         while (1)
         {
@@ -268,15 +268,12 @@ int main(void)
         (unsigned int) get_current_cpu_id());
     wakeup_other_hart();
     // TODO: [p4-task1 cont.] remove the brake and continue to start user processes.
-    kernel_brake();
+    //kernel_brake();
 
-
-    // load all tasks from sd to mem
-    for (int i = 0; i < tasknum; i++) {
-        load_task_img(tasks[i].taskname);
-    }
-
-    add_readyqueue(&pcb[0]);          // start shell
+    char *name = "shell";
+    char *argv[] = { "shell" };
+    int argc = 1;
+    do_exec(name, argc, argv);      // start shell
 
     // Setup timer interrupt and enable all interrupt globally
     bios_set_timer(time_base / 100 + get_ticks());
