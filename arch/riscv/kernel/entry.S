@@ -184,6 +184,13 @@ ENTRY(switch_to)
 
   sd sp, PCB_KERNEL_SP(a0)    # updata pre pcb's kernel sp
 
+  /* switch satp to current running*/
+  addi sp, sp, -8
+  sd a1, (sp)
+  jal switch_to_current_satp
+  ld a1, (sp)
+  addi sp, sp, 8
+
   /* TODO: [p2-task1] restore all callee save registers from kernel stack,
    * see the definition of `struct switchto_context` in sched.h*/
   ld sp, PCB_KERNEL_SP(a1)    # a1 = pcb_t * next  
