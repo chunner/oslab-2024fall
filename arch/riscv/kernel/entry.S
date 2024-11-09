@@ -70,6 +70,7 @@
    * space.
    */
   li t0, SR_SUM | SR_FS
+  csrc sstatus, t0
   /* TODO: [p2-task3] save sstatus, sepc, stval and scause on kernel stack */
   csrr t1, sstatus  
   csrr t2, sepc     
@@ -79,8 +80,6 @@
   sd  t2,OFFSET_REG_SEPC    (sp) 
   sd  t3,OFFSET_REG_SBADADDR(sp) 
   sd  t4,OFFSET_REG_SCAUSE  (sp) 
-
-  csrc sstatus, t0
 .endm
 
 .macro RESTORE_CONTEXT
@@ -222,14 +221,10 @@ ENTRY(ret_from_exception)
   # addi sp, sp, 8
 
   RESTORE_CONTEXT
+  # enable_preempt
+  not t0, x0
+  csrs CSR_SIE, t0  
 
-  addi sp, sp, -8
-  sd ra, (sp)
-  jal enable_preempt
-  ld ra, (sp)
-  addi sp, sp, 8
-  
- // csrr t0, sepc
   sret    // return to sepc
 ENDPROC(ret_from_exception)
 

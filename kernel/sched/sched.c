@@ -225,7 +225,29 @@ void setup_process_pcb(pcb_t *pcb, task_info_t task) {
     pcb->cpu_mask = current_running->cpu_mask;
     strcpy(pcb->taskname, task.taskname);
 }
-void setup_process_pcb_stack(pcb_t *pcb) {
+
+void setup_process_stack(pcb_t *pcb, int argc, char *argv[]) {
+    /* -----------------------------------USER STACK--------------------------------------*/
+    uint64_t user_stack_top = USER_STACK_BASE - PAGE_SIZE;       // user sp : 0xf_000_f000 - 0xf_000_0000
+    uint64_t kva = alloc_page_helper(user_stack_top, pcb->pgdir);   // alloc and map user stack
+    ptr_t user_sp_kva = kva + PAGE_SIZE;
+    uint64_t user_sp_kva_uva_offset = user_sp_kva - USER_STACK_BASE;
+
+    user_sp_kva -= sizeof(int64_t);    // argc_base
+    *(int64_t *) user_sp_kva = (int64_t) argc;
+
+    user_sp_kva = user_sp_kva - sizeof(char *) * argc;       // kernel_sp_argv_base
+    uint64_t argv_base = user_sp_kva;    //
+    char **my_argv = (char **) user_sp_kva;
+    for (int i = 0; i < argc; i++) {
+        int str_len = strlen(argv[i]) + 1;  // include '\0'
+        user_sp_kva -= str_len;
+        my_argv[i] = (char *) user_sp_kva;
+        strcpy((char *) user_sp_kva, argv[i]);
+    }
+    pcb->user_sp = user_sp_kva - user_sp_kva_uva_offset;
+    pcb->user_sp = ROUNDDOWN(pcb->user_sp, 16);  // alignment to 128 bit = 16 B
+    /*--------------------------------KERNEL STACK-------------------------------------*/
     /* initialization of registers on kernel stack*/
     pcb->kernel_sp = pcb->kernel_sp - sizeof(regs_context_t) - sizeof(switchto_context_t);
     regs_context_t *pt_regs = (regs_context_t *) (pcb->kernel_sp + sizeof(switchto_context_t));
@@ -236,6 +258,10 @@ void setup_process_pcb_stack(pcb_t *pcb) {
             pt_regs->regs[i] = pcb->user_sp;
         else if (i == 4) // tp
             pt_regs->regs[i] = (reg_t) pcb;
+        else if (i == 10) // a0
+            pt_regs->regs[i] = argc;
+        else if (i == 11) // a1
+            pt_regs->regs[i] = argv_base;
         else
             pt_regs->regs[i] = 0;
     }
@@ -252,26 +278,6 @@ void setup_process_pcb_stack(pcb_t *pcb) {
             pt_switchto->regs[i] = 0;
         }
     }
-}
-void load_argv_stack(pcb_t *pcb, int argc, char *argv[]) {
-    uint64_t user_stack_top = USER_STACK_BASE - PAGE_SIZE;       // user sp : 0xf_000_f000 - 0xf_000_0000
-    uint64_t kva = alloc_page_helper(user_stack_top, pcb->pgdir);   // alloc and map user stack
-    ptr_t user_sp_kva = kva + PAGE_SIZE;
-    uint64_t user_sp_kva_uva_offset = user_sp_kva - USER_STACK_BASE;
-
-    user_sp_kva -= sizeof(int);    // argc_base
-    *(int64_t *) user_sp_kva = (int64_t) argc;
-
-    user_sp_kva = user_sp_kva - sizeof(char *) * argc;       // kernel_sp_argv_base
-    char **my_argv = (char **) user_sp_kva;
-    for (int i = 0; i < argc; i++) {
-        int str_len = strlen(argv[i]) + 1;  // include '\0'
-        user_sp_kva -= str_len;
-        my_argv[i] = (char *) user_sp_kva;
-        strcpy((char *) user_sp_kva, argv[i]);
-    }
-    pcb->user_sp = user_sp_kva + user_sp_kva_uva_offset;
-    pcb->user_sp = ROUNDDOWN(pcb->user_sp, 16);  // alignment to 128 bit = 16 B
 }
 pid_t do_exec(char *name, int argc, char *argv[]) {
     lock_kernel(&pcb_pid_hart_lock);
@@ -295,12 +301,9 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     memcpy((uint8_t *) pcb->pgdir, (uint8_t *) PGDIR_VA, PAGE_SIZE); // copy kernel pgdir
     /* -----setup text and data segment vm */
     load_task_img(&pcb[pcb_id], tasks[taskid]);
-    /* ------setup stack vm */
-    load_argv_stack(&pcb[pcb_id], argc, argv);
+    /* ------setup user stack vm and init kernel stack---------- */
+    setup_process_stack(&pcb[pcb_id], argc, argv);
 
-    // ===========================init kernel stack
-    setup_process_pcb_stack(&pcb[pcb_id]);
-    
     /* add to readyqueue */
     lock_kernel(&ready_queue_hart_lock);
     add_readyqueue(&pcb[pcb_id]);
