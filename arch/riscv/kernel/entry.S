@@ -69,8 +69,7 @@
    * Disable the FPU to detect illegal usage of floating point in kernel
    * space.
    */
-  li t0, SR_SUM | SR_FS
-  csrc sstatus, t0
+  # li t0, SR_SUM | SR_FS
   /* TODO: [p2-task3] save sstatus, sepc, stval and scause on kernel stack */
   csrr t1, sstatus  
   csrr t2, sepc     
@@ -80,6 +79,8 @@
   sd  t2,OFFSET_REG_SEPC    (sp) 
   sd  t3,OFFSET_REG_SBADADDR(sp) 
   sd  t4,OFFSET_REG_SCAUSE  (sp) 
+
+  # csrc sstatus, t0
 .endm
 
 .macro RESTORE_CONTEXT

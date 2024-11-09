@@ -265,7 +265,7 @@ void setup_process_stack(pcb_t *pcb, int argc, char *argv[]) {
         else
             pt_regs->regs[i] = 0;
     }
-    pt_regs->sstatus = SR_SPIE;           // set spp = 0, spie = 1, sie = 0, SUM = 0
+    pt_regs->sstatus = SR_SPIE | SR_SUM;           // set spp = 0, spie = 1, sie = 0, SUM = 1
     pt_regs->sepc = pcb->entry_point;            // entry 
     /* set sp to simulate just returning from switch_to */
     switchto_context_t *pt_switchto = (switchto_context_t *) (pcb->kernel_sp);
