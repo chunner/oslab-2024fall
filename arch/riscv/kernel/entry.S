@@ -5,24 +5,24 @@
 .macro SAVE_CONTEXT
   /* TODO: [p2-task3] save all general purpose registers here! */
   /* HINT: Pay attention to the function of tp and sp, and save them carefully! */
-  addi sp, sp, -16
-  sd ra, (sp)
-  sd a0, 8(sp)
-  jal get_current_cpu_id
-  bnez a0, get_slave_tp
-  # master hart
-  la tp, current_running_0
-  ld tp, 0(tp)
-  j get_tp_end
-  # slave hart
-get_slave_tp:
-  la tp, current_running_1
-  ld tp, 0(tp)
+#   addi sp, sp, -16
+#   sd ra, (sp)
+#   sd a0, 8(sp)
+#   jal get_current_cpu_id
+#   bnez a0, get_slave_tp
+#   # master hart
+#   la tp, current_running_0
+#   ld tp, 0(tp)
+#   j get_tp_end
+#   # slave hart
+# get_slave_tp:
+#   la tp, current_running_1
+#   ld tp, 0(tp)
 
-get_tp_end:
-  ld ra, (sp)
-  ld a0, 8(sp)
-  addi sp, sp, 16
+# get_tp_end:
+#   ld ra, (sp)
+#   ld a0, 8(sp)
+#   addi sp, sp, 16
 
 
   sd sp, PCB_USER_SP(tp)      // store user stack top in PCB
@@ -162,8 +162,6 @@ ENDPROC(disable_interrupt)
 // NOTE: the address of previous pcb in a0
 // NOTE: the address of next pcb in a1
 ENTRY(switch_to)
-  # ld t0, PCB_KERNEL_SP(a0)   # a0 = pcb_t * prev
-  # addi t0, t0, -(SWITCH_TO_SIZE)
   addi sp, sp, -(SWITCH_TO_SIZE)      # sp = kernel_sp
   /* TODO: [p2-task1] save all callee save registers on kernel stack,
    * see the definition of `struct switchto_context` in sched.h*/
@@ -183,13 +181,6 @@ ENTRY(switch_to)
   sd  s11, SWITCH_TO_S11(sp)
 
   sd sp, PCB_KERNEL_SP(a0)    # updata pre pcb's kernel sp
-
-  /* switch satp to current running*/
-  addi sp, sp, -8
-  sd a1, (sp)
-  jal switch_to_current_satp
-  ld a1, (sp)
-  addi sp, sp, 8
 
   /* TODO: [p2-task1] restore all callee save registers from kernel stack,
    * see the definition of `struct switchto_context` in sched.h*/
@@ -221,7 +212,7 @@ ENTRY(ret_from_exception)
   /* TODO: [p2-task3] restore context via provided macro and return to sepc */
   /* HINT: remember to check your sp, does it point to the right address? */
 
-  jal save_current_running
+  # jal save_current_running
 
 
   # addi sp, sp, -8
@@ -250,13 +241,13 @@ ENTRY(exception_handler_entry)
   # jal lock_kernel 
 
 
-  /* TODO: [p2-task3] load ret_from_exception into $ra so that we can return to
+  /* load ret_from_exception into $ra so that we can return to
    * ret_from_exception when interrupt_help complete.
    */
   la ra, ret_from_exception
 
 
-  /* TODO: [p2-task3] call interrupt_helper
+  /* call interrupt_helper
    * NOTE: don't forget to pass parameters for it.
    */
   mv a0, sp           # *sp = regs

@@ -16,8 +16,6 @@ handler_t exc_table[EXCC_COUNT];
 
 void interrupt_helper(regs_context_t *regs, uint64_t stval, uint64_t scause)
 {
-    // get_current_running();
-    // TODO: [p2-task3] & [p2-task4] interrupt handler.
     // call corresponding handler by the value of `scause`
     if (current_running->status == TASK_EXITED) {
         do_scheduler();
@@ -40,7 +38,7 @@ void handle_irq_timer(regs_context_t *regs, uint64_t stval, uint64_t scause)
 
 void init_exception()
 {
-    /* TODO: [p2-task3] initialize exc_table */
+    /* initialize exc_table */
     /* NOTE: handle_syscall, handle_other, etc.*/
     exc_table[EXCC_SYSCALL] = handle_syscall;
     exc_table[EXCC_INST_MISALIGNED] = handle_other;
@@ -52,7 +50,7 @@ void init_exception()
     exc_table[EXCC_LOAD_PAGE_FAULT] = handle_other;
     exc_table[EXCC_STORE_PAGE_FAULT] = handle_other;
 
-    /* TODO: [p2-task4] initialize irq_table */
+    /* initialize irq_table */
     /* NOTE: handle_int, handle_other, etc.*/
     irq_table[IRQC_S_TIMER] = handle_irq_timer;
     irq_table[IRQC_U_SOFT] = handle_other;
@@ -63,7 +61,7 @@ void init_exception()
     irq_table[IRQC_U_EXT] = handle_other;
     irq_table[IRQC_S_EXT] = handle_other;
     irq_table[IRQC_M_EXT] = handle_other;
-    /* TODO: [p2-task3] set up the entrypoint of exceptions */
+    /* set up the entrypoint of exceptions */
     setup_exception();
     return;
 }
@@ -102,11 +100,11 @@ void handle_s_soft(regs_context_t *regs, uint64_t stval, uint64_t scause) {
 //     }
 //     return;
 // }
-void save_current_running() {
-    if (get_current_cpu_id() == 0) {
-        current_running_0 = current_running;
-    } else {
-        current_running_1 = current_running;
-    }
-    return;
-}
+// void save_current_running() {
+//     if (get_current_cpu_id() == 0) {
+//         current_running_0 = current_running;
+//     } else {
+//         current_running_1 = current_running;
+//     }
+//     return;
+// }

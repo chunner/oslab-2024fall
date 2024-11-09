@@ -35,8 +35,7 @@
 #include <csr.h>
 
 #define NUM_MAX_TASK 16
-#define KERNEL_STACK_BASE 0xf00010000lu     // kernel sp : 0xf_0000_f000 - 0xf_0001_0000
-#define USER_STACK_BASE 0xf00020000lu       // user sp : 0xf_0001_f000 - 0xf_0002_0000
+#define USER_STACK_BASE 0xf00010000lu     // user sp : 0xf_0000_f000 - 0xf_0001_0000
 
  /* used to save register infomation */
 typedef struct regs_context
@@ -65,10 +64,6 @@ typedef enum {
     TASK_EXITED,
 } task_status_t;
 
-// typedef enum {
-//     PCB_ACTIVE,
-//     PCB_INACTIVE,
-// }pcb_status_t;
 /* Process Control Block */
 typedef struct pcb
 {

@@ -32,7 +32,8 @@ uint64_t load_task_img(pcb_t *pcb, task_info_t task) {    /* setup code and data
     uint8_t *src = (uint8_t *) (task.entrypoint + task.offset);
     uint32_t len = SECTOR_SIZE * task.sector_num - task.offset;
     memcpy(dest, src, len);
-
+    set_satp(SATP_MODE_SV39, current_running->pid, kva2pa(current_running->pgdir) >> NORMAL_PAGE_SHIFT);    // switch satp back
+    local_flush_tlb_all();
     return task.entrypoint;
 }
 
