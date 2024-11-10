@@ -5,26 +5,6 @@
 .macro SAVE_CONTEXT
   /* TODO: [p2-task3] save all general purpose registers here! */
   /* HINT: Pay attention to the function of tp and sp, and save them carefully! */
-#   addi sp, sp, -16
-#   sd ra, (sp)
-#   sd a0, 8(sp)
-#   jal get_current_cpu_id
-#   bnez a0, get_slave_tp
-#   # master hart
-#   la tp, current_running_0
-#   ld tp, 0(tp)
-#   j get_tp_end
-#   # slave hart
-# get_slave_tp:
-#   la tp, current_running_1
-#   ld tp, 0(tp)
-
-# get_tp_end:
-#   ld ra, (sp)
-#   ld a0, 8(sp)
-#   addi sp, sp, 16
-
-
   sd sp, PCB_USER_SP(tp)      // store user stack top in PCB
   ld sp, PCB_KERNEL_SP(tp)        // load kernel stack top in PCB
 
@@ -70,6 +50,7 @@
    * space.
    */
   # li t0, SR_SUM | SR_FS
+  # csrc sstatus, t0
   /* TODO: [p2-task3] save sstatus, sepc, stval and scause on kernel stack */
   csrr t1, sstatus  
   csrr t2, sepc     
@@ -79,8 +60,6 @@
   sd  t2,OFFSET_REG_SEPC    (sp) 
   sd  t3,OFFSET_REG_SBADADDR(sp) 
   sd  t4,OFFSET_REG_SCAUSE  (sp) 
-
-  # csrc sstatus, t0
 .endm
 
 .macro RESTORE_CONTEXT
@@ -163,7 +142,7 @@ ENDPROC(disable_interrupt)
 // NOTE: the address of next pcb in a1
 ENTRY(switch_to)
   addi sp, sp, -(SWITCH_TO_SIZE)      # sp = kernel_sp
-  /* TODO: [p2-task1] save all callee save registers on kernel stack,
+  /* save all callee save registers on kernel stack,
    * see the definition of `struct switchto_context` in sched.h*/
   sd  ra, SWITCH_TO_RA(sp)
   sd  sp, SWITCH_TO_SP(sp)
@@ -182,7 +161,7 @@ ENTRY(switch_to)
 
   sd sp, PCB_KERNEL_SP(a0)    # updata pre pcb's kernel sp
 
-  /* TODO: [p2-task1] restore all callee save registers from kernel stack,
+  /* restore all callee save registers from kernel stack,
    * see the definition of `struct switchto_context` in sched.h*/
   ld sp, PCB_KERNEL_SP(a1)    # a1 = pcb_t * next  
   
@@ -209,18 +188,8 @@ ENTRY(switch_to)
 ENDPROC(switch_to)
 
 ENTRY(ret_from_exception)
-  /* TODO: [p2-task3] restore context via provided macro and return to sepc */
+  /* restore context via provided macro and return to sepc */
   /* HINT: remember to check your sp, does it point to the right address? */
-
-  # jal save_current_running
-
-
-  # addi sp, sp, -8
-  # sd ra, (sp)
-  # jal unlock_kernel
-  # ld ra, (sp)
-  # addi sp, sp, 8
-
   RESTORE_CONTEXT
   # enable_preempt
   not t0, x0
@@ -231,18 +200,12 @@ ENDPROC(ret_from_exception)
 
 ENTRY(exception_handler_entry)
 
-  /* TODO: [p2-task3] save context via the provided macro */
+  /*save context via the provided macro */
   SAVE_CONTEXT
-
-  # jal lock_kernel 
-
-
   /* load ret_from_exception into $ra so that we can return to
    * ret_from_exception when interrupt_help complete.
    */
   la ra, ret_from_exception
-
-
   /* call interrupt_helper
    * NOTE: don't forget to pass parameters for it.
    */

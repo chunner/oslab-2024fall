@@ -31,7 +31,7 @@ void interrupt_helper(regs_context_t *regs, uint64_t stval, uint64_t scause)
 void handle_irq_timer(regs_context_t *regs, uint64_t stval, uint64_t scause)
 {
     // TODO: [p2-task4] clock interrupt handler.
-    bios_set_timer(time_base * 10000 + get_ticks());    // 100 times per secondes
+    bios_set_timer(time_base / 100 + get_ticks());    // 100 times per secondes
     do_scheduler();
     return;
 }
@@ -92,19 +92,3 @@ void handle_other(regs_context_t *regs, uint64_t stval, uint64_t scause)
 void handle_s_soft(regs_context_t *regs, uint64_t stval, uint64_t scause) {
     return;         // jump to ret_from_complete
 }
-// void get_current_running() {
-//     if (get_current_cpu_id() == 0) {
-//         current_running = current_running_0;
-//     } else {
-//         current_running = current_running_1;
-//     }
-//     return;
-// }
-// void save_current_running() {
-//     if (get_current_cpu_id() == 0) {
-//         current_running_0 = current_running;
-//     } else {
-//         current_running_1 = current_running;
-//     }
-//     return;
-// }
