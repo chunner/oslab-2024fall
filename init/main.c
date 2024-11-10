@@ -245,6 +245,9 @@ int main(void)
     init_conditions();
     init_mbox();
 
+    // Init bitmap
+    init_bitmap();
+
     // Init interrupt (^_^)
     init_exception();
     printk("> [INIT] Interrupt processing initialization succeeded.\n");

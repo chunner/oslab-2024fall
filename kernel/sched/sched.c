@@ -216,8 +216,8 @@ void remove_readyqueue(pcb_t *pcb) {
 void setup_process_pcb(pcb_t *pcb, task_info_t task) {
     pcb->kernel_sp = allocPage(1) + PAGE_SIZE;
     pcb->kernel_stack_base = pcb->kernel_sp;
-    pcb->user_sp = USER_STACK_BASE;
-    pcb->user_stack_base = USER_STACK_BASE;
+    pcb->user_sp = USER_STACK_ADDR;
+    pcb->user_stack_base = USER_STACK_ADDR;
     pcb->pid = ++process_id;
     pcb->entry_point = task.entrypoint;
     pcb->block_queue.next = &pcb->block_queue;
@@ -228,16 +228,16 @@ void setup_process_pcb(pcb_t *pcb, task_info_t task) {
 
 void setup_process_stack(pcb_t *pcb, int argc, char *argv[]) {
     /* -----------------------------------USER STACK--------------------------------------*/
-    uint64_t user_stack_top = USER_STACK_BASE - PAGE_SIZE;       // user sp : 0xf_000_f000 - 0xf_000_0000
+    uint64_t user_stack_top = USER_STACK_ADDR - PAGE_SIZE;       // user sp : 0xf_000_f000 - 0xf_000_0000
     uint64_t kva = alloc_page_helper(user_stack_top, pcb->pgdir);   // alloc and map user stack
     ptr_t user_sp_kva = kva + PAGE_SIZE;
-    uint64_t user_sp_kva_uva_offset = user_sp_kva - USER_STACK_BASE;
+    uint64_t user_sp_kva_uva_offset = user_sp_kva - USER_STACK_ADDR;
 
     user_sp_kva -= sizeof(int64_t);    // argc_base
     *(int64_t *) user_sp_kva = (int64_t) argc;
 
     user_sp_kva = user_sp_kva - sizeof(char *) * argc;       // kernel_sp_argv_base
-    uint64_t argv_base = user_sp_kva;
+    uint64_t argv_base = user_sp_kva;    //
     char **my_argv = (char **) user_sp_kva;
     for (int i = 0; i < argc; i++) {
         int str_len = strlen(argv[i]) + 1;  // include '\0'

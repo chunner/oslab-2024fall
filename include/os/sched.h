@@ -35,7 +35,6 @@
 #include <csr.h>
 
 #define NUM_MAX_TASK 16
-#define USER_STACK_BASE 0xf00010000lu     // user sp : 0xf_0000_f000 - 0xf_0001_0000
 
  /* used to save register infomation */
 typedef struct regs_context

@@ -3,14 +3,71 @@
 // NOTE: A/C-core
 static ptr_t kernMemCurr = FREEMEM_KERNEL;
 
+// Each bit represents the state of a page. When initialized, 
+// all bits are set to 0, indicating that all pages are unallocated.
+char bitmap[FREE_MEM_PAGE_NUM / 8] = { 0 }; // Each char has 8 bits to represent 8 pages
+void init_bitmap() {
+    // 0xffffffc052000000 - 0xffffffc052004000 are used as stack
+    bitmap[0] |= 0x0f;    // 0b1111
+}
 ptr_t allocPage(int numPage)
 {
-    // align PAGE_SIZE
-    ptr_t ret = ROUND(kernMemCurr, PAGE_SIZE);
-    kernMemCurr = ret + numPage * PAGE_SIZE;
-    return ret;
+    int start_page = find_free_page(numPage);
+    if (start_page == -1) {
+        return -1;      // fail to alloc
+    }
+    mark_page_allocated(start_page, numPage);
+    return INIT_KERNEL_STACK + PAGE_SIZE * start_page;
+}
+int find_free_pages(int numPage) {
+    int consecutive_count = 0;
+    int start_page = -1;
+
+    // Traverse each byte in the bitmap
+    for (int byte_idx = 0; byte_idx < FREE_MEM_PAGE_NUM / 8; byte_idx++) {
+        if (bitmap[byte_idx] != 0xFF) {  // Check if there are any free bits in this byte
+            // Traverse each bit in the current byte
+            for (int bit = 0; bit < 8; bit++) {
+                int page_idx = byte_idx * 8 + bit;
+
+                if (!(bitmap[byte_idx] & (1 << bit))) {  // Check if the page is free
+                    if (consecutive_count == 0) {
+                        start_page = page_idx;  // Record the starting position of the free pages
+                    }
+                    consecutive_count++;
+
+                    // If we have found enough consecutive free pages
+                    if (consecutive_count == numPage) {
+                        return start_page;
+                    }
+                } else {
+                    // Reset counters if a used page is encountered
+                    consecutive_count = 0;
+                    start_page = -1;
+                }
+            }
+        } else {
+            // Reset counters if the entire byte is occupied
+            consecutive_count = 0;
+            start_page = -1;
+        }
+    }
+    return -1;  // Not enough consecutive free pages found
+}
+void mark_page_allocated(int start_page, int numPage) {
+    for (int i = 0; i < numPage; i++) {
+        int start_page = numPage + i;
+        bitmap[start_page / 8] |= (1 << (start_page % 8));  // Set the corresponding bit to 1
+    }
+
 }
 
+void free_pages(int start_page, int page_num) {
+    for (int i = 0; i < page_num; i++) {
+        int page_idx = start_page + i;
+        bitmap[page_idx / 8] &= ~(1 << (page_idx % 8));  // Clear the corresponding bit to 0
+    }
+}
 // NOTE: Only need for S-core to alloc 2MB large page
 #ifdef S_CORE
 static ptr_t largePageMemCurr = LARGE_PAGE_FREEMEM;
@@ -20,7 +77,7 @@ ptr_t allocLargePage(int numPage)
     ptr_t ret = ROUND(largePageMemCurr, LARGE_PAGE_SIZE);
     largePageMemCurr = ret + numPage * LARGE_PAGE_SIZE;
     return ret;
-}
+    }
 #endif
 
 void freePage(ptr_t baseAddr)

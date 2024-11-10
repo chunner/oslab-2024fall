@@ -28,18 +28,12 @@
 
 #include <type.h>
 #include <pgtable.h>
+#include <os/list.h>
 
 #define MAP_KERNEL 1
 #define MAP_USER 2
 #define MEM_SIZE 32
- // #define PAGE_SIZE 4096 // 4K = 0x1000
- // #define INIT_KERNEL_STACK 0x50500000
- // #define INIT_USER_STACK 0x52500000
- // #define FREEMEM_KERNEL (INIT_KERNEL_STACK + PAGE_SIZE * 4)
- // #define FREEMEM_USER INIT_USER_STACK
-// #define UserStackPage 16
-// #define KernelStackPage 16
-
+#define FREE_MEM_PAGE_NUM 0x8000    // 0x800_0000 / 4K
 #define PAGE_SIZE 4096 // 4K = 0x1000
 #define INIT_KERNEL_STACK 0xffffffc052000000
 #define FREEMEM_KERNEL (INIT_KERNEL_STACK + 4*PAGE_SIZE)
@@ -62,7 +56,8 @@ void freePage(ptr_t baseAddr);
 extern ptr_t allocLargePage(int numPage);
 #else
 // NOTE: A/C-core
-#define USER_STACK_ADDR 0xf00010000
+#define USER_STACK_ADDR 0xf00010000     // user sp : 0xf_0000_f000 - 0xf_0001_0000
+
 #endif
 
 // TODO [P4-task1] */
