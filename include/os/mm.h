@@ -29,6 +29,7 @@
 #include <type.h>
 #include <pgtable.h>
 #include <os/list.h>
+#include <os/sched.h>
 
 #define MAP_KERNEL 1
 #define MAP_USER 2
@@ -44,26 +45,16 @@
 
 #define NBYTES2PAGE(nbytes) (((nbytes) / PAGE_SIZE) + ((nbytes) % PAGE_SIZE != 0))
 
-extern ptr_t allocPage(int numPage);
-// TODO [P4-task1] */
-void freePage(ptr_t baseAddr);
+extern ptr_t allocPage(int numPage, pcb_t *pcb);
 
-// #define S_CORE
-// NOTE: only need for S-core to alloc 2MB large page
-#ifdef S_CORE
-#define LARGE_PAGE_FREEMEM 0xffffffc056000000
-#define USER_STACK_ADDR 0x400000
-extern ptr_t allocLargePage(int numPage);
-#else
-// NOTE: A/C-core
 #define USER_STACK_ADDR 0xf00010000     // user sp : 0xf_0000_f000 - 0xf_0001_0000
 
-#endif
 
 // TODO [P4-task1] */
-extern void *kmalloc(size_t size);
+extern void init_bitmap();
+extern void release_process_page(pcb_t *pcb);
 extern void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir);
-extern uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir);
+extern uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb);
 
 // TODO [P4-task4]: shm_page_get/dt */
 uintptr_t shm_page_get(int key);

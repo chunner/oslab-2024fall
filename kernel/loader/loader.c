@@ -13,7 +13,7 @@ uint64_t load_task_img(pcb_t *pcb, task_info_t task) {    /* setup code and data
     uint32_t sector_num = task.sector_num;
     uint32_t sector_pointer = task.firstsector;
     for (int i = 0;i < pagenum;i++) {
-        uint64_t kva = alloc_page_helper(uva, pcb->pgdir);
+        uint64_t kva = alloc_page_helper(uva, pcb->pgdir, pcb);
         uva += 0x1000lu;       // 4KB == 1000
         if (sector_num * SECTOR_SIZE >= PAGE_SIZE) {    // read (a page == 8 block) per time
             bios_sd_read(kva, PAGE_SIZE / SECTOR_SIZE, sector_pointer); // mem_address, num_of_blocks, block_id

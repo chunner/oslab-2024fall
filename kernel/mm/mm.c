@@ -10,15 +10,6 @@ void init_bitmap() {
     // 0xffffffc052000000 - 0xffffffc052004000 are used as stack
     bitmap[0] |= 0x0f;    // 0b1111
 }
-ptr_t allocPage(int numPage)
-{
-    int start_page = find_free_page(numPage);
-    if (start_page == -1) {
-        return -1;      // fail to alloc
-    }
-    mark_page_allocated(start_page, numPage);
-    return INIT_KERNEL_STACK + PAGE_SIZE * start_page;
-}
 int find_free_pages(int numPage) {
     int consecutive_count = 0;
     int start_page = -1;
@@ -62,35 +53,33 @@ void mark_page_allocated(int start_page, int numPage) {
 
 }
 
-void free_pages(int start_page, int page_num) {
+void unmark_page_free(int start_page, int page_num) {
     for (int i = 0; i < page_num; i++) {
         int page_idx = start_page + i;
         bitmap[page_idx / 8] &= ~(1 << (page_idx % 8));  // Clear the corresponding bit to 0
     }
 }
-// NOTE: Only need for S-core to alloc 2MB large page
-#ifdef S_CORE
-static ptr_t largePageMemCurr = LARGE_PAGE_FREEMEM;
-ptr_t allocLargePage(int numPage)
+
+ptr_t allocPage(int numPage, pcb_t *pcb)
 {
-    // align LARGE_PAGE_SIZE
-    ptr_t ret = ROUND(largePageMemCurr, LARGE_PAGE_SIZE);
-    largePageMemCurr = ret + numPage * LARGE_PAGE_SIZE;
-    return ret;
+    int start_page = find_free_page(numPage);
+    if (start_page == -1) {
+        return -1;      // fail to alloc
     }
-#endif
+    mark_page_allocated(start_page, numPage);
+    /* record the alloced page in pcb */
+    pcb->page_occupied[pcb->page_occupied_pointer].numPage = numPage;
+    pcb->page_occupied[pcb->page_occupied_pointer].start_page = numPage;
+    pcb->page_occupied_pointer++;
 
-void freePage(ptr_t baseAddr)
-{
-    // TODO [P4-task1] (design you 'freePage' here if you need):
+    return INIT_KERNEL_STACK + PAGE_SIZE * start_page;
 }
-
-void *kmalloc(size_t size)
-{
-    // TODO [P4-task1] (design you 'kmalloc' here if you need):
+void release_process_page(pcb_t *pcb) {
+    for (;pcb->page_occupied_pointer > 0;pcb->page_occupied_pointer--) {
+        int i = pcb->page_occupied_pointer;
+        unmark_page_free(pcb->page_occupied[i].start_page, pcb->page_occupied[i].numPage);
+    }
 }
-
-
 /* this is used for mapping kernel virtual address into user page table */
 void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir)
 {
@@ -100,7 +89,7 @@ void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir)
 /* allocate physical page for `va`, mapping it into `pgdir`,
    return the kernel virtual address for the page
    */
-uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir)
+uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb)
 {
     // TODO [P4-task1] alloc_page_helper:
     PTE *lv3_pgdir = (PTE *) pgdir;
@@ -109,20 +98,20 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir)
     uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (va >> (NORMAL_PAGE_SHIFT + PPN_BITS));
     uint64_t vpn0 = (va >> NORMAL_PAGE_SHIFT) ^ (vpn2 << (2 * PPN_BITS)) ^ (vpn1 << PPN_BITS);
     if (lv3_pgdir[vpn2] == 0) {     // alloc a new second-level page directory
-        PTE *lv2_pgdir = allocPage(1);
+        PTE *lv2_pgdir = allocPage(1, pcb);
         set_pfn(&lv3_pgdir[vpn2], kva2pa(lv2_pgdir) >> NORMAL_PAGE_SHIFT);
         set_attribute(&lv3_pgdir[vpn2], _PAGE_PRESENT);
         clear_pgdir(lv2_pgdir);   // clear second-level pgdir page
     }
     PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
     if (lv2_pgdir[vpn1] == 0) {     // alloc a new first_level page directory
-        PTE *lv1_pgdir = allocPage(1);
+        PTE *lv1_pgdir = allocPage(1, pcb);
         set_pfn(&lv2_pgdir[vpn1], kva2pa(lv1_pgdir) >> NORMAL_PAGE_SHIFT);
         set_attribute(&lv2_pgdir[vpn1], _PAGE_PRESENT);
         clear_pgdir(lv1_pgdir);   // clear second-level pgdir page
     }
     PTE *lv1_pgdir = (PTE *) pa2kva(get_pa(lv2_pgdir[vpn1]));
-    uint64_t kva = allocPage(1);
+    uint64_t kva = allocPage(1, pcb);
     uint64_t upa = kva2pa(kva);
     set_pfn(&lv1_pgdir[vpn0], upa >> NORMAL_PAGE_SHIFT);
     set_attribute(

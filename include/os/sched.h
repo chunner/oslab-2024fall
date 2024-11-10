@@ -63,6 +63,11 @@ typedef enum {
     TASK_EXITED,
 } task_status_t;
 
+typedef struct page_occupied {
+    int start_page;
+    int numPage;
+}page_occupied_t;
+
 /* Process Control Block */
 typedef struct pcb
 {
@@ -100,10 +105,16 @@ typedef struct pcb
     /* sys_wait (pid) */
     list_head block_queue;
 
+    /* cpu hart id relevant*/
     uint64_t current_cpu_id;
     uint64_t cpu_mask;
 
+    /* page table */
     uintptr_t pgdir;        // the address of the base of page table
+
+    /* Occupied Page Info */
+    page_occupied_t page_occupied[16];
+    int page_occupied_pointer;
 
 } pcb_t;
 

@@ -92,7 +92,7 @@ void do_mutex_lock_release(int mlock_idx)
     }
     unlock_kernel(&mutex_hart_lock);
 }
-void check_lock(pid_t pid) {
+void release_process_mutex(pid_t pid) {
     lock_kernel(&mutex_hart_lock);
     for (int i = 0;i < last_lockid;i++) {
         if (mlocks[i].lock.status == LOCKED && mlocks[i].pid == pid) {

@@ -61,7 +61,7 @@ int do_mutex_lock_init(int key);
 void do_mutex_lock_acquire(int mlock_idx);
 void do_mutex_lock_release(int mlock_idx);
 
-void check_lock(pid_t pid);         // check the process exited have lock
+void release_process_mutex(pid_t pid);         // check the process exited have lock
 
 /************************************************************/
 typedef enum {
