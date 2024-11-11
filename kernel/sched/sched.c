@@ -304,9 +304,9 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     setup_process_pcb(&pcb[pcb_id], tasks[taskid]);
     /* ===========================setup process vm  */
     /* ------setup page directory */
-    pcb->pgdir = allocPage(1, &pcb[pcb_id]);   // alloc 4KB for user pgdir
-    clear_pgdir(pcb->pgdir);
-    memcpy((uint8_t *) pcb->pgdir, (uint8_t *) PGDIR_VA, PAGE_SIZE); // copy kernel pgdir
+    pcb[pcb_id].pgdir = allocPage(1, &pcb[pcb_id]);   // alloc 4KB for user pgdir
+    clear_pgdir(pcb[pcb_id].pgdir);
+    memcpy((uint8_t *) pcb[pcb_id].pgdir, (uint8_t *) PGDIR_VA, PAGE_SIZE); // copy kernel pgdir
     /* -----setup text and data segment vm */
     load_task_img(&pcb[pcb_id], tasks[taskid]);
     /* ------setup user stack vm and init kernel stack */
