@@ -236,7 +236,7 @@ void setup_process_pcb(pcb_t *pcb, task_info_t task) {
 
 void setup_process_stack(pcb_t *pcb, int argc, char *argv[]) {
     /* -----------------------------------USER STACK--------------------------------------*/
-    uint64_t user_stack_top = USER_STACK_ADDR - PAGE_SIZE;       // user sp : 0xf_000_f000 - 0xf_000_0000
+    uint64_t user_stack_top = USER_STACK_ADDR - PAGE_SIZE;       // user sp : 0xf_000_f000 - 0xf_0001_0000
     uint64_t kva = alloc_page_helper(user_stack_top, pcb->pgdir, pcb);   // alloc and map user stack
     ptr_t user_sp_kva = kva + PAGE_SIZE;
     uint64_t user_sp_kva_uva_offset = user_sp_kva - USER_STACK_ADDR;

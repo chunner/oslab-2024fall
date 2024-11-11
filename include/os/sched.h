@@ -125,8 +125,8 @@ extern list_head ready_queue;
 extern list_head sleep_queue;
 
 /* current running task PCB */
-pcb_t *current_running_0;// asm("tp");
-pcb_t *current_running_1;// asm("tp");
+pcb_t *current_running_0;
+pcb_t *current_running_1;
 register pcb_t *current_running asm("tp");
 
 extern pid_t process_id;

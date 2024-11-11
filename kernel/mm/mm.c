@@ -7,7 +7,7 @@ static ptr_t kernMemCurr = FREEMEM_KERNEL;
 // all bits are set to 0, indicating that all pages are unallocated.
 char bitmap[FREE_MEM_PAGE_NUM / 8] = { 0 }; // Each char has 8 bits to represent 8 pages
 void init_bitmap() {
-    // 0xffffffc052000000 - 0xffffffc052004000 are used as stack
+    // 0xffffffc052000000 - 0xffffffc052004000 are used as stack, first 4 page
     bitmap[0] |= 0x0f;    // 0b1111
 }
 int find_free_pages(int numPage) {
@@ -47,7 +47,7 @@ int find_free_pages(int numPage) {
 }
 void mark_page_allocated(int start_page, int numPage) {
     for (int i = 0; i < numPage; i++) {
-        int start_page = numPage + i;
+        start_page = start_page + i;
         bitmap[start_page / 8] |= (1 << (start_page % 8));  // Set the corresponding bit to 1
     }
 
@@ -62,16 +62,16 @@ void unmark_page_free(int start_page, int page_num) {
 
 ptr_t allocPage(int numPage, pcb_t *pcb)
 {
-    int start_page = find_free_page(numPage);
+    int start_page = find_free_pages(numPage);
     if (start_page == -1) {
         return -1;      // fail to alloc
     }
     mark_page_allocated(start_page, numPage);
     /* record the alloced page in pcb */
     pcb->page_occupied[pcb->page_occupied_pointer].numPage = numPage;
-    pcb->page_occupied[pcb->page_occupied_pointer].start_page = numPage;
+    pcb->page_occupied[pcb->page_occupied_pointer].start_page = start_page;
     pcb->page_occupied_pointer++;
-
+    ptr_t retval = INIT_KERNEL_STACK + PAGE_SIZE * start_page;
     return INIT_KERNEL_STACK + PAGE_SIZE * start_page;
 }
 void release_process_page(pcb_t *pcb) {
