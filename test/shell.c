@@ -37,153 +37,173 @@
 #define MAX_ARGC 10
 #define MAX_ARGV_LEN 32
 #define MAX_NUM_BYTE 8
+void shell_prompt() {
+    printf("> root@UCAS_OS: ");
+}
 
-int main(void)
-{
+void parse_input(char *buffer) {
+    int c, i = 0;
+    while ((c = sys_getchar()) != '\n' && c != '\r') {
+        if (c >= 0 && c <= 127) {       // the input should be ASCII
+            if (c != '\b' && c != '\177') { // backspace
+                buffer[i++] = c;
+            } else if (i > 0) {
+                i--;
+            }
+            printf("%c", c);
+        }
+    }
+    buffer[i] = '\0';
+    printf("\n");
+}
+
+void handle_ps_command() {
+    sys_ps();
+}
+
+void handle_clear_command() {
+    sys_screen_clear();
+    sys_move_cursor(0, SHELL_BEGIN);
+    printf("------------------- COMMAND -------------------\n");
+}
+
+void handle_exec_command(char *buffer) {
+    char taskname[MAX_NAME_LEN];
+    char *argv[MAX_ARGC];
+    char argv_base[MAX_ARGV_LEN];
+    int argc = 0, i = 5, argv_base_i = 0, waitpid_en = 1;
+
+    for (; buffer[i] != ' ' && buffer[i] != '\0'; i++) {
+        taskname[i - 5] = buffer[i];
+    }
+    taskname[i - 5] = '\0';
+    argv[argc++] = taskname;// the first argv point to taskname
+
+    if (buffer[i + 1] == '&') {
+        waitpid_en = 0;
+        i += 2;
+    }
+
+    while (buffer[i] != '\0') {
+        i++;
+        argv[argc++] = &argv_base[argv_base_i];
+        while (buffer[i] != ' ' && buffer[i] != '\0') {
+            argv_base[argv_base_i++] = buffer[i++];
+        }
+        argv_base[argv_base_i++] = '\0';
+    }
+
+    int pid = sys_exec(taskname, argc, argv);
+    if (pid < 0) {
+        printf("Info: fail to execute %s\n", taskname);
+    } else {
+        printf("Info: execute %s successfully, pid = %d ...\n", taskname, pid);
+        if (waitpid_en) {
+            sys_waitpid(pid);
+        }
+    }
+}
+
+void handle_waitpid_command(char *buffer) {
+    char num_str[MAX_NUM_BYTE];
+    int i = 8, num_str_idx = 0;
+    while (buffer[i] >= '0' && buffer[i] <= '9' && num_str_idx < MAX_NUM_BYTE - 1) {
+        num_str[num_str_idx++] = buffer[i++];
+    }
+    num_str[num_str_idx++] = '\0';
+    int pid = atoi(num_str);
+    sys_waitpid(pid);
+    printf("Info: wait pid = %d ...\n", pid);
+}
+
+void handle_kill_command(char *buffer) {
+    char num_str[MAX_NUM_BYTE];
+    int i = 5, num_str_idx = 0;
+    while (buffer[i] >= '0' && buffer[i] <= '9' && num_str_idx < MAX_NUM_BYTE - 1) {
+        num_str[num_str_idx++] = buffer[i++];
+    }
+    num_str[num_str_idx++] = '\0';
+    int pid = atoi(num_str);
+    int retval = sys_kill(pid);
+    if (retval == 1) {
+        printf("Info: kill pid = %d successfully ...\n", pid);
+    } else {
+        printf("Info: fail to find pid = %d\n", pid);
+    }
+}
+
+void handle_taskset_command(char *buffer) {
+    int i = 8;
+    char mask_str[16];
+    char pid_str[MAX_NUM_BYTE];
+    char taskname[MAX_NAME_LEN];
+    int mask_str_idx = 0, pid_str_idx = 0, taskname_idx = 0;
+    uint64_t mask;
+    int pid, retval;
+    if (buffer[i] == '-' && buffer[i + 1] == 'p') { // taskset -p mask pid
+        i += 3;
+        //----------------decoding mask
+        while (buffer[i] != ' ') {
+            mask_str[mask_str_idx++] = buffer[i++];
+        }
+        mask_str[mask_str_idx++] = '\0';
+        mask = atoi(mask_str);
+        i++;
+        //---------------decoding pid
+        while (buffer[i] >= '0' && buffer[i] <= '9' && pid_str_idx < MAX_NUM_BYTE - 1) {
+            pid_str[pid_str_idx++] = buffer[i++];
+        }
+        pid_str[pid_str_idx++] = '\0';
+        pid = atoi(pid_str);
+        retval = sys_taskset(taskname, pid, mask, 1);
+    } else {    // taskset mask taskname
+        while (buffer[i] != ' ') {
+            mask_str[mask_str_idx++] = buffer[i++];
+        }
+        mask_str[mask_str_idx++] = '\0';
+        mask = atoi(mask_str);
+        i++;
+        while (buffer[i] != ' ' && buffer[i] != '\0') {
+            taskname[taskname_idx++] = buffer[i++];
+        }
+        taskname[taskname_idx++] = '\0';
+        retval = sys_taskset(taskname, 0, mask, 0);
+    }
+    if (retval == 0) {
+        printf("Info: taskset successfully\n");
+    } else {
+        printf("Error: fail to find\n");
+    }
+}
+
+
+int main(void) {
     sys_move_cursor(0, SHELL_BEGIN);
     printf("------------------- COMMAND -------------------\n");
 
-    while (1)
-    {
-        printf("> root@UCAS_OS: ");
-        // TODO [P3-task1]: call syscall to read UART port
-        int c;
+    while (1) {
+        shell_prompt();
         char buffer[50];
-        int i = 0;
-        while ((c = sys_getchar()) != '\n' && c != '\r') {
-            if (c >= 0 && c <= 127) {// if the input is not among ASCII
-                if (c != '\b' && c != '\177') {     // backspace
-                    buffer[i++] = c;
-                } else if (i > 0) {
-                    i--;
-                }
-                printf("%c", c);
-            }
-        }
-        buffer[i] = '\0';
-        printf("\n");
-        // printf("buffer = %s\n", buffer);
+        parse_input(buffer);
+
         if (strcmp(buffer, "ps") == 0) {
-            sys_ps();
+            handle_ps_command();
         } else if (strcmp(buffer, "clear") == 0) {
-            sys_screen_clear();
-            sys_move_cursor(0, SHELL_BEGIN);
-            printf("------------------- COMMAND -------------------\n");
+            handle_clear_command();
         } else if (strncmp(buffer, "exec", 4) == 0) {
-            char taskname[MAX_NAME_LEN];
-            int i = 5;
-            for (; buffer[i] != ' ' && buffer[i] != '\0'; i++) {
-                taskname[i - 5] = buffer[i];
-            }
-            taskname[i - 5] = '\0';
-            char *argv[MAX_ARGC];
-            int argc = 0;
-            argv[argc++] = taskname;    // the first arg is task name
-            char argv_base[MAX_ARGV_LEN];
-            int argv_base_i = 0;
-            int waitpid_en = 1;
-            if (buffer[i + 1] == '&') {
-                waitpid_en = 0;
-                i = i + 2;
-            }
-            while (buffer[i] != '\0') {
-                i++;
-                argv[argc++] = &argv_base[argv_base_i];
-                while (buffer[i] != ' ' && buffer[i] != '\0') {
-                    argv_base[argv_base_i++] = buffer[i++];
-                }
-            }
-            int pid = sys_exec(taskname, argc, argv);
-            if (pid < 0) {
-                printf("Info: fail to excute %s\n", taskname);
-            } else
-                printf("Info: execute %s successfully, pid = %d ...\n", taskname, pid);
-            if (waitpid_en) {
-                sys_waitpid(pid);
-            }
+            handle_exec_command(buffer);
         } else if (strncmp(buffer, "waitpid", 7) == 0) {
-            char num_str[MAX_NUM_BYTE];
-            int num_str_idx = 0;
-            int i = 8;
-            while (buffer[i] >= '0' && buffer[i] <= '9' && num_str_idx < MAX_NUM_BYTE - 1) {
-                num_str[num_str_idx++] = buffer[i++];
-            }
-            num_str[num_str_idx++] = '\0';
-            int pid = atoi(num_str);
-            sys_waitpid(pid);
-            printf("Info: wait pid = %d ...\n", pid);
+            handle_waitpid_command(buffer);
         } else if (strncmp(buffer, "kill", 4) == 0) {
-            char num_str[MAX_NUM_BYTE];
-            int num_str_idx = 0;
-            int i = 5;
-            while (buffer[i] >= '0' && buffer[i] <= '9' && num_str_idx < MAX_NUM_BYTE - 1) {
-                num_str[num_str_idx++] = buffer[i++];
-            }
-            num_str[num_str_idx++] = '\0';
-            int pid = atoi(num_str);
-            int retval = sys_kill(pid);
-            if (retval == 1) {
-                printf("Info: kill pid = %d successfully ...\n", pid);
-            } else {
-                printf("Info: fail to find pid = %d\n", pid);
-            }
+            handle_kill_command(buffer);
         } else if (strncmp(buffer, "taskset", 7) == 0) {
-            int i = 8;
-            char mask_str[16];
-            int mask_str_idx = 0;
-            uint64_t mask;
-            char pid_str[MAX_NUM_BYTE];
-            int pid_str_idx = 0;
-            int pid;
-            char taskname[MAX_NAME_LEN];
-            int taskname_idx = 0;
-            int retval;
-            if (buffer[i] == '-' && buffer[i + 1] == 'p') { // taskset -p mask pid
-                i += 3;
-                //----------------decoding mask
-                while (buffer[i] != ' ') {
-                    mask_str[mask_str_idx++] = buffer[i++];
-                }
-                mask_str[mask_str_idx++] = '\0';
-                mask = atoi(mask_str);
-                i++;
-                //---------------decoding pid
-                while (buffer[i] >= '0' && buffer[i] <= '9' && pid_str_idx < MAX_NUM_BYTE - 1) {
-                    pid_str[pid_str_idx++] = buffer[i++];
-                }
-                pid_str[pid_str_idx++] = '\0';
-                pid = atoi(pid_str);
-                retval = sys_taskset(taskname, pid, mask, 1);
-            } else {    // taskset mask taskname
-                while (buffer[i] != ' ') {
-                    mask_str[mask_str_idx++] = buffer[i++];
-                }
-                mask_str[mask_str_idx++] = '\0';
-                mask = atoi(mask_str);
-                i++;
-                while (buffer[i] != ' ' && buffer[i] != '\0') {
-                    taskname[taskname_idx++] = buffer[i++];
-                }
-                taskname[taskname_idx++] = '\0';
-                retval = sys_taskset(taskname, 0, mask, 0);
-            }
-            if (retval == 0) {
-                printf("Info: taskset successfully\n");
-            } else {
-                printf("Error: fail to find\n");
-            }
+            handle_taskset_command(buffer);
         } else {
-            printf("Error: Unkown Command %s!\n", buffer);
+            printf("Error: Unknown Command %s!\n", buffer);
         }
-
-        // TODO [P3-task1]: parse input
-        // note: backspace maybe 8('\b') or 127(delete)
-
-        // TODO [P3-task1]: ps, exec, kill, clear   
-
         /************************************************************/
         /* Do not touch this comment. Reserved for future projects. */
-        /************************************************************/     
+        /************************************************************/
     }
 
     return 0;
