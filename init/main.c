@@ -271,7 +271,8 @@ int main(void)
     char *name = "shell";
     char *argv[] = { "shell" };
     int argc = 1;
-    do_exec(name, argc, argv);      // start shell
+    pid_t pid = do_exec(name, argc, argv);      // exec shell
+    do_taskset(NULL, pid, 0x3, 1);              // set cpu_mask
 
     // Setup timer interrupt and enable all interrupt globally
     bios_set_timer(time_base / 100 + get_ticks());
