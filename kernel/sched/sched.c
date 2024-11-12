@@ -317,7 +317,6 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     add_readyqueue(&pcb[pcb_id]);
     unlock_kernel(&ready_queue_hart_lock);
     unlock_kernel(&pcb_pid_hart_lock);
-    do_scheduler();
     return pcb[pcb_id].pid;
 
 }

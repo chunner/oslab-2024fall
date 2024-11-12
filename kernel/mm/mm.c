@@ -97,6 +97,7 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb)
     uint64_t vpn2 = va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
     uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (va >> (NORMAL_PAGE_SHIFT + PPN_BITS));
     uint64_t vpn0 = (va >> NORMAL_PAGE_SHIFT) ^ (vpn2 << (2 * PPN_BITS)) ^ (vpn1 << PPN_BITS);
+    uint64_t offset = va & 0xFFF;   // first 12 bit
     if (lv3_pgdir[vpn2] == 0) {     // alloc a new second-level page directory
         PTE *lv2_pgdir = allocPage(1, pcb);
         set_pfn(&lv3_pgdir[vpn2], kva2pa(lv2_pgdir) >> NORMAL_PAGE_SHIFT);
@@ -117,7 +118,7 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb)
     set_attribute(
         &lv1_pgdir[vpn0], _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE |
         _PAGE_EXEC | _PAGE_USER | _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_DIRTY);
-    return kva;
+    return kva + offset;
 }
 
 uintptr_t shm_page_get(int key)
