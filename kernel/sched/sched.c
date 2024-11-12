@@ -245,12 +245,12 @@ void setup_process_stack(pcb_t *pcb, int argc, char *argv[]) {
     *(int64_t *) user_sp_kva = (int64_t) argc;
 
     user_sp_kva = user_sp_kva - sizeof(char *) * argc;       // kernel_sp_argv_base
-    uint64_t argv_base = user_sp_kva;    //
+    uint64_t argv_base = user_sp_kva - user_sp_kva_uva_offset;    //
     char **my_argv = (char **) user_sp_kva;
     for (int i = 0; i < argc; i++) {
         int str_len = strlen(argv[i]) + 1;  // include '\0'
         user_sp_kva -= str_len;
-        my_argv[i] = (char *) user_sp_kva;
+        my_argv[i] = (char *) (user_sp_kva - user_sp_kva_uva_offset);
         strcpy((char *) user_sp_kva, argv[i]);
     }
     pcb->user_sp = user_sp_kva - user_sp_kva_uva_offset;
@@ -317,6 +317,7 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     add_readyqueue(&pcb[pcb_id]);
     unlock_kernel(&ready_queue_hart_lock);
     unlock_kernel(&pcb_pid_hart_lock);
+    do_scheduler();
     return pcb[pcb_id].pid;
 
 }
