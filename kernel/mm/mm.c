@@ -80,10 +80,12 @@ void release_process_page(pcb_t *pcb) {
         unmark_page_free(pcb->page_occupied[i].start_page, pcb->page_occupied[i].numPage);
     }
 }
+
 /* this is used for mapping kernel virtual address into user page table */
 void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir)
 {
-    // TODO [P4-task1] share_pgtable:
+    // share_pgtable:
+    memcpy((uint8_t *) dest_pgdir, (uint8_t *) src_pgdir, PAGE_SIZE); // copy kernel pgdir
 }
 
 /* allocate physical page for `va`, mapping it into `pgdir`,
@@ -91,7 +93,6 @@ void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir)
    */
 uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb)
 {
-    // TODO [P4-task1] alloc_page_helper:
     PTE *lv3_pgdir = (PTE *) pgdir;
     va &= VA_MASK;
     uint64_t vpn2 = va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
@@ -119,6 +120,22 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb)
         &lv1_pgdir[vpn0], _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE |
         _PAGE_EXEC | _PAGE_USER | _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_DIRTY);
     return kva + offset;
+}
+
+void *kmalloc(size_t size, pcb_t *pcb)
+{
+    // TODO [P4-task1] (design you 'kmalloc' here if you need):
+    size = ROUND(size, 8);   // aligned to 8 B
+
+    static uintptr_t kmalloc_buffer_begin = 0;
+    static uintptr_t kmalloc_buffer_end = 0;
+
+    if (kmalloc_buffer_end - kmalloc_buffer_begin < size) {
+        kmalloc_buffer_begin = allocPage(NBYTES2PAGE(size), pcb);
+        kmalloc_buffer_end = kmalloc_buffer_begin + NBYTES2PAGE(size) * PAGE_SIZE;
+    }
+    kmalloc_buffer_begin += size;
+    return kmalloc_buffer_begin - size;
 }
 
 uintptr_t shm_page_get(int key)
