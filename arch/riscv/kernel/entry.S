@@ -190,7 +190,9 @@ ENDPROC(switch_to)
 ENTRY(ret_from_exception)
   /* restore context via provided macro and return to sepc */
   /* HINT: remember to check your sp, does it point to the right address? */
-  
+  la a0, whole_kernel_lock
+  call unlock_kernel
+
   RESTORE_CONTEXT
   # enable_preempt
   not t0, x0
@@ -206,6 +208,9 @@ ENTRY(exception_handler_entry)
   /* load ret_from_exception into $ra so that we can return to
    * ret_from_exception when interrupt_help complete.
    */
+  la a0, whole_kernel_lock
+  call lock_kernel
+
   la ra, ret_from_exception
   /* call interrupt_helper
    * NOTE: don't forget to pass parameters for it.

@@ -12,6 +12,8 @@ hart_spinlock_t mailbox_hart_lock;
 hart_spinlock_t pcb_pid_hart_lock;
 hart_spinlock_t sleep_queue_lock;
 
+hart_spinlock_t whole_kernel_lock;
+
 #define slave_hart_lock_loc 0xffffffc0502001f4
 
 extern void smp_init();
