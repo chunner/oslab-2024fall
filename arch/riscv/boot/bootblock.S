@@ -12,6 +12,9 @@
 // sd card read byte per time
 .equ sd_read_size, 0x8000  // 512 * 64
 
+// slave hart enter bootblock, lock; enter kernel, unlock  
+.equ slave_hart_lock, 0x502001f4
+
 .text
 .global main
 
@@ -68,6 +71,11 @@ final_read_sd_read:
 
 	/************************************************************/
 secondary:
+	// lock slave_hart_lock
+	la t0, slave_hart_lock
+	li t1, 0x1
+	sh t1, 0(t0)
+
 	/* TODO [P3-task3]: 
 	 * 1. Mask all interrupts
 	 * 2. let stvec pointer to kernel_main

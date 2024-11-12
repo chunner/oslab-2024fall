@@ -200,10 +200,10 @@ static void cancel_temp_pgdir() {          // Cancel temporary mapping 0x5000_00
 
 int main(void)
 {
+    short *slave_hart_lock = (hart_spinlock_t *) slave_hart_lock_loc;
     uint64_t mhartid;
     if ((mhartid = get_current_cpu_id()) != 0) { // if not master hart
-        // Cancel temporary mapping 0x5000_0000 to 0x5100_0000
-        cancel_temp_pgdir();
+        *slave_hart_lock = 0;
         // move the slave hart cursor
         current_running_1->cursor_y = current_running_0->cursor_y + 1;
         current_running = current_running_1;
@@ -273,6 +273,12 @@ int main(void)
     // TODO: [p4-task1 cont.] remove the brake and continue to start user processes.
     //kernel_brake();
 
+    // wait for slave hart to init
+    while (*slave_hart_lock == 1);
+    // Cancel temporary mapping 0x5000_0000 to 0x5100_0000
+    cancel_temp_pgdir();
+
+    // exec shell
     char *name = "shell";
     char *argv[] = { "shell" };
     int argc = 1;

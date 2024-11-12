@@ -356,7 +356,8 @@ void do_exit(void) {
     }
     // release lock
     release_process_mutex(current_running);
-
+    // ------------recycle mem
+    release_process_page(current_running);
     // recycle pcb
     current_running->status = TASK_EXITED;
     unlock_kernel(&pcb_pid_hart_lock);

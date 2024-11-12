@@ -190,6 +190,7 @@ ENDPROC(switch_to)
 ENTRY(ret_from_exception)
   /* restore context via provided macro and return to sepc */
   /* HINT: remember to check your sp, does it point to the right address? */
+  
   RESTORE_CONTEXT
   # enable_preempt
   not t0, x0

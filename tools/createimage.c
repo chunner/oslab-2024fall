@@ -11,7 +11,9 @@
 
 #define SECTOR_SIZE 512
 #define BOOT_LOADER_SIG_OFFSET 0x1fe
-#define OS_SIZE_LOC (BOOT_LOADER_SIG_OFFSET - 2)
+#define OS_SIZE_LOC (BOOT_LOADER_SIG_OFFSET - 2)    // 0x1fc
+#define TASKNUM_LOC (OS_SIZE_LOC - 6)               // 0x1f6
+#define SLAVE_HART_LOC (TASKNUM_LOC - 2)            // 0x1f4
 #define BOOT_LOADER_SIG_1 0x55
 #define BOOT_LOADER_SIG_2 0xaa
 
@@ -250,10 +252,13 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
     short nsectors_kernel = NBYTES2SEC(nbytes_kernel);
     fwrite(&nsectors_kernel, sizeof(short), 1, img);            // kernel's number of sectors 
 
-    int tasknum_loc = 0x1f6;
-    fseek(img, tasknum_loc, SEEK_SET);
+    fseek(img, TASKNUM_LOC, SEEK_SET);
     fwrite(&tasknum, sizeof(short), 1, img);                    // tasknum  0x1f6-0x1f7
     fwrite(&taskinfo_addr, sizeof(int), 1, img);                // taskinfo_addr  0x1f8 - 0x1fb
+
+    fseek(img, SLAVE_HART_LOC, SEEK_SET);
+    short slave_hart_loc = 0;
+    fwrite(&slave_hart_loc, sizeof(short), 1, img);            // unlock slave_hart_lock
 }
 
 /* print an error message and exit */
