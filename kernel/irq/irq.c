@@ -46,9 +46,9 @@ void init_exception()
     exc_table[EXCC_BREAKPOINT] = handle_other;
     exc_table[EXCC_LOAD_ACCESS] = handle_other;
     exc_table[EXCC_STORE_ACCESS] = handle_other;
-    exc_table[EXCC_INST_PAGE_FAULT] = handle_other;
-    exc_table[EXCC_LOAD_PAGE_FAULT] = handle_other;
-    exc_table[EXCC_STORE_PAGE_FAULT] = handle_other;
+    exc_table[EXCC_INST_PAGE_FAULT] = handle_page_fault;
+    exc_table[EXCC_LOAD_PAGE_FAULT] = handle_page_fault;
+    exc_table[EXCC_STORE_PAGE_FAULT] = handle_page_fault;
 
     /* initialize irq_table */
     /* NOTE: handle_int, handle_other, etc.*/
@@ -91,4 +91,8 @@ void handle_other(regs_context_t *regs, uint64_t stval, uint64_t scause)
 }
 void handle_s_soft(regs_context_t *regs, uint64_t stval, uint64_t scause) {
     return;         // jump to ret_from_complete
+}
+void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause) {
+    alloc_page_helper(stval, current_running->pgdir, current_running);  // stval is va triggering exception
+    return;     // jump to ret_from_exception, redo the inst
 }
