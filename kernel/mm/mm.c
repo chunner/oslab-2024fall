@@ -68,20 +68,20 @@ ptr_t allocPage(int numPage, pcb_t *pcb)
     }
     mark_page_allocated(start_page, numPage);
     /* record the alloced page in pcb */
-    pcb->page_occupied[pcb->page_occupied_pointer].numPage = numPage;
-    pcb->page_occupied[pcb->page_occupied_pointer].start_page = start_page;
-    pcb->page_occupied_pointer++;
+    // pcb->page_occupied[pcb->page_occupied_pointer].numPage = numPage;
+    // pcb->page_occupied[pcb->page_occupied_pointer].start_page = start_page;
+    // pcb->page_occupied_pointer++;
     ptr_t retval = INIT_KERNEL_STACK + PAGE_SIZE * start_page;
     return INIT_KERNEL_STACK + PAGE_SIZE * start_page;
 }
 void release_process_page(pcb_t *pcb) {
-    for (;pcb->page_occupied_pointer > 0;pcb->page_occupied_pointer--) {
-        int i = pcb->page_occupied_pointer;
-        unmark_page_free(pcb->page_occupied[i].start_page, pcb->page_occupied[i].numPage);
-    }
+    // for (;pcb->page_occupied_pointer > 0;pcb->page_occupied_pointer--) {
+    //     int i = pcb->page_occupied_pointer;
+    //     unmark_page_free(pcb->page_occupied[i].start_page, pcb->page_occupied[i].numPage);
+    // }
 }
 
-/* this is used for mapping kernel virtual address into user page table */
+/* This is used for mapping kernel virtual address into user page table */
 void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir)
 {
     // share_pgtable:
@@ -122,22 +122,6 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb)
     return kva + offset;
 }
 
-void *kmalloc(size_t size, pcb_t *pcb)
-{
-    // TODO [P4-task1] (design you 'kmalloc' here if you need):
-    size = ROUND(size, 8);   // aligned to 8 B
-
-    static uintptr_t kmalloc_buffer_begin = 0;
-    static uintptr_t kmalloc_buffer_end = 0;
-
-    if (kmalloc_buffer_end - kmalloc_buffer_begin < size) {
-        kmalloc_buffer_begin = allocPage(NBYTES2PAGE(size), pcb);
-        kmalloc_buffer_end = kmalloc_buffer_begin + NBYTES2PAGE(size) * PAGE_SIZE;
-    }
-    kmalloc_buffer_begin += size;
-    return kmalloc_buffer_begin - size;
-}
-
 uintptr_t shm_page_get(int key)
 {
     // TODO [P4-task4] shm_page_get:
@@ -147,3 +131,22 @@ void shm_page_dt(uintptr_t addr)
 {
     // TODO [P4-task4] shm_page_dt:
 }
+
+
+
+
+//void *kmalloc(size_t size, pcb_t *pcb)
+// {
+//     // TODO [P4-task1] (design you 'kmalloc' here if you need):
+//     size = ROUND(size, 8);   // aligned to 8 B
+
+//     static uintptr_t kmalloc_buffer_begin = 0;
+//     static uintptr_t kmalloc_buffer_end = 0;
+
+//     if (kmalloc_buffer_end - kmalloc_buffer_begin < size) {
+//         kmalloc_buffer_begin = allocPage(NBYTES2PAGE(size), pcb);
+//         kmalloc_buffer_end = kmalloc_buffer_begin + NBYTES2PAGE(size) * PAGE_SIZE;
+//     }
+//     kmalloc_buffer_begin += size;
+//     return kmalloc_buffer_begin - size;
+// }

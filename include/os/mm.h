@@ -34,7 +34,7 @@
 #define MAP_KERNEL 1
 #define MAP_USER 2
 #define MEM_SIZE 32
-#define FREE_MEM_PAGE_NUM 0xe000    // (0x6000_0000 - 0x5200_0000) / 4K = 0xe00_0000/ 0x1000 = 0xe000
+#define FREE_MEM_PAGE_NUM 0xd000    // (0x5f00_0000 - 0x5200_0000) / 4K = 0xd00_0000/ 0x1000 = 0xd000
 #define PAGE_SIZE 4096 // 4K = 0x1000
 #define INIT_KERNEL_STACK 0xffffffc052000000
 #define FREEMEM_KERNEL (INIT_KERNEL_STACK + 4*PAGE_SIZE)
@@ -55,6 +55,28 @@ extern void init_bitmap();
 extern void release_process_page(pcb_t *pcb);
 extern void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir);
 extern uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb);
+
+typedef enum {
+    PN_ACTIVE,
+    PN_INACTIVE,
+} PageNode_status_t;
+
+typedef struct PageNode {
+    struct PageNode *next;
+    struct PageNode *prev;
+
+    PageNode_status_t PN_status;
+
+    PTE *pte_entry;
+    pcb_t *master_pcb;
+
+    int page_idx;   // in order to calcu kva
+}PageNode_t;
+
+PageNode_t *PageNode = 0xffffffc05f000000ul;
+#define PageNode_MAXNUM 0x40000
+
+PageNode_t *PN_clock_ptr = NULL;
 
 // TODO [P4-task4]: shm_page_get/dt */
 uintptr_t shm_page_get(int key);

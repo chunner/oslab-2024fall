@@ -112,9 +112,9 @@ typedef struct pcb
     /* page table */
     uintptr_t pgdir;        // the address of the base of page table
 
-    /* Occupied Page Info */
-    page_occupied_t page_occupied[16];
-    int page_occupied_pointer;
+    // /* Occupied Page Info */
+    // page_occupied_t page_occupied[16];
+    // int page_occupied_pointer;
 
 } pcb_t;
 
