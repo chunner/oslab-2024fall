@@ -101,6 +101,7 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb)
     uint64_t offset = va & 0xFFF;   // first 12 bit
     if (lv3_pgdir[vpn2] == 0) {     // alloc a new second-level page directory
         PTE *lv2_pgdir = allocPage(1, pcb);
+        insert_pn_list(lv2_pgdir, lv2_pgdir, pcb->pgdir, pcb);
         set_pfn(&lv3_pgdir[vpn2], kva2pa(lv2_pgdir) >> NORMAL_PAGE_SHIFT);
         set_attribute(&lv3_pgdir[vpn2], _PAGE_PRESENT);
         clear_pgdir(lv2_pgdir);   // clear second-level pgdir page
@@ -121,7 +122,48 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb)
         _PAGE_EXEC | _PAGE_USER | _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_DIRTY);
     return kva + offset;
 }
+int get_free_pn() {
+    int i = 0;
+    for (; i < PageNode_MAXNUM;i++) {
+        if (pn_list[i].status == PN_INACTIVE) {
+            return i;  // success to find
+        }
+    }
+    return -1;  // fail to find
+}
+void insert_pn_list(uintptr_t kva, uintptr_t uva, PTE *pgdir, pcb_t *pcb) {
+    int i = get_free_pn();
+    pn_list[i].status = PN_ACTIVE;
+    pn_list[i].kva = kva;
+    pn_list[i].master_pcb = pcb;
 
+    if (uva & 1 << 28) {    // kernel space, 2 level page table
+        uint64_t vpn2 = uva >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
+        uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (uva >> (NORMAL_PAGE_SHIFT + PPN_BITS));
+        PTE *lv3_pgdir = pgdir;
+        PTE *lv2_pgdir = lv3_pgdir[vpn2];
+        pn_list[i].pte_entry = &lv2_pgdir[vpn1];
+    } else {    // user space, 3 level page level
+        uint64_t vpn2 = uva >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
+        uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (uva >> (NORMAL_PAGE_SHIFT + PPN_BITS));
+        uint64_t vpn0 = (uva >> NORMAL_PAGE_SHIFT) ^ (vpn2 << (2 * PPN_BITS)) ^ (vpn1 << PPN_BITS);
+        PTE *lv3_pgdir = pgdir;
+        PTE *lv2_pgdir = lv3_pgdir[vpn2];
+        PTE *lv1_pgdir = lv2_pgdir[vpn1];
+        pn_list[i].pte_entry = &lv1_pgdir[vpn0];
+    }
+    // Insert in PN list
+    if (PN_clock_ptr == NULL) { // the list is blank
+        pn_list[i].next = &pn_list[i];
+        pn_list[i].prev = &pn_list[i];
+        PN_clock_ptr = &pn_list[i];
+    } else {
+        pn_list[i].next = PN_clock_ptr;
+        pn_list[i].prev = PN_clock_ptr->prev;
+        PN_clock_ptr->prev->next = &pn_list[i];
+        PN_clock_ptr->prev = &pn_list[i];
+    }
+}
 uintptr_t shm_page_get(int key)
 {
     // TODO [P4-task4] shm_page_get:

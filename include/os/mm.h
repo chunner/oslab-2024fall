@@ -65,15 +65,15 @@ typedef struct PageNode {
     struct PageNode *next;
     struct PageNode *prev;
 
-    PageNode_status_t PN_status;
+    PageNode_status_t status;
 
     PTE *pte_entry;
     pcb_t *master_pcb;
 
-    int page_idx;   // in order to calcu kva
+    uintptr_t kva;
 }PageNode_t;
 
-PageNode_t *PageNode = 0xffffffc05f000000ul;
+PageNode_t *pn_list = 0xffffffc05f000000ul;
 #define PageNode_MAXNUM 0x40000
 
 PageNode_t *PN_clock_ptr = NULL;
