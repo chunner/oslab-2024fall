@@ -3,14 +3,6 @@
 
 #define NR_CPUS 2
 typedef volatile uint32_t hart_spinlock_t;
-hart_spinlock_t ready_queue_hart_lock;
-hart_spinlock_t screen_buffer_hart_lock;
-hart_spinlock_t mutex_hart_lock;
-hart_spinlock_t barrier_hart_lock;
-hart_spinlock_t condition_hart_lock;
-hart_spinlock_t mailbox_hart_lock;
-hart_spinlock_t pcb_pid_hart_lock;
-hart_spinlock_t sleep_queue_lock;
 
 hart_spinlock_t whole_kernel_lock;
 

@@ -30,6 +30,8 @@
 #include <pgtable.h>
 #include <os/list.h>
 #include <os/sched.h>
+#include <os/string.h>
+#include <common.h>
 
 #define MAP_KERNEL 1
 #define MAP_USER 2
@@ -48,17 +50,20 @@
 
 #define NBYTES2PAGE(nbytes) (((nbytes) / PAGE_SIZE) + ((nbytes) % PAGE_SIZE != 0))
 
-extern ptr_t allocPage(int numPage, pcb_t *pcb);
-
 #define USER_STACK_ADDR 0xf00010000     // user sp : 0xf_0000_f000 - 0xf_0001_0000
-
+#define nsectors_image_loc 0xffffffc0502001f2
 
 // TODO [P4-task1] */
-extern void init_bitmap();
+extern ptr_t alloc_kernel_page();
+extern ptr_t alloc_user_page();
 extern void release_process_page(pcb_t *pcb);
 extern void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir);
 extern uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb);
 extern void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause);
+
+extern void create_pn(uintptr_t kva, uintptr_t uva, PTE *pgdir, pcb_t *pcb);
+extern void init_mem_manager();
+uintptr_t swap_page();
 
 typedef enum {
     PN_ACTIVE,
@@ -82,13 +87,14 @@ typedef struct PageNode {
     uintptr_t uva;
 }PageNode_t;
 
-PageNode_t *pn_list = 0xffffffc05f000000ul;
+PageNode_t *pn_list;
 #define PageNode_MAXNUM 0x40000
+#define PN_LIST_BASE 0xffffffc05f000000ul
 
-PageNode_t *kernel_page_list = NULL;
+PageNode_t *kernel_page_list;
 
-PageNode_t *user_page_mem_list = NULL;
-PageNode_t *user_page_sd_list = NULL;
+PageNode_t *user_page_mem_list;
+PageNode_t *user_page_sd_list;
 
 uint64_t sd_sector_end;
 

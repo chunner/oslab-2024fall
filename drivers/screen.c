@@ -70,16 +70,13 @@ void screen_write_ch(char ch)
 
 void init_screen(void)
 {
-    lock_kernel(&screen_buffer_hart_lock);
     vt100_hidden_cursor();
     vt100_clear();
-    unlock_kernel(&screen_buffer_hart_lock);
     screen_clear();
 }
 
 void screen_clear(void)
 {
-    lock_kernel(&screen_buffer_hart_lock);
     int i, j;
     vt100_clear();
     for (i = 0; i < SCREEN_HEIGHT; i++)
@@ -92,13 +89,11 @@ void screen_clear(void)
     }
     current_running->cursor_x = 0;
     current_running->cursor_y = 0;
-    unlock_kernel(&screen_buffer_hart_lock);
     screen_reflush();
 }
 
 void screen_move_cursor(int x, int y)
 {
-    lock_kernel(&screen_buffer_hart_lock);
     if (x >= SCREEN_WIDTH)
         x = SCREEN_WIDTH - 1;
     else if (x < 0)
@@ -110,7 +105,6 @@ void screen_move_cursor(int x, int y)
     current_running->cursor_x = x;
     current_running->cursor_y = y;
     vt100_move_cursor(x + 1, y + 1);
-    unlock_kernel(&screen_buffer_hart_lock);
 }
 
 
@@ -120,12 +114,10 @@ void screen_write(char *buff)
     int i = 0;
     int l = strlen(buff);
 
-    lock_kernel(&screen_buffer_hart_lock);
     for (i = 0; i < l; i++)
     {
         screen_write_ch(buff[i]);
     }
-    unlock_kernel(&screen_buffer_hart_lock);
 }
 
 /*
@@ -136,7 +128,6 @@ void screen_write(char *buff)
  */
 void screen_reflush(void)
 {
-    lock_kernel(&screen_buffer_hart_lock);
     int i, j;
 
     /* here to reflush screen buffer to serial port */
@@ -156,5 +147,4 @@ void screen_reflush(void)
 
     /* recover cursor position */
     vt100_move_cursor(current_running->cursor_x + 1, current_running->cursor_y + 1);
-    unlock_kernel(&screen_buffer_hart_lock);
 }

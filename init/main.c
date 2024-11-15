@@ -22,7 +22,6 @@
 #define VERSION_BUF 50
 
 #define tasknum_loc     0xffffffc0502001f6
-#define nsectors_image_loc 0xffffffc0502001f2
 
 int version = 2; // version must between 0 and 9
 char buf[VERSION_BUF];
@@ -75,47 +74,47 @@ static void init_task_info(void)
 }
 
 /************************************************************/
-static void init_pcb_stack(
-    ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point,
-    pcb_t *pcb)
-{
-    /* initialization of registers on kernel stack
-     * HINT: sp, ra, sepc, sstatus
-     * NOTE: To run the task in user mode, you should set corresponding bits
-     *     of sstatus(SPP, SPIE, etc.).
-     */
-    pcb->kernel_sp = kernel_stack - sizeof(regs_context_t) - sizeof(switchto_context_t);
-    regs_context_t *pt_regs =
-        (regs_context_t *) (kernel_stack - sizeof(regs_context_t));
-    for (int i = 0; i < 32; i++) {
-        if (i == 1) // ra
-            pt_regs->regs[i] = entry_point;
-        else if (i == 2) // sp
-            pt_regs->regs[i] = user_stack;
-        else if (i == 4) // tp
-            pt_regs->regs[i] = (reg_t) pcb;
-        else
-            pt_regs->regs[i] = 0;
-    }
-    pt_regs->sstatus = ((0UL & (~SR_SPP)) & (~SR_SIE)) | SR_SPIE;           // set spp = 0, spie = 1, sie = 0
-    pt_regs->sepc = entry_point;            // entry 
-    pt_regs->scause = 0UL | EXC_SYSCALL;    // IRQ 
-    /* set sp to simulate just returning from switch_to
-     * NOTE: you should prepare a stack, and push some values to
-     * simulate a callee-saved context.
-     */
-    switchto_context_t *pt_switchto =
-        (switchto_context_t *) ((ptr_t) pt_regs - sizeof(switchto_context_t));
-    for (int i = 0; i < 14; i++) {
-        if (i == 0) { // ra
-            pt_switchto->regs[i] = (reg_t) ret_from_exception;
-        } else if (i == 1) {   // sp
-            pt_switchto->regs[i] = pcb->kernel_sp;
-        } else {      // S0 - S11
-            pt_switchto->regs[i] = 0;
-        }
-    }
-}
+// static void init_pcb_stack(
+//     ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point,
+//     pcb_t *pcb)
+// {
+//     /* initialization of registers on kernel stack
+//      * HINT: sp, ra, sepc, sstatus
+//      * NOTE: To run the task in user mode, you should set corresponding bits
+//      *     of sstatus(SPP, SPIE, etc.).
+//      */
+//     pcb->kernel_sp = kernel_stack - sizeof(regs_context_t) - sizeof(switchto_context_t);
+//     regs_context_t *pt_regs =
+//         (regs_context_t *) (kernel_stack - sizeof(regs_context_t));
+//     for (int i = 0; i < 32; i++) {
+//         if (i == 1) // ra
+//             pt_regs->regs[i] = entry_point;
+//         else if (i == 2) // sp
+//             pt_regs->regs[i] = user_stack;
+//         else if (i == 4) // tp
+//             pt_regs->regs[i] = (reg_t) pcb;
+//         else
+//             pt_regs->regs[i] = 0;
+//     }
+//     pt_regs->sstatus = ((0UL & (~SR_SPP)) & (~SR_SIE)) | SR_SPIE;           // set spp = 0, spie = 1, sie = 0
+//     pt_regs->sepc = entry_point;            // entry 
+//     pt_regs->scause = 0UL | EXC_SYSCALL;    // IRQ 
+//     /* set sp to simulate just returning from switch_to
+//      * NOTE: you should prepare a stack, and push some values to
+//      * simulate a callee-saved context.
+//      */
+//     switchto_context_t *pt_switchto =
+//         (switchto_context_t *) ((ptr_t) pt_regs - sizeof(switchto_context_t));
+//     for (int i = 0; i < 14; i++) {
+//         if (i == 0) { // ra
+//             pt_switchto->regs[i] = (reg_t) ret_from_exception;
+//         } else if (i == 1) {   // sp
+//             pt_switchto->regs[i] = pcb->kernel_sp;
+//         } else {      // S0 - S11
+//             pt_switchto->regs[i] = 0;
+//         }
+//     }
+// }
 
 static void init_pcb(void)
 {
@@ -167,9 +166,6 @@ static void init_syscall(void)
     syscall[SYSCALL_MBOX_RECV] = (long (*)())do_mbox_recv;
     syscall[SYSCALL_TASKSET] = (long (*)())do_taskset;
 }
-static void init_sd_sector_end() {
-    sd_sector_end = (uint64_t) * (short *) nsectors_image_loc;
-}
 /************************************************************/
 
 /*
@@ -193,7 +189,7 @@ static void cancel_temp_pgdir() {          // Cancel temporary mapping 0x5000_00
 
 int main(void)
 {
-    short *slave_hart_lock = (hart_spinlock_t *) slave_hart_lock_loc;
+    short *slave_hart_lock = (short *) slave_hart_lock_loc;
     uint64_t mhartid;
     if ((mhartid = get_current_cpu_id()) != 0) { // if not master hart
         *slave_hart_lock = 0;
@@ -212,7 +208,7 @@ int main(void)
             asm volatile("wfi");
         }
     }
-    init_sd_sector_end();
+    init_mem_manager();
 
     // Init jump table provided by kernel and bios(ΦωΦ)
     init_jmptab();
@@ -238,9 +234,6 @@ int main(void)
     init_barriers();
     init_conditions();
     init_mbox();
-
-    // Init bitmap
-    init_bitmap();
 
     // Init interrupt (^_^)
     init_exception();

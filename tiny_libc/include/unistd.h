@@ -55,8 +55,10 @@ int sys_mbox_recv(int mbox_idx, void *msg, int msg_length);
 
 /* TODO: [P4-task5] shmpageget/dt */
 /* shmpageget/dt */
-void* sys_shmpageget(int key);
+void *sys_shmpageget(int key);
 void sys_shmpagedt(void *addr);
+
+void sys_screen_clear(void);
 /************************************************************/
 
 #endif

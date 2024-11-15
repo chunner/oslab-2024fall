@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <os/string.h>
 #include <os/smp.h>
+#include <os/loader.h>
 
 pcb_t pcb[NUM_MAX_TASK];
 const ptr_t pid0_stack = INIT_KERNEL_STACK + PAGE_SIZE;     // master kernel 
@@ -34,9 +35,6 @@ LIST_HEAD(sleep_queue);
 pid_t process_id = 1;
 /*=======================================do_scheduler=======================================================*/
 int get_next_running() {    //  Modify the current_running pointer.
-    lock_kernel(&ready_queue_hart_lock);          // lock for ready_queue
-    lock_kernel(&pcb_pid_hart_lock);
-
     if (current_running->status == TASK_RUNNING)      // put the current_runnning to the tail of ready_queue
         add_readyqueue(current_running);
 
@@ -50,14 +48,10 @@ int get_next_running() {    //  Modify the current_running pointer.
             remove_readyqueue(current_running);
             current_running->status = TASK_RUNNING;
             current_running->current_cpu_id = get_current_cpu_id();
-            unlock_kernel(&ready_queue_hart_lock);
-            unlock_kernel(&pcb_pid_hart_lock);
             return 1;
         }
         next_running_list = next_running_list->next;
     }
-    unlock_kernel(&pcb_pid_hart_lock);
-    unlock_kernel(&ready_queue_hart_lock);
     return 0;   // fail to get next_running
 }
 void switch_to_current_satp(void) {
@@ -98,10 +92,8 @@ void do_sleep(uint32_t sleep_time)
     // 1. block the current_running
     // 2. set the wake up time for the blocked task
     // 3. reschedule because the current_running is blocked.
-    lock_kernel(&sleep_queue_lock);
     current_running->wakeup_time = sleep_time + get_timer();
     do_block(&current_running->list, &sleep_queue);
-    unlock_kernel(&sleep_queue_lock);
     do_scheduler();
 }
 
@@ -132,9 +124,7 @@ void do_unblock(list_node_t *pcb_node)
     prev_node->next = next_node;
     // insert pcb_node in the circular queue
     pcb_t *pcb = LIST_PCB(pcb_node);
-    lock_kernel(&ready_queue_hart_lock);
     add_readyqueue(pcb);
-    unlock_kernel(&ready_queue_hart_lock);
 }
 
 void set_sche_workload(int remain_length) {         // updata remain_length in pcb
@@ -162,7 +152,6 @@ void remove_readyqueue(pcb_t *pcb) {
 }
 /* ==========================================process show===================================================== */
 void do_process_show() {
-    lock_kernel(&pcb_pid_hart_lock);
     printk("[Process Table]\n");
     for (int i = 0;i < NUM_MAX_TASK;i++) {
         if (pcb[i].status != TASK_EXITED) {
@@ -189,7 +178,6 @@ void do_process_show() {
             printk("\n");
         }
     }
-    unlock_kernel(&pcb_pid_hart_lock);
 }
 /*-----------------------------tool function to search in arrays--------------------------------------*/
 int taskname_to_taskid(char taskname[]) {
@@ -221,8 +209,8 @@ int get_free_pcb() {
 }
 /*---------------------------------exec, kill, exit, waitpid --------------------------------------------------*/
 void setup_process_pcb(pcb_t *pcb, task_info_t task) {
-    pcb->kernel_sp = allocPage(1, pcb) + PAGE_SIZE;
-    creat_pn(pcb->kernel_sp, pcb->kernel_sp, (uintptr_t) PGDIR_VA, pcb);
+    pcb->kernel_sp = alloc_kernel_page() + PAGE_SIZE;
+    create_pn(pcb->kernel_sp - PAGE_SIZE, pcb->kernel_sp - PAGE_SIZE, (uintptr_t) PGDIR_VA, pcb);
     pcb->kernel_stack_base = pcb->kernel_sp;
     pcb->user_sp = USER_STACK_ADDR;
     pcb->user_stack_base = USER_STACK_ADDR;
@@ -289,16 +277,13 @@ void setup_process_stack(pcb_t *pcb, int argc, char *argv[]) {
     }
 }
 pid_t do_exec(char *name, int argc, char *argv[]) {
-    lock_kernel(&pcb_pid_hart_lock);
     /* =============================get taskid and pcb_id */
     int taskid;
     if ((taskid = taskname_to_taskid(name)) == -1) {
-        unlock_kernel(&pcb_pid_hart_lock);
         return -1;  // fail to find valid task
     }
     int pcb_id;
     if ((pcb_id = get_free_pcb()) == -1) {
-        unlock_kernel(&pcb_pid_hart_lock);
         return -1; // fail to find free pcb
     }
     /* ============================init pcb */
@@ -316,24 +301,18 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     setup_process_stack(&pcb[pcb_id], argc, argv);
 
     /* add to readyqueue */
-    lock_kernel(&ready_queue_hart_lock);
     add_readyqueue(&pcb[pcb_id]);
-    unlock_kernel(&ready_queue_hart_lock);
-    unlock_kernel(&pcb_pid_hart_lock);
     return pcb[pcb_id].pid;
 
 }
 int do_kill(pid_t pid) {
-    lock_kernel(&pcb_pid_hart_lock);
     // ----------pid to pcb_id
     int i;
     if ((i = pid_to_pcb_id(pid)) == -1) { // fail to find
-        unlock_kernel(&pcb_pid_hart_lock);
         return -1;
     }
     // ------------kill itself, then go to exit
     if (&pcb[i] == current_running) {
-        unlock_kernel(&pcb_pid_hart_lock);
         do_exit();
         return 1;
     }
@@ -348,26 +327,22 @@ int do_kill(pid_t pid) {
     // -------------recycle pcb
     pcb[i].status = TASK_EXITED;
     remove_pcb_queue(&pcb[i]);
-    unlock_kernel(&pcb_pid_hart_lock);
     return 1;
 }
 void do_exit(void) {
-    lock_kernel(&pcb_pid_hart_lock);
     // wake up wait queue
     while (current_running->block_queue.next != &current_running->block_queue) {
         do_unblock(current_running->block_queue.next);
     }
     // release lock
-    release_process_mutex(current_running);
+    release_process_mutex(current_running->pid);
     // ------------recycle mem
     release_process_page(current_running);
     // recycle pcb
     current_running->status = TASK_EXITED;
-    unlock_kernel(&pcb_pid_hart_lock);
     do_scheduler();
 }
 int do_waitpid(pid_t pid) {
-    lock_kernel(&pcb_pid_hart_lock);
     int i = 0;
     for (;i < NUM_MAX_TASK;i++) {
         if (pcb[i].pid == pid && pcb[i].status != TASK_EXITED) {
@@ -375,15 +350,12 @@ int do_waitpid(pid_t pid) {
         }
     }
     if (i >= NUM_MAX_TASK) {
-        unlock_kernel(&pcb_pid_hart_lock);
         return 0;
     }  // fail to find
     if (pcb[i].status != TASK_EXITED) {
         do_block(&current_running->list, &pcb[i].block_queue);
-        unlock_kernel(&pcb_pid_hart_lock);
         do_scheduler();
     } else {
-        unlock_kernel(&pcb_pid_hart_lock);
     }
     return i;
 }
@@ -399,7 +371,6 @@ int do_taskset(char *name, pid_t pid, uint64_t mask, int mod) {
         if (pid == -1) {
             return -1;
         }
-        lock_kernel(&pcb_pid_hart_lock);
         int i = 0;
         for (;i < NUM_MAX_TASK;i++) {
             if (pcb[i].pid == pid && pcb[i].status != TASK_EXITED) {
@@ -407,9 +378,7 @@ int do_taskset(char *name, pid_t pid, uint64_t mask, int mod) {
             }
         }
         pcb[i].cpu_mask = mask;
-        unlock_kernel(&pcb_pid_hart_lock);
     } else {// taskset -p mask pid
-        lock_kernel(&pcb_pid_hart_lock);
         int i = 0;
         for (;i < NUM_MAX_TASK;i++) {
             if (pcb[i].pid == pid && pcb[i].status != TASK_EXITED) {
@@ -417,11 +386,9 @@ int do_taskset(char *name, pid_t pid, uint64_t mask, int mod) {
             }
         }
         if (i >= NUM_MAX_TASK) {
-            unlock_kernel(&pcb_pid_hart_lock);
             return -1;
         }
         pcb[i].cpu_mask = mask;
-        unlock_kernel(&pcb_pid_hart_lock);
     }
     return 0;
 }
@@ -429,12 +396,6 @@ void remove_pcb_queue(pcb_t *pcb) {
     if (pcb->list.next == NULL || pcb->list.next == NULL) {
         return;
     }
-    lock_kernel(&ready_queue_hart_lock);
-    lock_kernel(&mutex_hart_lock);
-    lock_kernel(&barrier_hart_lock);
-    lock_kernel(&condition_hart_lock);
-    lock_kernel(&mailbox_hart_lock);
-    lock_kernel(&sleep_queue_lock);
 
     list_node_t *pcb_list = &pcb->list;
     list_node_t *next_node = pcb_list->next;
@@ -443,11 +404,4 @@ void remove_pcb_queue(pcb_t *pcb) {
     pcb_list->prev = NULL;
     next_node->prev = prev_node;
     prev_node->next = next_node;
-
-    unlock_kernel(&ready_queue_hart_lock);
-    unlock_kernel(&mutex_hart_lock);
-    unlock_kernel(&barrier_hart_lock);
-    unlock_kernel(&condition_hart_lock);
-    unlock_kernel(&mailbox_hart_lock);
-    unlock_kernel(&sleep_queue_lock);
 }

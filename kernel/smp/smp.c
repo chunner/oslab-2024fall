@@ -9,14 +9,6 @@
 void smp_init()
 {
     /* TODO: P3-TASK3 multicore*/
-    unlock_kernel(&ready_queue_hart_lock);
-    unlock_kernel(&screen_buffer_hart_lock);
-    unlock_kernel(&mutex_hart_lock);
-    unlock_kernel(&barrier_hart_lock);
-    unlock_kernel(&condition_hart_lock);
-    unlock_kernel(&mailbox_hart_lock);
-    unlock_kernel(&pcb_pid_hart_lock);
-    unlock_kernel(&sleep_queue_lock);
     unlock_kernel(&whole_kernel_lock);
 }
 

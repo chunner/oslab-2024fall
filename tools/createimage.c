@@ -131,7 +131,7 @@ static void create_image(int nfiles, char *files[])
             /* update nbytes_kernel */
             if (strcmp(*files, "main") == 0) {
                 nbytes_kernel += get_filesz(phdr) + taskinfo_size;
-                nbytes_image += get_files(phdr) + taskinfo_size;
+                nbytes_image += get_filesz(phdr) + taskinfo_size;
             } else if (strcmp(*files, "bootblock") == 0) {
                 nbytes_image += SECTOR_SIZE;
             } else {
@@ -267,9 +267,9 @@ static void write_img_info(int nbytes_kernel, int nbyte_image, task_info_t *task
     short slave_hart_loc = 0;
     fwrite(&slave_hart_loc, sizeof(short), 1, img);            // unlock slave_hart_lock
 
-    fseek(img, IMAGE_SIZE_LOC, SEEK_SET);                       // 0x1f4
+    fseek(img, IMAGE_SIZE_LOC, SEEK_SET);                       // 0x1f2
     short nsectors_image = NBYTES2SEC(nbyte_image);
-    fwrite(&nsectors_image, sizeof(short), 1, img);            // unlock slave_hart_lock
+    fwrite(&nsectors_image, sizeof(short), 1, img);            // sectors of image
 }
 
 /* print an error message and exit */

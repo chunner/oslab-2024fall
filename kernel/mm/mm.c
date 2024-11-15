@@ -1,10 +1,5 @@
 #include <os/mm.h>
 
-// NOTE: A/C-core
-static ptr_t kernMemCurr = FREEMEM_KERNEL;
-
-
-
 /* ---------------------------------------------BIT MAP------------------------------------------------------------ */
 // Each bit represents the state of a page. When initialized, 
 // all bits are set to 0, indicating that all pages are unallocated.
@@ -44,6 +39,15 @@ void unmark_page_free(uint64_t kva, char bitmap[]) {
 
 
 /* -----------------------------------------------------------Alloc Page-------------------------------------------------------------------- */
+void init_mem_manager() {
+    sd_sector_end = (uint64_t) * (short *) nsectors_image_loc;
+    pn_list = (PageNode_t *) PN_LIST_BASE;
+    kernel_page_list = NULL;
+    user_page_mem_list = NULL;
+    user_page_sd_list = NULL;
+    init_bitmap();
+}
+
 ptr_t alloc_kernel_page()
 {
     int page_idx = find_free_pages(kernel_bitmap, FREE_KERNEL_PAGE_NUM);
@@ -69,13 +73,13 @@ ptr_t alloc_user_page() {
     return INIT_KERNEL_STACK + PAGE_SIZE * page_idx;
 }
 
-delete_list_node(PageNode_t *p) {
+void delete_list_node(PageNode_t *p) {
     p->prev->next = p->next;
     p->next->prev = p->prev;
     p->next = NULL;
     p->prev = NULL;
 }
-delete_page_from_list(pcb_t *pcb, PageNode_t *head, char bitmap[], int is_in_mem) {
+void delete_page_from_list(pcb_t *pcb, PageNode_t *head, char bitmap[], int is_in_mem) {
     if (head == NULL) {     // page list is empty
         return;
     }
@@ -134,24 +138,24 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb)
     uint64_t vpn0 = (va >> NORMAL_PAGE_SHIFT) ^ (vpn2 << (2 * PPN_BITS)) ^ (vpn1 << PPN_BITS);
     uint64_t offset = va & 0xFFF;   // first 12 bit
     if (lv3_pgdir[vpn2] == 0) {     // alloc a new second-level page directory
-        PTE *lv2_pgdir = alloc_kernel_page();
-        create_pn(lv2_pgdir, lv2_pgdir, (uintptr_t) PGDIR_VA, pcb);
-        set_pfn(&lv3_pgdir[vpn2], kva2pa(lv2_pgdir) >> NORMAL_PAGE_SHIFT);
+        PTE *lv2_pgdir = (PTE *) alloc_kernel_page();
+        create_pn((uintptr_t) lv2_pgdir, (uintptr_t) lv2_pgdir, (uintptr_t) PGDIR_VA, pcb);
+        set_pfn(&lv3_pgdir[vpn2], (uint64_t) kva2pa(lv2_pgdir) >> NORMAL_PAGE_SHIFT);
         set_attribute(&lv3_pgdir[vpn2], _PAGE_PRESENT);
         clear_pgdir(lv2_pgdir);   // clear second-level pgdir page
     }
     PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
     if (lv2_pgdir[vpn1] == 0) {     // alloc a new first_level page directory
-        PTE *lv1_pgdir = alloc_kernel_page();
-        create_pn(lv1_pgdir, lv1_pgdir, (uintptr_t) PGDIR_VA, pcb);
+        PTE *lv1_pgdir = (PTE *) alloc_kernel_page();
+        create_pn((uintptr_t) lv1_pgdir, (uintptr_t) lv1_pgdir, (uintptr_t) PGDIR_VA, pcb);
         set_pfn(&lv2_pgdir[vpn1], kva2pa(lv1_pgdir) >> NORMAL_PAGE_SHIFT);
         set_attribute(&lv2_pgdir[vpn1], _PAGE_PRESENT);
         clear_pgdir(lv1_pgdir);   // clear second-level pgdir page
     }
     PTE *lv1_pgdir = (PTE *) pa2kva(get_pa(lv2_pgdir[vpn1]));
-    uint64_t kva = alloc_user_page();
+    uintptr_t kva = (uintptr_t) alloc_user_page();
     create_pn(kva, va, pcb->pgdir, pcb);
-    uint64_t upa = kva2pa(kva);
+    uintptr_t upa = kva2pa(kva);
     set_pfn(&lv1_pgdir[vpn0], upa >> NORMAL_PAGE_SHIFT);
     set_attribute(
         &lv1_pgdir[vpn0], _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE |
@@ -192,7 +196,7 @@ void create_pn(uintptr_t kva, uintptr_t uva, PTE *pgdir, pcb_t *pcb) {
         uint64_t vpn2 = uva >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
         uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (uva >> (NORMAL_PAGE_SHIFT + PPN_BITS));
         PTE *lv3_pgdir = pgdir;
-        PTE *lv2_pgdir = lv3_pgdir[vpn2];
+        PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
         pn_list[i].pte_entry = &lv2_pgdir[vpn1];
         insert_list_tail(&pn_list[i], kernel_page_list);
     } else {    // user space, 3 level page level
@@ -200,15 +204,15 @@ void create_pn(uintptr_t kva, uintptr_t uva, PTE *pgdir, pcb_t *pcb) {
         uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (uva >> (NORMAL_PAGE_SHIFT + PPN_BITS));
         uint64_t vpn0 = (uva >> NORMAL_PAGE_SHIFT) ^ (vpn2 << (2 * PPN_BITS)) ^ (vpn1 << PPN_BITS);
         PTE *lv3_pgdir = pgdir;
-        PTE *lv2_pgdir = lv3_pgdir[vpn2];
-        PTE *lv1_pgdir = lv2_pgdir[vpn1];
+        PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
+        PTE *lv1_pgdir = (PTE *) pa2kva(get_pa(lv2_pgdir[vpn1]));
         pn_list[i].pte_entry = &lv1_pgdir[vpn0];
         insert_list_tail(&pn_list[i], user_page_mem_list);
     }
 }
 
-int swap_page() {
-    while (get_attribute(user_page_mem_list->pte_entry, _PAGE_ACCESSED)) {    // the page has be accessed
+uintptr_t swap_page() {
+    while (get_attribute(*user_page_mem_list->pte_entry, _PAGE_ACCESSED)) {    // the page has be accessed
         clear_attribute(user_page_mem_list->pte_entry, _PAGE_ACCESSED);
         user_page_mem_list = user_page_mem_list->next;
     }

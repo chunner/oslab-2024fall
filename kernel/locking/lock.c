@@ -43,7 +43,6 @@ void spin_lock_release(spin_lock_t *lock)
 int do_mutex_lock_init(int key)
 {
     /* TODO: [p2-task2] initialize mutex lock */
-    lock_kernel(&mutex_hart_lock);
     int i = 0;
     for (;i < last_lockid; i++) {
         if (mlocks[i].key == key) {
@@ -52,12 +51,10 @@ int do_mutex_lock_init(int key)
     }
     if (i == last_lockid) { // do not exit the same key
         if (i >= LOCK_NUM) {
-            unlock_kernel(&mutex_hart_lock);
             return -1;
         } // mlocks are run out
         mlocks[last_lockid++].key = key;
     }
-    unlock_kernel(&mutex_hart_lock);
     return i;
 }
 
@@ -65,18 +62,14 @@ int do_mutex_lock_init(int key)
 void do_mutex_lock_acquire(int mlock_idx)
 {
     /* TODO: [p2-task2] acquire mutex lock */
-    lock_kernel(&mutex_hart_lock);
     while (1) {
         if (mlocks[mlock_idx].lock.status == UNLOCKED) {
             mlocks[mlock_idx].lock.status = LOCKED;
             mlocks[mlock_idx].pid = do_getpid();
-            unlock_kernel(&mutex_hart_lock);
             return;
         } else {
             do_block(&current_running->list, &mlocks[mlock_idx].block_queue);
-            unlock_kernel(&mutex_hart_lock);
             do_scheduler();
-            lock_kernel(&mutex_hart_lock);
         }
     }
 }
@@ -84,16 +77,13 @@ void do_mutex_lock_acquire(int mlock_idx)
 void do_mutex_lock_release(int mlock_idx)
 {
     /* TODO: [p2-task2] release mutex lock */
-    lock_kernel(&mutex_hart_lock);
     mlocks[mlock_idx].lock.status = UNLOCKED;
     mlocks[mlock_idx].pid = 0;
     while (mlocks[mlock_idx].block_queue.next != &mlocks[mlock_idx].block_queue) {
         do_unblock(mlocks[mlock_idx].block_queue.next);
     }
-    unlock_kernel(&mutex_hart_lock);
 }
 void release_process_mutex(pid_t pid) {
-    lock_kernel(&mutex_hart_lock);
     for (int i = 0;i < last_lockid;i++) {
         if (mlocks[i].lock.status == LOCKED && mlocks[i].pid == pid) {
             // do_mutex_lock_release(i);
@@ -104,7 +94,6 @@ void release_process_mutex(pid_t pid) {
             }
         }
     }
-    unlock_kernel(&mutex_hart_lock);
 }
 /*--------------------------------barrier----------------------------------------------------------------*/
 barrier_t barrier[BARRIER_NUM];
@@ -116,7 +105,6 @@ void init_barriers(void) {
     }
 }
 int do_barrier_init(int key, int goal) {
-    lock_kernel(&barrier_hart_lock);
     int bar_idx = 0;
     for (;bar_idx < BARRIER_NUM;bar_idx++) {
         if (barrier[bar_idx].status == BAR_INACTIVE) {
@@ -124,7 +112,6 @@ int do_barrier_init(int key, int goal) {
         }
     }
     if (bar_idx >= BARRIER_NUM) {
-        unlock_kernel(&barrier_hart_lock);
         return -1;
     } // barrier are run out
     barrier[bar_idx].status = BAR_ACTIVE;
@@ -133,33 +120,27 @@ int do_barrier_init(int key, int goal) {
     barrier[bar_idx].counter = 0;
     barrier[bar_idx].block_queue.next = &barrier[bar_idx].block_queue;
     barrier[bar_idx].block_queue.prev = &barrier[bar_idx].block_queue;
-    unlock_kernel(&barrier_hart_lock);
     return bar_idx;
 }
 void do_barrier_wait(int bar_idx) {
-    lock_kernel(&barrier_hart_lock);
     barrier[bar_idx].counter++;
     if (barrier[bar_idx].counter >= barrier[bar_idx].goal) {
         while (barrier[bar_idx].block_queue.next != &barrier[bar_idx].block_queue) {    // wake up block queue
             do_unblock(barrier[bar_idx].block_queue.next);
         }
         barrier[bar_idx].counter = 0;
-        unlock_kernel(&barrier_hart_lock);
         return;
     } else {
         do_block(&current_running->list, &barrier[bar_idx].block_queue);
-        unlock_kernel(&barrier_hart_lock);
         do_scheduler();
         return;
     }
 }
 void do_barrier_destroy(int bar_idx) {
-    lock_kernel(&barrier_hart_lock);
     while (barrier[bar_idx].block_queue.next != &barrier[bar_idx].block_queue) {    // wake up block queue
         do_unblock(barrier[bar_idx].block_queue.next);
     }
     barrier[bar_idx].status = BAR_INACTIVE;
-    unlock_kernel(&barrier_hart_lock);
 }
 
 /* ---------------------------condition-----------------------------------------*/
@@ -172,7 +153,6 @@ void init_conditions(void) {
     }
 }
 int do_condition_init(int key) {
-    lock_kernel(&condition_hart_lock);
     int cond_idx = 0;
     for (;cond_idx < CONDITION_NUM;cond_idx++) {
         if (condition[cond_idx].status == COND_INACTIVE) {
@@ -180,43 +160,33 @@ int do_condition_init(int key) {
         }
     }
     if (cond_idx >= CONDITION_NUM) {
-        unlock_kernel(&condition_hart_lock);
         return -1;
     } // condition has run out
     condition[cond_idx].key = key;
     condition[cond_idx].status = COND_ACTIVE;
     condition[cond_idx].block_queue.next = &condition[cond_idx].block_queue;
     condition[cond_idx].block_queue.prev = &condition[cond_idx].block_queue;
-    unlock_kernel(&condition_hart_lock);
     return cond_idx;
 }
 void do_condition_wait(int cond_idx, int mutex_idx) {
-    lock_kernel(&condition_hart_lock);
     do_block(&current_running->list, &condition[cond_idx].block_queue);
     do_mutex_lock_release(mutex_idx);
-    unlock_kernel(&condition_hart_lock);
     do_scheduler();
     do_mutex_lock_acquire(mutex_idx);
 }
 void do_condition_signal(int cond_idx) {
-    lock_kernel(&condition_hart_lock);
     if (condition[cond_idx].block_queue.next != &condition[cond_idx].block_queue) {
         do_unblock(condition[cond_idx].block_queue.next);
     }
-    unlock_kernel(&condition_hart_lock);
 }
 void do_condition_broadcast(int cond_idx) {
-    lock_kernel(&condition_hart_lock);
     while (condition[cond_idx].block_queue.next != &condition[cond_idx].block_queue) {
         do_unblock(condition[cond_idx].block_queue.next);
     }
-    unlock_kernel(&condition_hart_lock);
 }
 void do_condition_destroy(int cond_idx) {
-    lock_kernel(&condition_hart_lock);
     do_condition_broadcast(cond_idx);
     condition[cond_idx].status = COND_INACTIVE;
-    unlock_kernel(&condition_hart_lock);
 }
 /*----------------------------------------mail box-----------------------------------------*/
 mailbox_t mailbox[MBOX_NUM];
@@ -233,7 +203,6 @@ void init_mbox() {
     }
 }
 int do_mbox_open(char *name) {
-    lock_kernel(&mailbox_hart_lock);
     int mbox_idx = 0;
     // try to search a mailbox with the same name
     for (;mbox_idx < MBOX_NUM;mbox_idx++) {
@@ -249,7 +218,6 @@ int do_mbox_open(char *name) {
             }
         }
         if (mbox_idx >= MBOX_NUM) {   // mailbox has run out
-            unlock_kernel(&mailbox_hart_lock);
             return -1;
         }
         // init the mailbox
@@ -264,20 +232,16 @@ int do_mbox_open(char *name) {
     }
     mailbox[mbox_idx].cite_num++;
     mailbox[mbox_idx].open = MBOX_OPEN;
-    unlock_kernel(&mailbox_hart_lock);
     return mbox_idx;
 }
 void do_mbox_close(int mbox_idx) {
-    lock_kernel(&mailbox_hart_lock);
     mailbox[mbox_idx].cite_num--;
     mailbox[mbox_idx].open = MBOX_CLOSE;
     if (mailbox[mbox_idx].cite_num <= 0) {
         mailbox[mbox_idx].status = MBOX_INACTIVE;
     }
-    unlock_kernel(&mailbox_hart_lock);
 }
 int do_mbox_send(int mbox_idx, void *msg, int msg_length) {
-    lock_kernel(&mailbox_hart_lock);
     int blockedCount = 0;
     while (1) {
         if (mailbox[mbox_idx].buffer_idx + msg_length <= MAX_MBOX_LENGTH) {
@@ -288,19 +252,15 @@ int do_mbox_send(int mbox_idx, void *msg, int msg_length) {
             while (mailbox[mbox_idx].empty_queue.next != &mailbox[mbox_idx].empty_queue) {
                 do_unblock(mailbox[mbox_idx].empty_queue.next);
             }
-            unlock_kernel(&mailbox_hart_lock);
             return blockedCount;
         } else {    // mailbox is full
             do_block(&current_running->list, &mailbox[mbox_idx].full_queue);
             blockedCount++;
-            unlock_kernel(&mailbox_hart_lock);
             do_scheduler();
-            lock_kernel(&mailbox_hart_lock);
         }
     }
 }
 int do_mbox_recv(int mbox_idx, void *msg, int msg_length) {
-    lock_kernel(&mailbox_hart_lock);
     int blockedCount = 0;
     while (1) {
         if (mailbox[mbox_idx].buffer_idx - msg_length >= 0) {
@@ -314,14 +274,11 @@ int do_mbox_recv(int mbox_idx, void *msg, int msg_length) {
             while (mailbox[mbox_idx].full_queue.next != &mailbox[mbox_idx].full_queue) {
                 do_unblock(mailbox[mbox_idx].full_queue.next);
             }
-            unlock_kernel(&mailbox_hart_lock);
             return blockedCount;
         } else {
             do_block(&current_running->list, &mailbox[mbox_idx].empty_queue);
             blockedCount++;
-            unlock_kernel(&mailbox_hart_lock);
             do_scheduler();
-            lock_kernel(&mailbox_hart_lock);
         }
     }
 }
