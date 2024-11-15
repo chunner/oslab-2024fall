@@ -92,7 +92,3 @@ void handle_other(regs_context_t *regs, uint64_t stval, uint64_t scause)
 void handle_s_soft(regs_context_t *regs, uint64_t stval, uint64_t scause) {
     return;         // jump to ret_from_complete
 }
-void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause) {
-    alloc_page_helper(stval, current_running->pgdir, current_running);  // stval is va triggering exception
-    return;     // jump to ret_from_exception, redo the inst
-}

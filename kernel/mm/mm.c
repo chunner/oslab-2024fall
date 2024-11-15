@@ -134,7 +134,7 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb)
     uint64_t vpn0 = (va >> NORMAL_PAGE_SHIFT) ^ (vpn2 << (2 * PPN_BITS)) ^ (vpn1 << PPN_BITS);
     uint64_t offset = va & 0xFFF;   // first 12 bit
     if (lv3_pgdir[vpn2] == 0) {     // alloc a new second-level page directory
-        PTE *lv2_pgdir = allocPage(1, pcb);
+        PTE *lv2_pgdir = alloc_kernel_page();
         create_pn(lv2_pgdir, lv2_pgdir, (uintptr_t) PGDIR_VA, pcb);
         set_pfn(&lv3_pgdir[vpn2], kva2pa(lv2_pgdir) >> NORMAL_PAGE_SHIFT);
         set_attribute(&lv3_pgdir[vpn2], _PAGE_PRESENT);
@@ -142,14 +142,14 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb)
     }
     PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
     if (lv2_pgdir[vpn1] == 0) {     // alloc a new first_level page directory
-        PTE *lv1_pgdir = allocPage(1, pcb);
+        PTE *lv1_pgdir = alloc_kernel_page();
         create_pn(lv1_pgdir, lv1_pgdir, (uintptr_t) PGDIR_VA, pcb);
         set_pfn(&lv2_pgdir[vpn1], kva2pa(lv1_pgdir) >> NORMAL_PAGE_SHIFT);
         set_attribute(&lv2_pgdir[vpn1], _PAGE_PRESENT);
         clear_pgdir(lv1_pgdir);   // clear second-level pgdir page
     }
     PTE *lv1_pgdir = (PTE *) pa2kva(get_pa(lv2_pgdir[vpn1]));
-    uint64_t kva = allocPage(1, pcb);
+    uint64_t kva = alloc_user_page();
     create_pn(kva, va, pcb->pgdir, pcb);
     uint64_t upa = kva2pa(kva);
     set_pfn(&lv1_pgdir[vpn0], upa >> NORMAL_PAGE_SHIFT);
@@ -215,6 +215,7 @@ int swap_page() {
     // move the pagenode into sd_list
     PageNode_t *swapped_page = user_page_mem_list;
     uintptr_t kva = swapped_page->addr.kva;
+    clear_attribute(swapped_page->pte_entry, _PAGE_DIRTY);
     user_page_mem_list = user_page_mem_list->next;
     delete_list_node(swapped_page);
     insert_list_tail(swapped_page, user_page_sd_list);
@@ -223,6 +224,45 @@ int swap_page() {
     swapped_page->addr.sector_id = sd_sector_end;
     sd_sector_end += PAGE_SIZE / SECTOR_SIZE;
     return kva;
+}
+PageNode_t *search_sd_list(uintptr_t uva) {
+    PageNode_t *p = user_page_sd_list->next;
+    if (!p) {
+        return NULL;
+    }
+    while (p != user_page_sd_list) {
+        if (p->uva == uva) {
+            delete_list_node(p);
+            return p;
+        }
+        p = p->next;
+    }
+    if (user_page_sd_list->uva == uva) {
+        p = user_page_sd_list;
+        if (user_page_sd_list->next == user_page_mem_list) {
+            user_page_sd_list = NULL;
+            p->next = NULL;
+            p->prev = NULL;
+        } else {
+            user_page_sd_list = user_page_sd_list->next;
+            delete_list_node(p);
+        }
+        return p;
+    }
+    return NULL;
+}
+void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause) {
+    PageNode_t *swapped_page = search_sd_list(stval);
+    if (swapped_page) {
+        uintptr_t kva = alloc_user_page();
+        sd_read(kva, PAGE_SIZE / SECTOR_SIZE, swapped_page->addr.sector_id);
+        swapped_page->addr.kva = kva;
+        set_pfn(swapped_page->pte_entry, (kva2pa(kva)) >> NORMAL_PAGE_SHIFT);
+        set_attribute(swapped_page->pte_entry, _PAGE_PRESENT);
+    } else {
+        alloc_page_helper(stval, current_running->pgdir, current_running);  // stval is va triggering exception
+    }
+    return;     // jump to ret_from_exception, redo the inst
 }
 uintptr_t shm_page_get(int key)
 {

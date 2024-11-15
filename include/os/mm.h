@@ -58,6 +58,7 @@ extern void init_bitmap();
 extern void release_process_page(pcb_t *pcb);
 extern void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir);
 extern uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb);
+extern void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause);
 
 typedef enum {
     PN_ACTIVE,
