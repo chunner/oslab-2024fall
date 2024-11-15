@@ -123,6 +123,11 @@ static inline void set_attribute(PTE *entry, uint64_t bits)
     /* TODO: [P4-task1] */
     *entry = *entry | bits;
 }
+static inline void clear_attribute(PTE *entry, uint64_t bits)
+{
+    /* TODO: [P4-task1] */
+    *entry = *entry & ~bits;
+}
 
 static inline void clear_pgdir(uintptr_t pgdir_addr)
 {

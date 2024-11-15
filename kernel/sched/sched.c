@@ -222,6 +222,7 @@ int get_free_pcb() {
 /*---------------------------------exec, kill, exit, waitpid --------------------------------------------------*/
 void setup_process_pcb(pcb_t *pcb, task_info_t task) {
     pcb->kernel_sp = allocPage(1, pcb) + PAGE_SIZE;
+    insert_pn_list(pcb->kernel_sp, pcb->kernel_sp, (uintptr_t) PGDIR_VA, pcb);
     pcb->kernel_stack_base = pcb->kernel_sp;
     pcb->user_sp = USER_STACK_ADDR;
     pcb->user_stack_base = USER_STACK_ADDR;
@@ -230,7 +231,7 @@ void setup_process_pcb(pcb_t *pcb, task_info_t task) {
     pcb->block_queue.next = &pcb->block_queue;
     pcb->block_queue.prev = &pcb->block_queue;
     pcb->cpu_mask = current_running->cpu_mask;
-    pcb->page_occupied_pointer = 0;
+    //pcb->page_occupied_pointer = 0;
     strcpy(pcb->taskname, task.taskname);
 }
 
@@ -305,6 +306,7 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     /* ===========================setup process vm  */
     /* ------setup page directory */
     pcb[pcb_id].pgdir = allocPage(1, &pcb[pcb_id]);   // alloc 4KB for user pgdir
+    insert_pn_list(pcb[pcb_id].pgdir, pcb[pcb_id].pgdir, (uintptr_t) PGDIR_VA, &pcb[pcb_id]);
     clear_pgdir(pcb[pcb_id].pgdir);
     share_pgtable(pcb[pcb_id].pgdir, (uintptr_t) PGDIR_VA);// copy kernel pgdir
     /* -----setup text and data segment vm */

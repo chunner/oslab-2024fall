@@ -34,10 +34,13 @@
 #define MAP_KERNEL 1
 #define MAP_USER 2
 #define MEM_SIZE 32
-#define FREE_MEM_PAGE_NUM 0xd000    // (0x5f00_0000 - 0x5200_0000) / 4K = 0xd00_0000/ 0x1000 = 0xd000
 #define PAGE_SIZE 4096 // 4K = 0x1000
 #define INIT_KERNEL_STACK 0xffffffc052000000
 #define FREEMEM_KERNEL (INIT_KERNEL_STACK + 4*PAGE_SIZE)
+#define FREE_KERNEL_PAGE_NUM 0x2000
+
+#define USER_MEM_BASE 0xffffffc054000000
+#define FREE_USER_PAGE_NUM 0x9000    // (0x5f00_0000 - 0x5200_0000) / 4K = 0xd00_0000/ 0x1000 = 0xd000
 
  /* Rounding; only works for n = power of two */
 #define ROUND(a, n)     (((((uint64_t)(a))+(n)-1)) & ~((n)-1))
@@ -70,13 +73,23 @@ typedef struct PageNode {
     PTE *pte_entry;
     pcb_t *master_pcb;
 
-    uintptr_t kva;
+    union {
+        uintptr_t kva;      // In Mem
+        uint64_t sector_id; // In SDcard
+    }addr;
+
+    uintptr_t uva;
 }PageNode_t;
 
 PageNode_t *pn_list = 0xffffffc05f000000ul;
 #define PageNode_MAXNUM 0x40000
 
-PageNode_t *PN_clock_ptr = NULL;
+PageNode_t *kernel_page_list = NULL;
+
+PageNode_t *user_page_mem_list = NULL;
+PageNode_t *user_page_sd_list = NULL;
+
+uint64_t sd_sector_end;
 
 // TODO [P4-task4]: shm_page_get/dt */
 uintptr_t shm_page_get(int key);

@@ -22,6 +22,7 @@
 #define VERSION_BUF 50
 
 #define tasknum_loc     0xffffffc0502001f6
+#define nsectors_image_loc 0xffffffc0502001f2
 
 int version = 2; // version must between 0 and 9
 char buf[VERSION_BUF];
@@ -166,6 +167,9 @@ static void init_syscall(void)
     syscall[SYSCALL_MBOX_RECV] = (long (*)())do_mbox_recv;
     syscall[SYSCALL_TASKSET] = (long (*)())do_taskset;
 }
+static void init_sd_sector_end() {
+    sd_sector_end = (uint64_t) * (short *) nsectors_image_loc;
+}
 /************************************************************/
 
 /*
@@ -208,6 +212,7 @@ int main(void)
             asm volatile("wfi");
         }
     }
+    init_sd_sector_end();
 
     // Init jump table provided by kernel and bios(ΦωΦ)
     init_jmptab();

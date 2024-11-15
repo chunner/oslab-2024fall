@@ -14,6 +14,7 @@
 #define OS_SIZE_LOC (BOOT_LOADER_SIG_OFFSET - 2)    // 0x1fc
 #define TASKNUM_LOC (OS_SIZE_LOC - 6)               // 0x1f6
 #define SLAVE_HART_LOC (TASKNUM_LOC - 2)            // 0x1f4
+#define IMAGE_SIZE_LOC (SLAVE_HART_LOC - 2)         // 0X1f2
 #define BOOT_LOADER_SIG_1 0x55
 #define BOOT_LOADER_SIG_2 0xaa
 
@@ -49,7 +50,7 @@ static uint32_t get_filesz(Elf64_Phdr phdr);
 static uint32_t get_memsz(Elf64_Phdr phdr);
 static void write_segment(Elf64_Phdr phdr, FILE *fp, FILE *img, int *phyaddr);
 static void write_padding(FILE *img, int *phyaddr, int new_phyaddr);
-static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
+static void write_img_info(int nbytes_kernel, int nbytes_image, task_info_t *taskinfo,
     short tasknum, FILE *img);
 
 int main(int argc, char **argv)
@@ -89,6 +90,7 @@ static void create_image(int nfiles, char *files[])
 {
     int tasknum = nfiles - 2;
     int nbytes_kernel = 0;
+    int nbytes_image = 0;
     int phyaddr = 0;
     FILE *fp = NULL, *img = NULL;
     Elf64_Ehdr ehdr;
@@ -128,7 +130,12 @@ static void create_image(int nfiles, char *files[])
 
             /* update nbytes_kernel */
             if (strcmp(*files, "main") == 0) {
-                nbytes_kernel += get_filesz(phdr);
+                nbytes_kernel += get_filesz(phdr) + taskinfo_size;
+                nbytes_image += get_files(phdr) + taskinfo_size;
+            } else if (strcmp(*files, "bootblock") == 0) {
+                nbytes_image += SECTOR_SIZE;
+            } else {
+                nbytes_image += get_filesz(phdr);
             }
 
             /* update mem filesz */
@@ -161,7 +168,7 @@ static void create_image(int nfiles, char *files[])
         fclose(fp);
         files++;
     }
-    write_img_info(nbytes_kernel, taskinfo, tasknum, img);
+    write_img_info(nbytes_kernel, nbytes_image, taskinfo, tasknum, img);
 
     fclose(img);
 }
@@ -237,7 +244,7 @@ static void write_padding(FILE *img, int *phyaddr, int new_phyaddr)
     }
 }
 
-static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
+static void write_img_info(int nbytes_kernel, int nbyte_image, task_info_t *taskinfo,
     short tasknum, FILE *img)
 {
     // TODO: [p1-task3] & [p1-task4] write image info to some certain places
@@ -256,9 +263,13 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
     fwrite(&tasknum, sizeof(short), 1, img);                    // tasknum  0x1f6-0x1f7
     fwrite(&taskinfo_addr, sizeof(int), 1, img);                // taskinfo_addr  0x1f8 - 0x1fb
 
-    fseek(img, SLAVE_HART_LOC, SEEK_SET);
+    fseek(img, SLAVE_HART_LOC, SEEK_SET);                       // 0x1f4
     short slave_hart_loc = 0;
     fwrite(&slave_hart_loc, sizeof(short), 1, img);            // unlock slave_hart_lock
+
+    fseek(img, IMAGE_SIZE_LOC, SEEK_SET);                       // 0x1f4
+    short nsectors_image = NBYTES2SEC(nbyte_image);
+    fwrite(&nsectors_image, sizeof(short), 1, img);            // unlock slave_hart_lock
 }
 
 /* print an error message and exit */
