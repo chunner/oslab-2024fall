@@ -64,7 +64,16 @@ extern void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t sca
 extern void create_pn(uintptr_t kva, uintptr_t uva, PTE *pgdir, pcb_t *pcb);
 extern void init_mem_manager();
 uintptr_t swap_page();
+extern void mark_page_allocated(int page_idx, char bitmap[]);
+extern void unmark_page_free(uint64_t kva, char bitmap[]);
 
+uint64_t sd_sector_end;
+
+// TODO [P4-task4]: shm_page_get/dt */
+uintptr_t shm_page_get(int key);
+void shm_page_dt(uintptr_t addr);
+
+/* -----------------------------------------PageNode ------------------------------------------------------- */
 typedef enum {
     PN_ACTIVE,
     PN_INACTIVE,
@@ -91,17 +100,108 @@ PageNode_t *pn_list;
 #define PageNode_MAXNUM 0x40000
 #define PN_LIST_BASE 0xffffffc05f000000ul
 
-PageNode_t *kernel_page_list;
+PageNode_t kernel_page_head;
 
-PageNode_t *user_page_mem_list;
-PageNode_t *user_page_sd_list;
+PageNode_t user_page_mem_head;
+PageNode_t user_page_sd_head;
 
-uint64_t sd_sector_end;
+// List management
+void init_list_head(PageNode_t *head) {
+    head->next = head;
+    head->prev = head;
+}
+void delete_list_node(PageNode_t *p) {
+    p->prev->next = p->next;
+    p->next->prev = p->prev;
+    p->next = NULL;
+    p->prev = NULL;
+}
+void insert_list_tail(PageNode_t *p, PageNode_t *head) {
+    p->next = head;
+    p->prev = head->prev;
+    head->prev->next = p;
+    head->prev = p;
+}
+void forward_list_head(PageNode_t *head) {
+    if (head->next == head) return; // list is empty
+    // exchange node2 and head
+    PageNode_t *node1 = head->prev;
+    PageNode_t *node2 = head->next;
+    PageNode_t *node3 = head->next->next;
 
-// TODO [P4-task4]: shm_page_get/dt */
-uintptr_t shm_page_get(int key);
-void shm_page_dt(uintptr_t addr);
+    head->next = node3;
+    node3->prev = head;
+    head->prev = node2;
+    node2->next = head;
+    node2->prev = node1;
+    node1->next = node2;
+}
 
+// memory page management
+void recycle_node_from_list(pcb_t *pcb, PageNode_t *head, char bitmap[], int is_in_mem) {
+    PageNode_t *p = head->next;
+    while (p != head) {
+        PageNode_t *pnext = p->next;
+        if (p->master_pcb == pcb) {
+            // recycle PageNode
+            p->status = PN_INACTIVE;
+            // recycle MemPage
+            if (is_in_mem) {
+                unmark_page_free(p->addr.kva, bitmap);
+            }
+            // remove from the list
+            delete_list_node(p);
+        }
+        p = pnext;
+    }
+}
 
+int get_free_PageNode() {
+    int i = 0;
+    for (; i < PageNode_MAXNUM;i++) {
+        if (pn_list[i].status == PN_INACTIVE) {
+            return i;  // success to find
+        }
+    }
+    return -1;  // fail to find
+}
 
+void create_PageNode(uintptr_t kva, uintptr_t uva, PTE *pgdir, pcb_t *pcb) {
+    int i = get_free_PageNode();
+    pn_list[i].status = PN_ACTIVE;
+    pn_list[i].addr.kva = kva;
+    pn_list[i].master_pcb = pcb;
+    pn_list[i].uva = uva;
+
+    if (uva & 1 << 28) {    // kernel space, 2 level page table
+        uva &= VA_MASK;
+        uint64_t vpn2 = uva >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
+        uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (uva >> (NORMAL_PAGE_SHIFT + PPN_BITS));
+        PTE *lv3_pgdir = pgdir;
+        PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
+        pn_list[i].pte_entry = &lv2_pgdir[vpn1];
+        insert_list_tail(&pn_list[i], &kernel_page_head);
+    } else {    // user space, 3 level page level
+        uva &= VA_MASK;
+        uint64_t vpn2 = uva >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
+        uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (uva >> (NORMAL_PAGE_SHIFT + PPN_BITS));
+        uint64_t vpn0 = (uva >> NORMAL_PAGE_SHIFT) ^ (vpn2 << (2 * PPN_BITS)) ^ (vpn1 << PPN_BITS);
+        PTE *lv3_pgdir = pgdir;
+        PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
+        PTE *lv1_pgdir = (PTE *) pa2kva(get_pa(lv2_pgdir[vpn1]));
+        pn_list[i].pte_entry = &lv1_pgdir[vpn0];
+        insert_list_tail(&pn_list[i], &user_page_mem_head);
+    }
+}
+
+PageNode_t *search_sd_list(uintptr_t uva) {
+    PageNode_t *p = user_page_sd_head.next;
+    while (p != &user_page_sd_head) {
+        if (p->uva == uva) {
+            return p;
+        }
+        p = p->next;
+    }
+    return NULL;
+}
 #endif /* MM_H */
