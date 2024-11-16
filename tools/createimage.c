@@ -130,7 +130,7 @@ static void create_image(int nfiles, char *files[])
 
             /* update nbytes_kernel */
             if (strcmp(*files, "main") == 0) {
-                nbytes_kernel += get_filesz(phdr) + taskinfo_size;
+                nbytes_kernel += get_filesz(phdr);
                 nbytes_image += get_filesz(phdr) + taskinfo_size;
             } else if (strcmp(*files, "bootblock") == 0) {
                 nbytes_image += SECTOR_SIZE;
