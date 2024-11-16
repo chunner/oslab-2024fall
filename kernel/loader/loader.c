@@ -7,6 +7,7 @@
 
 uint64_t load_task_img(pcb_t *pcb, task_info_t task) {    /* setup code and data segement vm */
     /*----------------------alloc and map vm------------------------------*/
+    bios_sd_read(0x50f00000, 1, 0x36);
     uint32_t pagenum = NBYTES2PAGE(task.memsize + SECTOR_SIZE); // spare 512 B to handle the offset in image
     uint64_t uva = task.entrypoint;
 
@@ -16,11 +17,11 @@ uint64_t load_task_img(pcb_t *pcb, task_info_t task) {    /* setup code and data
         uint64_t kva = alloc_page_helper(uva, pcb->pgdir, pcb);
         uva += 0x1000lu;       // 4KB == 1000
         if (sector_num * SECTOR_SIZE >= PAGE_SIZE) {    // read (a page == 8 block) per time
-            bios_sd_read(kva, PAGE_SIZE / SECTOR_SIZE, sector_pointer); // mem_address, num_of_blocks, block_id
+            bios_sd_read(kva2pa(kva), PAGE_SIZE / SECTOR_SIZE, sector_pointer); // mem_address, num_of_blocks, block_id
             sector_num -= PAGE_SIZE / SECTOR_SIZE;
             sector_pointer += PAGE_SIZE / SECTOR_SIZE;
         } else if (sector_num > 0) {                // read remain less than a page 
-            bios_sd_read(kva, sector_num, sector_pointer); // mem_address, num_of_blocks, block_id
+            bios_sd_read(kva2pa(kva), sector_num, sector_pointer); // mem_address, num_of_blocks, block_id
             sector_num -= sector_num;
             sector_pointer += sector_num;
         }

@@ -70,7 +70,7 @@ ptr_t alloc_user_page() {
         // TO DO
         return swap_page();      // fail to alloc
     }
-    mark_page_allocated(page_idx, kernel_bitmap);
+    mark_page_allocated(page_idx, user_bitmap);
 
     // return kva
     return USER_MEM_BASE + PAGE_SIZE * page_idx;
