@@ -9,7 +9,19 @@ void init_bitmap() {
     // 0xffffffc052000000 - 0xffffffc052004000 are used as stack, first 4 page
     kernel_bitmap[0] |= 0x0f;    // 0b1111
 }
-
+void init_mem_manager() {
+    // sd buffer addr
+    sd_sector_end = (uint64_t) * (short *) nsectors_image_loc;
+    // PageNode list init
+    pn_list = (PageNode_t *) PN_LIST_BASE;
+    for (int i = 0;i < PageNode_MAXNUM;i++) {
+        pn_list[i].status = PN_INACTIVE;
+    }
+    kernel_page_list = NULL;
+    user_page_mem_list = NULL;
+    user_page_sd_list = NULL;
+    init_bitmap();
+}
 // return the page_idx in the bitmap
 int find_free_pages(char bitmap[], int page_num) {
     // Traverse each byte in the bitmap
@@ -39,15 +51,6 @@ void unmark_page_free(uint64_t kva, char bitmap[]) {
 
 
 /* -----------------------------------------------------------Alloc Page-------------------------------------------------------------------- */
-void init_mem_manager() {
-    sd_sector_end = (uint64_t) * (short *) nsectors_image_loc;
-    pn_list = (PageNode_t *) PN_LIST_BASE;
-    kernel_page_list = NULL;
-    user_page_mem_list = NULL;
-    user_page_sd_list = NULL;
-    init_bitmap();
-}
-
 ptr_t alloc_kernel_page()
 {
     int page_idx = find_free_pages(kernel_bitmap, FREE_KERNEL_PAGE_NUM);
@@ -70,7 +73,7 @@ ptr_t alloc_user_page() {
     mark_page_allocated(page_idx, kernel_bitmap);
 
     // return kva
-    return INIT_KERNEL_STACK + PAGE_SIZE * page_idx;
+    return USER_MEM_BASE + PAGE_SIZE * page_idx;
 }
 
 void delete_list_node(PageNode_t *p) {
@@ -193,6 +196,7 @@ void create_pn(uintptr_t kva, uintptr_t uva, PTE *pgdir, pcb_t *pcb) {
     pn_list[i].uva = uva;
 
     if (uva & 1 << 28) {    // kernel space, 2 level page table
+        uva &= VA_MASK;
         uint64_t vpn2 = uva >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
         uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (uva >> (NORMAL_PAGE_SHIFT + PPN_BITS));
         PTE *lv3_pgdir = pgdir;
@@ -200,6 +204,7 @@ void create_pn(uintptr_t kva, uintptr_t uva, PTE *pgdir, pcb_t *pcb) {
         pn_list[i].pte_entry = &lv2_pgdir[vpn1];
         insert_list_tail(&pn_list[i], kernel_page_list);
     } else {    // user space, 3 level page level
+        uva &= VA_MASK;
         uint64_t vpn2 = uva >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
         uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (uva >> (NORMAL_PAGE_SHIFT + PPN_BITS));
         uint64_t vpn0 = (uva >> NORMAL_PAGE_SHIFT) ^ (vpn2 << (2 * PPN_BITS)) ^ (vpn1 << PPN_BITS);
