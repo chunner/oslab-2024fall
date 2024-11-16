@@ -122,19 +122,19 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb)
     set_pfn(&lv1_pgdir[vpn0], upa >> NORMAL_PAGE_SHIFT);
     set_attribute(
         &lv1_pgdir[vpn0], _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE |
-        _PAGE_EXEC | _PAGE_USER | _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_DIRTY);
+        _PAGE_EXEC | _PAGE_USER | _PAGE_DIRTY);
     return kva + offset;
 }
 /* -----------------------------------------PAGE NODE LIST---------------------------------------------------------------------------- */
 uintptr_t swap_page() {
-    while (get_attribute(*user_page_mem_head.next->pte_entry, _PAGE_ACCESSED)) {    // the page has be accessed
-        clear_attribute(user_page_mem_head.next->pte_entry, _PAGE_ACCESSED);
+    while (get_attribute(*user_page_mem_head.next->pte_entry, _PAGE_ACCESSED | _PAGE_DIRTY)) {    // the page has be accessed
+        clear_attribute(user_page_mem_head.next->pte_entry, _PAGE_ACCESSED | _PAGE_DIRTY);
         forward_list_head(&user_page_mem_head);
     }
     // move the pagenode into sd_list
     PageNode_t *swapped_page = user_page_mem_head.next;
     uintptr_t kva = swapped_page->addr.kva;
-    clear_attribute(swapped_page->pte_entry, _PAGE_DIRTY);
+    clear_attribute(swapped_page->pte_entry, _PAGE_PRESENT);
     delete_list_node(swapped_page);
     insert_list_tail(swapped_page, &user_page_sd_head);
     // write into sd card
@@ -145,7 +145,15 @@ uintptr_t swap_page() {
 }
 
 void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause) {
-    PageNode_t *swapped_page = search_sd_list(stval);
+    // first time to visit the page
+    PageNode_t *p;
+    p = search_list_node(&user_page_mem_head, stval);
+    if (p) {
+        set_attribute(p->pte_entry, _PAGE_ACCESSED | _PAGE_DIRTY);
+        return;
+    }
+
+    PageNode_t *swapped_page = search_list_node(&user_page_sd_head, stval);
     if (swapped_page) { // success to find the swapped page
         delete_list_node(swapped_page);
         uintptr_t kva = alloc_user_page();

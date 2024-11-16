@@ -42,7 +42,7 @@
 #define FREE_KERNEL_PAGE_NUM 0x2000
 
 #define USER_MEM_BASE 0xffffffc054000000
-#define FREE_USER_PAGE_NUM 0x5    // (0x5f00_0000 - 0x5200_0000) / 4K = 0xd00_0000/ 0x1000 = 0xd000
+#define FREE_USER_PAGE_NUM 0x8    // (0x5f00_0000 - 0x5200_0000) / 4K = 0xd00_0000/ 0x1000 = 0xd000
 
  /* Rounding; only works for n = power of two */
 #define ROUND(a, n)     (((((uint64_t)(a))+(n)-1)) & ~((n)-1))
@@ -194,9 +194,9 @@ static inline void create_PageNode(uintptr_t kva, uintptr_t uva, PTE *pgdir, pcb
     }
 }
 
-static inline PageNode_t *search_sd_list(uintptr_t uva) {
-    PageNode_t *p = user_page_sd_head.next;
-    while (p != &user_page_sd_head) {
+static inline PageNode_t *search_list_node(PageNode_t *head, uintptr_t uva) {
+    PageNode_t *p = head->next;
+    while (p != head) {
         if (p->uva == uva) {
             return p;
         }

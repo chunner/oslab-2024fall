@@ -6,28 +6,39 @@
 #include <unistd.h>
 #include <assert.h>
 
-#define FREE_USER_PAGE_NUM 0x10 
+#define PAGE_NUM 0x8 
 #define PAGE_SIZE 4096 // 4K = 0x1000
 int main() {
     srand(clock());
-    long val = 0;
-    uintptr_t mem1 = 20000;
+    uintptr_t mem1 = 0x20000;
     int curs = 0;
     int i;
     sys_move_cursor(2, 2);
-    for (i = 1; i < FREE_USER_PAGE_NUM; i++)
+    long val[PAGE_NUM];
+    for (i = 0; i < PAGE_NUM; i++)
     {
         // sys_move_cursor(2, curs+i);
-        val = rand();
-        *(long *) mem1 = val;
-        printf("<%d>: 0x%lx, %ld\n", i, mem1, val);
-        if (*(long *) mem1 != val) {
+        val[i] = rand();
+        *(long *) mem1 = val[i];
+        printf("<%d>: 0x%lx, %ld\n", i, mem1, val[i]);
+        if (*(long *) mem1 != val[i]) {
             printf("Error!\n");
+            return 0;
         }
         mem1 += PAGE_SIZE;
     }
-    //Only input address.
-    //Achieving input r/w command is recommended but not required.
-    printf("Success!\n");
+    printf("--------------------write Success!\n");
+    uintptr_t mem2 = 20000;
+    for (i = 1; i < PAGE_NUM; i++)
+    {
+        // sys_move_cursor(2, curs+i);
+        printf("<%d>: 0x%lx, %ld\n", i, mem1, *(long *) mem1);
+        if (*(long *) mem1 != val[i]) {
+            printf("Error!\n");
+            return 0;
+        }
+        mem1 += PAGE_SIZE;
+    }
+    printf("--------------------read Success!\n");
     return 0;
 }
