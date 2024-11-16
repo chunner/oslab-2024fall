@@ -76,9 +76,9 @@ ptr_t alloc_user_page() {
 }
 
 void release_process_page(pcb_t *pcb) {
-    delete_page_from_list(pcb, kernel_page_head, kernel_bitmap, 1);
-    delete_page_from_list(pcb, user_page_mem_head, user_bitmap, 1);
-    delete_page_from_list(pcb, user_page_sd_head, NULL, 0);
+    recycle_node_from_list(pcb, &kernel_page_head, kernel_bitmap, 1);
+    recycle_node_from_list(pcb, &user_page_mem_head, user_bitmap, 1);
+    recycle_node_from_list(pcb, &user_page_sd_head, NULL, 0);
 }
 
 /* This is used for mapping kernel virtual address into user page table */
@@ -102,7 +102,7 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb)
     uint64_t offset = va & 0xFFF;   // first 12 bit
     if (lv3_pgdir[vpn2] == 0) {     // alloc a new second-level page directory
         PTE *lv2_pgdir = (PTE *) alloc_kernel_page();
-        create_pn((uintptr_t) lv2_pgdir, (uintptr_t) lv2_pgdir, (uintptr_t) PGDIR_VA, pcb);
+        create_PageNode((uintptr_t) lv2_pgdir, (uintptr_t) lv2_pgdir, (uintptr_t) PGDIR_VA, pcb);
         set_pfn(&lv3_pgdir[vpn2], (uint64_t) kva2pa(lv2_pgdir) >> NORMAL_PAGE_SHIFT);
         set_attribute(&lv3_pgdir[vpn2], _PAGE_PRESENT);
         clear_pgdir(lv2_pgdir);   // clear second-level pgdir page
@@ -110,14 +110,14 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb)
     PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
     if (lv2_pgdir[vpn1] == 0) {     // alloc a new first_level page directory
         PTE *lv1_pgdir = (PTE *) alloc_kernel_page();
-        create_pn((uintptr_t) lv1_pgdir, (uintptr_t) lv1_pgdir, (uintptr_t) PGDIR_VA, pcb);
+        create_PageNode((uintptr_t) lv1_pgdir, (uintptr_t) lv1_pgdir, (uintptr_t) PGDIR_VA, pcb);
         set_pfn(&lv2_pgdir[vpn1], kva2pa(lv1_pgdir) >> NORMAL_PAGE_SHIFT);
         set_attribute(&lv2_pgdir[vpn1], _PAGE_PRESENT);
         clear_pgdir(lv1_pgdir);   // clear second-level pgdir page
     }
     PTE *lv1_pgdir = (PTE *) pa2kva(get_pa(lv2_pgdir[vpn1]));
     uintptr_t kva = (uintptr_t) alloc_user_page();
-    create_pn(kva, va, pcb->pgdir, pcb);
+    create_PageNode(kva, va, pcb->pgdir, pcb);
     uintptr_t upa = kva2pa(kva);
     set_pfn(&lv1_pgdir[vpn0], upa >> NORMAL_PAGE_SHIFT);
     set_attribute(

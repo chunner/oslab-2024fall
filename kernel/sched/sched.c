@@ -210,7 +210,7 @@ int get_free_pcb() {
 /*---------------------------------exec, kill, exit, waitpid --------------------------------------------------*/
 void setup_process_pcb(pcb_t *pcb, task_info_t task) {
     pcb->kernel_sp = alloc_kernel_page() + PAGE_SIZE;
-    create_pn(pcb->kernel_sp - PAGE_SIZE, pcb->kernel_sp - PAGE_SIZE, (uintptr_t) PGDIR_VA, pcb);
+    create_PageNode(pcb->kernel_sp - PAGE_SIZE, pcb->kernel_sp - PAGE_SIZE, (uintptr_t) PGDIR_VA, pcb);
     pcb->kernel_stack_base = pcb->kernel_sp;
     pcb->user_sp = USER_STACK_ADDR;
     pcb->user_stack_base = USER_STACK_ADDR;
@@ -291,7 +291,7 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     /* ===========================setup process vm  */
     /* ------setup page directory */
     pcb[pcb_id].pgdir = alloc_kernel_page();   // alloc 4KB for user pgdir
-    create_pn(pcb[pcb_id].pgdir, pcb[pcb_id].pgdir, (uintptr_t) PGDIR_VA, pcb);
+    create_PageNode(pcb[pcb_id].pgdir, pcb[pcb_id].pgdir, (uintptr_t) PGDIR_VA, pcb);
 
     clear_pgdir(pcb[pcb_id].pgdir);
     share_pgtable(pcb[pcb_id].pgdir, (uintptr_t) PGDIR_VA);// copy kernel pgdir
