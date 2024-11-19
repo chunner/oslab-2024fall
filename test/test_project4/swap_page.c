@@ -13,7 +13,7 @@ int main() {
     uintptr_t mem1 = 0x20000;
     int curs = 0;
     int i;
-    sys_move_cursor(2, 2);
+    sys_move_cursor(0, 2);
     long val[PAGE_NUM];
     for (i = 0; i < PAGE_NUM; i++)
     {
@@ -28,16 +28,16 @@ int main() {
         mem1 += PAGE_SIZE;
     }
     printf("--------------------write Success!\n");
-    uintptr_t mem2 = 20000;
-    for (i = 1; i < PAGE_NUM; i++)
+    uintptr_t mem2 = 0x20000;
+    for (i = 0; i < PAGE_NUM; i++)
     {
         // sys_move_cursor(2, curs+i);
-        printf("<%d>: 0x%lx, %ld\n", i, mem1, *(long *) mem1);
-        if (*(long *) mem1 != val[i]) {
+        printf("<%d>: 0x%lx, %ld\n", i, mem2, *(long *) mem2);
+        if (*(long *) mem2 != val[i]) {
             printf("Error!\n");
             return 0;
         }
-        mem1 += PAGE_SIZE;
+        mem2 += PAGE_SIZE;
     }
     printf("--------------------read Success!\n");
     return 0;

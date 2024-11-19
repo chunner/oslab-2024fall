@@ -133,8 +133,10 @@ uintptr_t swap_page() {
     }
     // move the pagenode into sd_list
     PageNode_t *swapped_page = user_page_mem_head.next;
+    // clear_attribute(swapped_page->pte_entry, _PAGE_ACCESSED | _PAGE_DIRTY);
+    *swapped_page->pte_entry = 0;
+    local_flush_tlb_page(swapped_page->uva);        // refresh tlb
     uintptr_t kva = swapped_page->addr.kva;
-    clear_attribute(swapped_page->pte_entry, _PAGE_PRESENT);
     delete_list_node(swapped_page);
     insert_list_tail(swapped_page, &user_page_sd_head);
     // write into sd card
@@ -145,24 +147,27 @@ uintptr_t swap_page() {
 }
 
 void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause) {
+    uint64_t vpn = stval & ~(PAGE_SIZE - 1);
     // first time to visit the page
     PageNode_t *p;
-    p = search_list_node(&user_page_mem_head, stval);
+    p = search_list_node(&user_page_mem_head, vpn);
     if (p) {
         set_attribute(p->pte_entry, _PAGE_ACCESSED | _PAGE_DIRTY);
         return;
     }
-
-    PageNode_t *swapped_page = search_list_node(&user_page_sd_head, stval);
+    PageNode_t *swapped_page = search_list_node(&user_page_sd_head, vpn);
     if (swapped_page) { // success to find the swapped page
         delete_list_node(swapped_page);
         uintptr_t kva = alloc_user_page();
         sd_read(kva, PAGE_SIZE / SECTOR_SIZE, swapped_page->addr.sector_id);
         swapped_page->addr.kva = kva;
-        set_pfn(swapped_page->pte_entry, (kva2pa(kva)) >> NORMAL_PAGE_SHIFT);
-        set_attribute(swapped_page->pte_entry, _PAGE_PRESENT);
+        set_pfn(swapped_page->pte_entry, kva2pa(kva) >> NORMAL_PAGE_SHIFT);
+        set_attribute(
+            swapped_page->pte_entry, _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE |
+            _PAGE_EXEC | _PAGE_USER | _PAGE_DIRTY);
+
     } else {    // fail to find in the sd card
-        alloc_page_helper(stval, current_running->pgdir, current_running);  // stval is va triggering exception
+        alloc_page_helper(vpn, current_running->pgdir, current_running);  // stval is va triggering exception
     }
     return;     // jump to ret_from_exception, redo the inst
 }
