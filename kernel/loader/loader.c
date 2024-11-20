@@ -7,7 +7,6 @@
 
 uint64_t load_task_img(pcb_t *pcb, task_info_t task) {    /* setup code and data segement vm */
     /*----------------------alloc and map vm------------------------------*/
-    bios_sd_read(0x50f00000, 1, 0x36);
     uint32_t pagenum = NBYTES2PAGE(task.memsize + SECTOR_SIZE); // spare 512 B to handle the offset in image
     uint64_t uva = task.entrypoint;
 

@@ -92,7 +92,7 @@ void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir)
 /* allocate physical page for `va`, mapping it into `pgdir`,
    return the kernel virtual address for the page
    */
-uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb)
+uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb)  // offset of va should be 0
 {
     PTE *lv3_pgdir = (PTE *) pgdir;
     va &= VA_MASK;
@@ -123,7 +123,7 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb)
     set_attribute(
         &lv1_pgdir[vpn0], _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE |
         _PAGE_EXEC | _PAGE_USER | _PAGE_DIRTY);
-    return kva + offset;
+    return kva;
 }
 /* -----------------------------------------PAGE NODE LIST---------------------------------------------------------------------------- */
 uintptr_t swap_page() {
@@ -133,12 +133,12 @@ uintptr_t swap_page() {
     }
     // move the pagenode into sd_list
     PageNode_t *swapped_page = user_page_mem_head.next;
+    delete_list_node(swapped_page);
+    insert_list_tail(swapped_page, &user_page_sd_head);
     // clear_attribute(swapped_page->pte_entry, _PAGE_ACCESSED | _PAGE_DIRTY);
     *swapped_page->pte_entry = 0;
     local_flush_tlb_page(swapped_page->uva);        // refresh tlb
     uintptr_t kva = swapped_page->addr.kva;
-    delete_list_node(swapped_page);
-    insert_list_tail(swapped_page, &user_page_sd_head);
     // write into sd card
     sd_write(kva2pa(kva), PAGE_SIZE / SECTOR_SIZE, sd_sector_end);
     swapped_page->addr.sector_id = sd_sector_end;
@@ -155,20 +155,22 @@ void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause) {
         set_attribute(p->pte_entry, _PAGE_ACCESSED | _PAGE_DIRTY);
         return;
     }
-    PageNode_t *swapped_page = search_list_node(&user_page_sd_head, vpn);
-    if (swapped_page) { // success to find the swapped page
-        delete_list_node(swapped_page);
+    // page is swapped to sd
+    p = search_list_node(&user_page_sd_head, vpn);
+    if (p) { // success to find the swapped page
+        delete_list_node(p);
+        insert_list_tail(p, &user_page_mem_head);
         uintptr_t kva = alloc_user_page();
-        sd_read(kva, PAGE_SIZE / SECTOR_SIZE, swapped_page->addr.sector_id);
-        swapped_page->addr.kva = kva;
-        set_pfn(swapped_page->pte_entry, kva2pa(kva) >> NORMAL_PAGE_SHIFT);
+        sd_read(kva2pa(kva), PAGE_SIZE / SECTOR_SIZE, p->addr.sector_id);
+        p->addr.kva = kva;
+        set_pfn(p->pte_entry, kva2pa(kva) >> NORMAL_PAGE_SHIFT);
         set_attribute(
-            swapped_page->pte_entry, _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE |
+            p->pte_entry, _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE |
             _PAGE_EXEC | _PAGE_USER | _PAGE_DIRTY);
-
-    } else {    // fail to find in the sd card
-        alloc_page_helper(vpn, current_running->pgdir, current_running);  // stval is va triggering exception
+        return;
     }
+    // have not create page_node
+    alloc_page_helper(vpn, current_running->pgdir, current_running);  // stval is va triggering exception
     return;     // jump to ret_from_exception, redo the inst
 }
 uintptr_t shm_page_get(int key)
