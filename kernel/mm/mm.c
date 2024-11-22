@@ -134,7 +134,6 @@ uintptr_t swap_page() {
     // move the pagenode into sd_list
     PageNode_t *swapped_page = user_page_mem_head.next;
     delete_list_node(swapped_page);
-    insert_list_tail(swapped_page, &user_page_sd_head);
     // clear_attribute(swapped_page->pte_entry, _PAGE_ACCESSED | _PAGE_DIRTY);
     *swapped_page->pte_entry = 0;
     local_flush_tlb_page(swapped_page->uva);        // refresh tlb
@@ -143,6 +142,7 @@ uintptr_t swap_page() {
     sd_write(kva2pa(kva), PAGE_SIZE / SECTOR_SIZE, sd_sector_end);
     swapped_page->addr.sector_id = sd_sector_end;
     sd_sector_end += PAGE_SIZE / SECTOR_SIZE;
+    insert_list_tail(swapped_page, &user_page_sd_head);
     return kva;
 }
 
@@ -158,8 +158,7 @@ void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause) {
     // page is swapped to sd
     p = search_list_node(&user_page_sd_head, vpn);
     if (p) { // success to find the swapped page
-        delete_list_node(p);
-        insert_list_tail(p, &user_page_mem_head);
+        delete_list_node(p);                       // remove from sd_list
         uintptr_t kva = alloc_user_page();
         sd_read(kva2pa(kva), PAGE_SIZE / SECTOR_SIZE, p->addr.sector_id);
         p->addr.kva = kva;
@@ -167,6 +166,7 @@ void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause) {
         set_attribute(
             p->pte_entry, _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE |
             _PAGE_EXEC | _PAGE_USER | _PAGE_DIRTY);
+        insert_list_tail(p, &user_page_mem_head);   // insert into mem_list
         return;
     }
     // have not create page_node
