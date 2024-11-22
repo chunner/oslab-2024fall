@@ -60,13 +60,17 @@ typedef enum {
     TASK_BLOCKED,
     TASK_RUNNING,
     TASK_READY,
-    TASK_EXITED,
+    TASK_EXITED
 } task_status_t;
 
 typedef struct page_occupied {
     int start_page;
     int numPage;
 }page_occupied_t;
+typedef enum {
+    MTHREAD,
+    PTHREAD
+}thread_type_t;
 
 /* Process Control Block */
 typedef struct pcb
@@ -112,9 +116,9 @@ typedef struct pcb
     /* page table */
     uintptr_t pgdir;        // the address of the base of page table
 
-    // /* Occupied Page Info */
-    // page_occupied_t page_occupied[16];
-    // int page_occupied_pointer;
+    /* MTHREAD | PTHREAD*/
+    thread_type_t thread_type;
+    pthread_t pthread_id;
 
 } pcb_t;
 
@@ -167,4 +171,5 @@ extern void do_process_show();
 extern pid_t do_getpid();
 /************************************************************/
 
+extern void do_pthread_create(pthread_t thread, void (*start_routine)(void *), void *arg, uint64_t exit_funt);
 #endif

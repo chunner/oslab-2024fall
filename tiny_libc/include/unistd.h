@@ -53,6 +53,9 @@ void sys_mbox_close(int mbox_id);
 int sys_mbox_send(int mbox_idx, void *msg, int msg_length);
 int sys_mbox_recv(int mbox_idx, void *msg, int msg_length);
 
+
+void sys_pthread_create(pthread_t thread, void (*start_routine)(void *), void *arg, uint64_t exit_funct);
+
 /* TODO: [P4-task5] shmpageget/dt */
 /* shmpageget/dt */
 void *sys_shmpageget(int key);

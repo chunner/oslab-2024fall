@@ -209,18 +209,18 @@ int get_free_pcb() {
 }
 /*---------------------------------exec, kill, exit, waitpid --------------------------------------------------*/
 void setup_process_pcb(pcb_t *pcb, task_info_t task) {
+    pcb->pid = ++process_id;
     pcb->kernel_sp = alloc_kernel_page() + PAGE_SIZE;
     create_PageNode(pcb->kernel_sp - PAGE_SIZE, pcb->kernel_sp - PAGE_SIZE, (uintptr_t) PGDIR_VA, pcb);
     pcb->kernel_stack_base = pcb->kernel_sp;
     pcb->user_sp = USER_STACK_ADDR;
     pcb->user_stack_base = USER_STACK_ADDR;
-    pcb->pid = ++process_id;
     pcb->entry_point = task.entrypoint;
     pcb->block_queue.next = &pcb->block_queue;
     pcb->block_queue.prev = &pcb->block_queue;
     pcb->cpu_mask = current_running->cpu_mask;
-    //pcb->page_occupied_pointer = 0;
     strcpy(pcb->taskname, task.taskname);
+    pcb->thread_type = MTHREAD;
 }
 
 void setup_process_stack(pcb_t *pcb, int argc, char *argv[]) {
@@ -405,4 +405,67 @@ void remove_pcb_queue(pcb_t *pcb) {
     pcb_list->prev = NULL;
     next_node->prev = prev_node;
     prev_node->next = next_node;
+}
+/* ----------------------------------------------------pthread --------------------------------------------------------- */
+void init_pthread_pcb(pcb_t *pcb, pthread_t thread, uint64_t start_routine) {
+    pcb->pid = current_running->pid;
+    pcb->kernel_sp = alloc_kernel_page() + PAGE_SIZE;
+    create_PageNode(pcb->kernel_sp - PAGE_SIZE, pcb->kernel_sp - PAGE_SIZE, (uintptr_t) PGDIR_VA, pcb);
+    pcb->kernel_stack_base = pcb->kernel_sp;
+    pcb->user_sp = current_running->user_stack_base + PAGE_SIZE * thread;   // user_stack depend on thread_id
+    pcb->user_stack_base = pcb->user_sp;
+    pcb->entry_point = start_routine;
+    pcb->block_queue.next = &pcb->block_queue;
+    pcb->block_queue.prev = &pcb->block_queue;
+    pcb->cpu_mask = current_running->cpu_mask;
+    strcpy(pcb->taskname, current_running->taskname);
+    pcb->thread_type = PTHREAD;
+    pcb->pthread_id = thread;
+}
+void setup_pthread_create(pcb_t *pcb, void *arg, uint64_t exit_funt) {
+    // -------- user stack
+    uint64_t user_stack_top = pcb->user_stack_base - PAGE_SIZE;
+    uint64_t kva = alloc_page_helper(user_stack_top, pcb->pgdir, pcb);   // alloc and map user stack
+    // -------- kernel stack
+    /* initialization of registers on kernel stack*/
+    pcb->kernel_sp = pcb->kernel_sp - sizeof(regs_context_t) - sizeof(switchto_context_t);
+    regs_context_t *pt_regs = (regs_context_t *) (pcb->kernel_sp + sizeof(switchto_context_t));
+    for (int i = 0; i < 32; i++) {
+        if (i == 1) // ra
+            pt_regs->regs[i] = exit_funt;
+        else if (i == 2) // sp
+            pt_regs->regs[i] = pcb->user_sp;
+        else if (i == 4) // tp
+            pt_regs->regs[i] = (reg_t) pcb;
+        else if (i == 10) // a0
+            pt_regs->regs[i] = arg;
+        else
+            pt_regs->regs[i] = 0;
+    }
+    pt_regs->sstatus = SR_SPIE | SR_SUM;           // set spp = 0, spie = 1, sie = 0, SUM = 1
+    pt_regs->sepc = pcb->entry_point;            // entry 
+    /* set sp to simulate just returning from switch_to */
+    switchto_context_t *pt_switchto = (switchto_context_t *) (pcb->kernel_sp);
+    for (int i = 0; i < 14; i++) {
+        if (i == 0) { // ra
+            pt_switchto->regs[i] = (reg_t) ret_from_exception;
+        } else if (i == 1) {   // sp
+            pt_switchto->regs[i] = pcb->kernel_sp;
+        } else {      // S0 - S11
+            pt_switchto->regs[i] = 0;
+        }
+    }
+}
+
+
+void do_pthread_create(pthread_t thread, void (*start_routine)(void *), void *arg, uint64_t exit_funt) {
+    int pcb_id;
+    if ((pcb_id = get_free_pcb()) == -1) {
+        return; // fail to find free pcb
+    }
+    init_pthread_pcb(&pcb[pcb_id], thread, (uint64_t) start_routine);
+    pcb[pcb_id].pgdir = current_running->pgdir;     // the same addr space
+    setup_pthread_stack(&pcb[pcb_id], arg, exit_funt);
+    add_readyqueue(&pcb[pcb_id]);
+    return;
 }

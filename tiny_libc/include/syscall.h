@@ -41,5 +41,6 @@
 #define SYSCALL_SHM_GET 56
 #define SYSCALL_SHM_DT 57
 #define SYSCALL_TASKSET 32
+#define SYSCALL_PTHREAD_CREATE 58
 
 #endif

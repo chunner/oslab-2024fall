@@ -32,14 +32,14 @@
 
 typedef int BOOL;
 #ifndef TRUE
-	#define TRUE 	1
-	#define FALSE 	0
+#define TRUE 	1
+#define FALSE 	0
 #endif
 
 typedef int bool;
 #ifndef true
-    #define true   1
-    #define false  0
+#define true   1
+#define false  0
 #endif
 
 typedef unsigned __attribute__((__mode__(QI))) int8_t;
@@ -57,6 +57,7 @@ typedef uint64_t ptr_t;
 typedef uint64_t uintptr_t;
 typedef int64_t intptr_t;
 typedef uint64_t size_t;
+typedef pid_t pthread_t;
 
 /* Minimum of signed integral types.  */
 # define INT8_MIN               (-128)

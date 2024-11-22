@@ -23,7 +23,7 @@ jump2main:
     ld ra, 0(sp)
     addi sp, sp , 8
 
-    /* TODO: [p1-task3] finish task and return to the kernel, replace this in p3-task2! */
+    // sys exit
     li a7, 1         # SYSCALL_EXIT
     ecall      # call sys_exit
     

@@ -85,7 +85,7 @@ static inline void recycle_node_from_list(pcb_t *pcb, PageNode_t *head, int is_i
     PageNode_t *p = head->next;
     while (p != head) {
         PageNode_t *pnext = p->next;
-        if (p->master_pcb == pcb) {
+        if (p->pid == pcb->pid) {
             // recycle PageNode
             p->status = PN_INACTIVE;
             // recycle MemPage

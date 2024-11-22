@@ -85,7 +85,8 @@ typedef struct PageNode {
     PageNode_status_t status;
 
     PTE *pte_entry;
-    pcb_t *master_pcb;
+    //pcb_t *master_pcb;
+    pid_t pid;
 
     union {
         uintptr_t kva;      // In Mem
@@ -151,7 +152,7 @@ static inline void create_PageNode(uintptr_t kva, uintptr_t uva, PTE *pgdir, pcb
     int i = get_free_PageNode();
     pn_list[i].status = PN_ACTIVE;
     pn_list[i].addr.kva = kva;
-    pn_list[i].master_pcb = pcb;
+    pn_list[i].pid = pcb->pid;
     pn_list[i].uva = uva;
 
     if (uva & 1 << 28) {    // kernel space, 2 level page table
@@ -178,7 +179,7 @@ static inline void create_PageNode(uintptr_t kva, uintptr_t uva, PTE *pgdir, pcb
 static inline PageNode_t *search_list_node(PageNode_t *head, uintptr_t uva, pcb_t *master_pcb) {
     PageNode_t *p = head->next;
     while (p != head) {
-        if (p->uva == uva && p->master_pcb == master_pcb) {
+        if (p->uva == uva && p->pid == master_pcb->pid) {
             return p;
         }
         p = p->next;
