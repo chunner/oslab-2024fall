@@ -230,6 +230,7 @@ void setup_process_pcb(pcb_t *pcb, task_info_t task) {
     pcb->cpu_mask = current_running->cpu_mask;
     strcpy(pcb->taskname, task.taskname);
     pcb->thread_type = MTHREAD;
+    pcb->pthread_id = 0;
 }
 
 void setup_process_stack(pcb_t *pcb, int argc, char *argv[]) {
@@ -428,10 +429,10 @@ void init_pthread_pcb(pcb_t *pcb, pthread_t thread, uint64_t start_routine) {
     pcb->thread_type = PTHREAD;
     pcb->pthread_id = thread;
 }
-void setup_pthread_create(pcb_t *pcb, void *arg, uint64_t exit_funt) {
+void setup_pthread_stack(pcb_t *pcb, void *arg, uint64_t exit_funt) {
     // -------- user stack
     uint64_t user_stack_top = pcb->user_stack_base - PAGE_SIZE;
-    uint64_t kva = alloc_page_helper(user_stack_top, pcb->pgdir, pcb);   // alloc and map user stack
+    alloc_page_helper(user_stack_top, pcb->pgdir, pcb);   // alloc and map user stack
     // -------- kernel stack
     /* initialization of registers on kernel stack*/
     pcb->kernel_sp = pcb->kernel_sp - sizeof(regs_context_t) - sizeof(switchto_context_t);

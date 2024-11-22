@@ -10,7 +10,7 @@ void pthread_create(pthread_t *thread,
     static uintptr_t pthread_id = 0;
 
     *thread = ++pthread_id;
-    sys_pthread_create(thread, start_routine, arg, (uint64_t) sys_exit);
+    sys_pthread_create(*thread, start_routine, arg, (uint64_t) sys_exit);
 
 }
 
