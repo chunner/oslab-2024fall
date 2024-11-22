@@ -61,11 +61,10 @@ extern void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir);
 extern uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb);
 extern void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause);
 
-extern void create_pn(uintptr_t kva, uintptr_t uva, PTE *pgdir, pcb_t *pcb);
 extern void init_mem_manager();
 uintptr_t swap_page();
-extern void mark_page_allocated(int page_idx, char bitmap[]);
-extern void unmark_page_free(uint64_t kva, char bitmap[]);
+extern void mark_page_allocated(uint64_t page_idx, char bitmap[]);
+extern void unmark_page_free(uint64_t page_idx, char bitmap[]);
 
 uint64_t sd_sector_end;
 
@@ -138,24 +137,6 @@ static inline void forward_list_head(PageNode_t *head) {
 }
 
 // memory page management
-static inline void recycle_node_from_list(pcb_t *pcb, PageNode_t *head, char bitmap[], int is_in_mem) {
-    PageNode_t *p = head->next;
-    while (p != head) {
-        PageNode_t *pnext = p->next;
-        if (p->master_pcb == pcb) {
-            // recycle PageNode
-            p->status = PN_INACTIVE;
-            // recycle MemPage
-            if (is_in_mem) {
-                unmark_page_free(p->addr.kva, bitmap);
-            }
-            // remove from the list
-            delete_list_node(p);
-        }
-        p = pnext;
-    }
-}
-
 static inline int get_free_PageNode() {
     int i = 0;
     for (; i < PageNode_MAXNUM;i++) {
@@ -194,10 +175,10 @@ static inline void create_PageNode(uintptr_t kva, uintptr_t uva, PTE *pgdir, pcb
     }
 }
 
-static inline PageNode_t *search_list_node(PageNode_t *head, uintptr_t uva) {
+static inline PageNode_t *search_list_node(PageNode_t *head, uintptr_t uva, pcb_t *master_pcb) {
     PageNode_t *p = head->next;
     while (p != head) {
-        if (p->uva == uva) {
+        if (p->uva == uva && p->master_pcb == master_pcb) {
             return p;
         }
         p = p->next;

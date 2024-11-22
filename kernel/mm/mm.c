@@ -24,13 +24,13 @@ void init_mem_manager() {
     init_bitmap();
 }
 // return the page_idx in the bitmap
-int find_free_pages(char bitmap[], int page_num) {
+uint64_t find_free_pages(char bitmap[], int page_num) {
     // Traverse each byte in the bitmap
-    for (int byte_idx = 0; byte_idx < page_num / 8; byte_idx++) {
+    for (uint64_t byte_idx = 0; byte_idx < page_num / 8; byte_idx++) {
         if (bitmap[byte_idx] != 0xFF) {  // Check if there are any free bits in this byte
             // Traverse each bit in the current byte
             for (int bit = 0; bit < 8; bit++) {
-                int page_idx = byte_idx * 8 + bit;
+                uint64_t page_idx = byte_idx * 8 + bit;
 
                 if (!(bitmap[byte_idx] & (1 << bit))) {  // Check if the page is free
                     return page_idx;
@@ -41,12 +41,11 @@ int find_free_pages(char bitmap[], int page_num) {
     return -1;  // Not enough consecutive free pages found
 }
 
-void mark_page_allocated(int page_idx, char bitmap[]) {
+void mark_page_allocated(uint64_t page_idx, char bitmap[]) {
     bitmap[page_idx / 8] |= (1 << (page_idx % 8));  // Set the corresponding bit to 1
 }
 
-void unmark_page_free(uint64_t kva, char bitmap[]) {
-    int page_idx = (kva - INIT_KERNEL_STACK) / PAGE_SIZE;
+void unmark_page_free(uint64_t page_idx, char bitmap[]) {
     bitmap[page_idx / 8] &= ~(1 << (page_idx % 8));  // Clear the corresponding bit to 0
 }
 
@@ -54,7 +53,7 @@ void unmark_page_free(uint64_t kva, char bitmap[]) {
 /* -----------------------------------------------------------Alloc Page-------------------------------------------------------------------- */
 ptr_t alloc_kernel_page()
 {
-    int page_idx = find_free_pages(kernel_bitmap, FREE_KERNEL_PAGE_NUM);
+    uint64_t page_idx = find_free_pages(kernel_bitmap, FREE_KERNEL_PAGE_NUM);
     if (page_idx == -1) {
         return swap_page();      // fail to alloc
     }
@@ -65,7 +64,7 @@ ptr_t alloc_kernel_page()
 }
 
 ptr_t alloc_user_page() {
-    int page_idx = find_free_pages(user_bitmap, FREE_USER_PAGE_NUM);
+    uint64_t page_idx = find_free_pages(user_bitmap, FREE_USER_PAGE_NUM);
     if (page_idx == -1) {
         return swap_page();      // fail to alloc
     }
@@ -74,13 +73,6 @@ ptr_t alloc_user_page() {
     // return kva
     return USER_MEM_BASE + PAGE_SIZE * page_idx;
 }
-
-void release_process_page(pcb_t *pcb) {
-    recycle_node_from_list(pcb, &kernel_page_head, kernel_bitmap, 1);
-    recycle_node_from_list(pcb, &user_page_mem_head, user_bitmap, 1);
-    recycle_node_from_list(pcb, &user_page_sd_head, NULL, 0);
-}
-
 /* This is used for mapping kernel virtual address into user page table */
 void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir)
 {
@@ -88,6 +80,35 @@ void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir)
     memcpy((uint8_t *) dest_pgdir, (uint8_t *) src_pgdir, PAGE_SIZE); // copy kernel pgdir
 }
 
+// ------------------------------------------------------------recycle page ---------------------------------------------------
+static inline void recycle_node_from_list(pcb_t *pcb, PageNode_t *head, int is_in_mem) {
+    PageNode_t *p = head->next;
+    while (p != head) {
+        PageNode_t *pnext = p->next;
+        if (p->master_pcb == pcb) {
+            // recycle PageNode
+            p->status = PN_INACTIVE;
+            // recycle MemPage
+            if (is_in_mem) {
+                if (p->uva != p->addr.kva) { // user page
+                    uint64_t page_idx = (p->addr.kva - USER_MEM_BASE) / PAGE_SIZE;
+                    unmark_page_free(page_idx, user_bitmap);
+                } else {
+                    uint64_t page_idx = (p->addr.kva - INIT_KERNEL_STACK) / PAGE_SIZE;
+                    unmark_page_free(page_idx, kernel_bitmap);
+                }
+            }
+            // remove from the list
+            delete_list_node(p);
+        }
+        p = pnext;
+    }
+}
+void release_process_page(pcb_t *pcb) {
+    recycle_node_from_list(pcb, &kernel_page_head, 1);
+    recycle_node_from_list(pcb, &user_page_mem_head, 1);
+    recycle_node_from_list(pcb, &user_page_sd_head, 0);
+}
 /* --------------------------------------------MAP VA to PAGE TABLE -------------------------------------------------------------------*/
 /* allocate physical page for `va`, mapping it into `pgdir`,
    return the kernel virtual address for the page
@@ -150,13 +171,13 @@ void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause) {
     uint64_t vpn = stval & ~(PAGE_SIZE - 1);
     // first time to visit the page
     PageNode_t *p;
-    p = search_list_node(&user_page_mem_head, vpn);
+    p = search_list_node(&user_page_mem_head, vpn, current_running);
     if (p) {
         set_attribute(p->pte_entry, _PAGE_ACCESSED | _PAGE_DIRTY);
         return;
     }
     // page is swapped to sd
-    p = search_list_node(&user_page_sd_head, vpn);
+    p = search_list_node(&user_page_sd_head, vpn, current_running);
     if (p) { // success to find the swapped page
         delete_list_node(p);                       // remove from sd_list
         uintptr_t kva = alloc_user_page();
