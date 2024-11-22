@@ -55,6 +55,7 @@ int sys_mbox_recv(int mbox_idx, void *msg, int msg_length);
 
 
 void sys_pthread_create(pthread_t thread, void (*start_routine)(void *), void *arg, uint64_t exit_funct);
+void sys_pthread_join(pthread_t thread);
 
 /* TODO: [P4-task5] shmpageget/dt */
 /* shmpageget/dt */

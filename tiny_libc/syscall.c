@@ -285,6 +285,10 @@ void sys_shmpagedt(void *addr)
 
 void sys_pthread_create(pthread_t thread, void (*start_routine)(void *), void *arg, uint64_t exit_funct)
 {
-    invoke_syscall((long) SYSCALL_TASKSET, (long) thread, (long) start_routine, (long) arg, (long) exit_funct, IGNORE);
+    invoke_syscall((long) SYSCALL_PTHREAD_CREATE, (long) thread, (long) start_routine, (long) arg, (long) exit_funct, IGNORE);
+}
+void sys_pthread_join(pthread_t thread)
+{
+    invoke_syscall((long) SYSCALL_PTHREAD_JOIN, (long) thread, IGNORE, IGNORE, IGNORE, IGNORE);
 }
 /************************************************************/

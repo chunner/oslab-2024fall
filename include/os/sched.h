@@ -172,4 +172,5 @@ extern pid_t do_getpid();
 /************************************************************/
 
 extern void do_pthread_create(pthread_t thread, void (*start_routine)(void *), void *arg, uint64_t exit_funt);
+extern void do_pthread_join(pthread_t thread);
 #endif

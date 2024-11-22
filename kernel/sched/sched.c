@@ -207,6 +207,15 @@ int get_free_pcb() {
     }
     return -1;  // fail to find
 }
+int search_pthread_pcb(pid_t pid, pthread_t thread) {
+    int i = 0;
+    for (;i < NUM_MAX_TASK;i++) {
+        if (pcb[i].pid == pid && pcb[i].pthread_id == thread && pcb[i].status != TASK_EXITED) {
+            return i;
+        }
+    }
+    return -1;
+}
 /*---------------------------------exec, kill, exit, waitpid --------------------------------------------------*/
 void setup_process_pcb(pcb_t *pcb, task_info_t task) {
     pcb->pid = ++process_id;
@@ -353,11 +362,8 @@ int do_waitpid(pid_t pid) {
     if (i >= NUM_MAX_TASK) {
         return 0;
     }  // fail to find
-    if (pcb[i].status != TASK_EXITED) {
-        do_block(&current_running->list, &pcb[i].block_queue);
-        do_scheduler();
-    } else {
-    }
+    do_block(&current_running->list, &pcb[i].block_queue);
+    do_scheduler();
     return i;
 }
 pid_t do_getpid() {
@@ -468,4 +474,12 @@ void do_pthread_create(pthread_t thread, void (*start_routine)(void *), void *ar
     setup_pthread_stack(&pcb[pcb_id], arg, exit_funt);
     add_readyqueue(&pcb[pcb_id]);
     return;
+}
+void do_pthread_join(pthread_t thread) {
+    int pcb_id;
+    if ((pcb_id = search_pthread_pcb(current_running->pid, thread)) == -1) {
+        return; // fail to find free pcb
+    }
+    do_block(&current_running->list, &pcb[pcb_id].block_queue);
+    do_scheduler();
 }
