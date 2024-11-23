@@ -204,7 +204,7 @@ ENTRY(switch_to)
   
   sd sp, PCB_KERNEL_SP(a1)    # updat kernel sp += SWITCH_TO_SIZE
 
-  jr ra         # go back to do_scheduler (real context)
+  ret         # go back to do_scheduler (real context)
                 # or ret_from_exception   (fake context)
 ENDPROC(switch_to)
 
@@ -214,16 +214,15 @@ ENTRY(ret_from_exception)
   la a0, whole_kernel_lock
   call unlock_kernel
 
-  RESTORE_CONTEXT
   # enable_preempt
   not t0, x0
   csrs CSR_SIE, t0  
 
+  RESTORE_CONTEXT
   sret    // return to sepc
 ENDPROC(ret_from_exception)
 
 ENTRY(exception_handler_entry)
-
   /*save context via the provided macro */
   SAVE_CONTEXT
   /* load ret_from_exception into $ra so that we can return to

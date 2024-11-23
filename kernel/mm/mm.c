@@ -231,7 +231,7 @@ void create_PageNode(uintptr_t kva, uintptr_t uva, PTE *pgdir, pcb_t *pcb) {
     pn_list[i].addr.kva = kva;
     pn_list[i].pid = pcb->pid;
     pn_list[i].uva = uva;
-    printl("<%d> create pagenode, addr = %lx, pid = %d, uva = %d\n", i, &pn_list[i], pn_list[i].pid, pn_list[i].uva);
+    printl("<%d> create pagenode, addr = %lx, pid = %d, uva = %lx\n", i, &pn_list[i], pn_list[i].pid, pn_list[i].uva);
 
     if (uva & 1 << 28) {    // kernel space, 2 level page table
         uva &= VA_MASK;
