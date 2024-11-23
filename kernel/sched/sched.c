@@ -327,21 +327,21 @@ int do_kill(pid_t pid) {
         // ------------kill itself, then go to exit
         if (&pcb[i] == current_running) {
             do_exit();
+        } else {
+            // ----------wake up block queue
+            while (pcb[i].block_queue.next != &pcb[i].block_queue) {
+                do_unblock(pcb[i].block_queue.next);
+            }
+            // -----------release lock
+            release_process_mutex(pid);
+            // ------------recycle mem
+            if (pcb[i].pthread_id == 0) {
+                release_process_page(&pcb[i]);
+            }
+            // -------------recycle pcb
+            pcb[i].status = TASK_EXITED;
+            remove_pcb_queue(&pcb[i]);
         }
-        // ----------wake up block queue
-        while (pcb[i].block_queue.next != &pcb[i].block_queue) {
-            do_unblock(pcb[i].block_queue.next);
-        }
-        // -----------release lock
-        release_process_mutex(pid);
-        // ------------recycle mem
-        if (pcb[i].pthread_id == 0) {
-            release_process_page(&pcb[i]);
-        }
-        // -------------recycle pcb
-        pcb[i].status = TASK_EXITED;
-        remove_pcb_queue(&pcb[i]);
-        return 1;
     }
 }
 void do_exit(void) {
