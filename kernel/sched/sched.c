@@ -54,11 +54,6 @@ int get_next_running() {    //  Modify the current_running pointer.
     }
     return 0;   // fail to get next_running
 }
-void switch_to_current_satp(void) {
-    set_satp(SATP_MODE_SV39, current_running->pid, kva2pa(current_running->pgdir) >> NORMAL_PAGE_SHIFT);
-    local_flush_tlb_all();
-    return;
-}
 void do_scheduler(void)
 {
     // TODO: [p2-task3] Check sleep queue to wake up PCBs
@@ -68,17 +63,14 @@ void do_scheduler(void)
     /************************************************************/
     pcb_t *prepcb = current_running;
     if (get_next_running()) {
-        switch_to_current_satp();
         switch_to(prepcb, current_running);
         return;
     } else {
         if (get_current_cpu_id() == 0) {
             current_running = &pid0_pcb;
-            switch_to_current_satp();
             switch_to(prepcb, current_running);
         } else {
             current_running = &pid1_pcb;
-            switch_to_current_satp();
             switch_to(prepcb, current_running);
         }
         return;

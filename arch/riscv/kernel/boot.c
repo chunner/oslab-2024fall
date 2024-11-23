@@ -70,6 +70,7 @@ extern uintptr_t _start[];
 /*********** start here **************/
 int ARRTIBUTE_BOOTKERNEL boot_kernel(unsigned long mhartid)
 {
+    local_flush_tlb_all();
     if (mhartid == 0) {
         setup_vm();
     } else {
