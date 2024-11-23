@@ -150,6 +150,8 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb)  // offse
     set_attribute(
         &lv1_pgdir[vpn0], _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE |
         _PAGE_EXEC | _PAGE_USER | _PAGE_DIRTY);
+    local_flush_tlb_all();
+    local_flush_icache_all();
     return kva;
 }
 /* -----------------------------------------PAGE NODE LIST---------------------------------------------------------------------------- */
@@ -165,13 +167,14 @@ uintptr_t swap_page() {
     // clear_attribute(swapped_page->pte_entry, _PAGE_ACCESSED | _PAGE_DIRTY);
     *swapped_page->pte_entry = 0;
     local_flush_tlb_page(swapped_page->uva);        // refresh tlb
+    local_flush_icache_all();
     uintptr_t kva = swapped_page->addr.kva;
     // write into sd card
+    printl("swap out kva = %lx, uva = %lx, pid = %d\n", kva, swapped_page->uva, swapped_page->pid);
     if (swapped_page->uva == 0) {
-        printl("error: user.next = %lx\n", swapped_page);
+        printl("error: swapped_page = %lx, kva = %lx, pte = %lx, stateus = %d \n", swapped_page, swapped_page->addr.kva, *swapped_page->pte_entry, swapped_page->status);
         while (1);
     }
-    printl("swap out kva = %lx, uva = %lx, pid = %d\n", kva, swapped_page->uva, swapped_page->pid);
     sd_write(kva2pa(kva), PAGE_SIZE / SECTOR_SIZE, sd_sector_end);
     swapped_page->addr.sector_id = sd_sector_end;
     sd_sector_end += PAGE_SIZE / SECTOR_SIZE;
@@ -190,6 +193,7 @@ void swap_page_in(PageNode_t *p) {
         p->pte_entry, _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE |
         _PAGE_EXEC | _PAGE_USER | _PAGE_DIRTY);
     insert_list_tail(p, &user_page_mem_head);   // insert into mem_list
+    local_flush_tlb_all();
     return;
 }
 
@@ -201,6 +205,8 @@ void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause) {
     p = search_list_node(&user_page_mem_head, vpn, current_running);
     if (p) {
         set_attribute(p->pte_entry, _PAGE_ACCESSED | _PAGE_DIRTY);
+        local_flush_tlb_all();
+        local_flush_icache_all();
         return;
     }
     // page is swapped to sd
@@ -214,6 +220,40 @@ void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause) {
     alloc_page_helper(vpn, current_running->pgdir, current_running);  // stval is va triggering exception
     return;     // jump to ret_from_exception, redo the inst
 }
+
+
+void create_PageNode(uintptr_t kva, uintptr_t uva, PTE *pgdir, pcb_t *pcb) {
+    if (uva == 0) {
+        while (1);
+    }
+    int i = get_free_PageNode();
+    pn_list[i].status = PN_ACTIVE;
+    pn_list[i].addr.kva = kva;
+    pn_list[i].pid = pcb->pid;
+    pn_list[i].uva = uva;
+    printl("<%d> create pagenode, addr = %lx, pid = %d, uva = %d\n", i, &pn_list[i], pn_list[i].pid, pn_list[i].uva);
+
+    if (uva & 1 << 28) {    // kernel space, 2 level page table
+        uva &= VA_MASK;
+        uint64_t vpn2 = uva >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
+        uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (uva >> (NORMAL_PAGE_SHIFT + PPN_BITS));
+        PTE *lv3_pgdir = pgdir;
+        PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
+        pn_list[i].pte_entry = &lv2_pgdir[vpn1];
+        insert_list_tail(&pn_list[i], &kernel_page_head);
+    } else {    // user space, 3 level page level
+        uva &= VA_MASK;
+        uint64_t vpn2 = uva >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
+        uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (uva >> (NORMAL_PAGE_SHIFT + PPN_BITS));
+        uint64_t vpn0 = (uva >> NORMAL_PAGE_SHIFT) ^ (vpn2 << (2 * PPN_BITS)) ^ (vpn1 << PPN_BITS);
+        PTE *lv3_pgdir = pgdir;
+        PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
+        PTE *lv1_pgdir = (PTE *) pa2kva(get_pa(lv2_pgdir[vpn1]));
+        pn_list[i].pte_entry = &lv1_pgdir[vpn0];
+        insert_list_tail(&pn_list[i], &user_page_mem_head);
+    }
+}
+
 uintptr_t shm_page_get(int key)
 {
     // TODO [P4-task4] shm_page_get:

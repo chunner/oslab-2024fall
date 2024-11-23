@@ -180,6 +180,7 @@ ENTRY(switch_to)
   or t4, t3, t4               # t4 = t4 | ppn
   csrw satp, t4               # Write t3 to the satp CSR
   sfence.vma 
+  fence.i
 
   /* restore all callee save registers from kernel stack,
    * see the definition of `struct switchto_context` in sched.h*/

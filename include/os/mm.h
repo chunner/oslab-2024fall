@@ -68,6 +68,7 @@ extern void unmark_page_free(uint64_t page_idx, char bitmap[]);
 
 uint64_t sd_sector_end;
 extern void check_uva_mem(uintptr_t uva_begin, uint64_t len);
+extern void create_PageNode(uintptr_t kva, uintptr_t uva, PTE *pgdir, pcb_t *pcb);
 
 // TODO [P4-task4]: shm_page_get/dt */
 uintptr_t shm_page_get(int key);
@@ -75,8 +76,8 @@ void shm_page_dt(uintptr_t addr);
 
 /* -----------------------------------------PageNode ------------------------------------------------------- */
 typedef enum {
-    PN_ACTIVE,
     PN_INACTIVE,
+    PN_ACTIVE
 } PageNode_status_t;
 
 typedef struct PageNode {
@@ -147,34 +148,6 @@ static inline int get_free_PageNode() {
         }
     }
     return -1;  // fail to find
-}
-
-static inline void create_PageNode(uintptr_t kva, uintptr_t uva, PTE *pgdir, pcb_t *pcb) {
-    int i = get_free_PageNode();
-    pn_list[i].status = PN_ACTIVE;
-    pn_list[i].addr.kva = kva;
-    pn_list[i].pid = pcb->pid;
-    pn_list[i].uva = uva;
-
-    if (uva & 1 << 28) {    // kernel space, 2 level page table
-        uva &= VA_MASK;
-        uint64_t vpn2 = uva >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
-        uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (uva >> (NORMAL_PAGE_SHIFT + PPN_BITS));
-        PTE *lv3_pgdir = pgdir;
-        PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
-        pn_list[i].pte_entry = &lv2_pgdir[vpn1];
-        insert_list_tail(&pn_list[i], &kernel_page_head);
-    } else {    // user space, 3 level page level
-        uva &= VA_MASK;
-        uint64_t vpn2 = uva >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
-        uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (uva >> (NORMAL_PAGE_SHIFT + PPN_BITS));
-        uint64_t vpn0 = (uva >> NORMAL_PAGE_SHIFT) ^ (vpn2 << (2 * PPN_BITS)) ^ (vpn1 << PPN_BITS);
-        PTE *lv3_pgdir = pgdir;
-        PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
-        PTE *lv1_pgdir = (PTE *) pa2kva(get_pa(lv2_pgdir[vpn1]));
-        pn_list[i].pte_entry = &lv1_pgdir[vpn0];
-        insert_list_tail(&pn_list[i], &user_page_mem_head);
-    }
 }
 
 static inline PageNode_t *search_list_node(PageNode_t *head, uintptr_t uva, pcb_t *master_pcb) {
