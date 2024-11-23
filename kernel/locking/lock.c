@@ -4,6 +4,7 @@
 #include <atomic.h>
 #include <os/string.h>
 #include <os/smp.h>
+#include <os/mm.h>
 
 mutex_lock_t mlocks[LOCK_NUM];
 int last_lockid = 0;
@@ -204,6 +205,7 @@ void init_mbox() {
 }
 int do_mbox_open(char *name) {
     int mbox_idx = 0;
+    check_uva_mem(name, 32);
     // try to search a mailbox with the same name
     for (;mbox_idx < MBOX_NUM;mbox_idx++) {
         if (mailbox[mbox_idx].status == MBOX_ACTIVE && strcmp(mailbox[mbox_idx].name, name) == 0) {
@@ -246,6 +248,7 @@ int do_mbox_send(int mbox_idx, void *msg, int msg_length) {
     while (1) {
         if (mailbox[mbox_idx].buffer_idx + msg_length <= MAX_MBOX_LENGTH) {
             int start = mailbox[mbox_idx].buffer_idx;
+            check_uva_mem(msg, msg_length);
             memcpy((uint8_t *) &mailbox[mbox_idx].buffer[start], (uint8_t *) msg, msg_length);
             mailbox[mbox_idx].buffer_idx += msg_length;
             // wake up all reciver
@@ -264,7 +267,7 @@ int do_mbox_recv(int mbox_idx, void *msg, int msg_length) {
     int blockedCount = 0;
     while (1) {
         if (mailbox[mbox_idx].buffer_idx - msg_length >= 0) {
-            // int start = mailbox[mbox_idx].buffer_idx - msg_length;
+            check_uva_mem(msg, msg_length);
             memcpy((uint8_t *) msg, (uint8_t *) &mailbox[mbox_idx].buffer[0], msg_length);
             // move the valid buffer to head
             int remain_length = mailbox[mbox_idx].buffer_idx - msg_length;

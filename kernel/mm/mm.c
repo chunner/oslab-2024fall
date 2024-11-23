@@ -1,10 +1,11 @@
 #include <os/mm.h>
 
 /* ---------------------------------------------BIT MAP------------------------------------------------------------ */
+#define NPAGES2BITMAPCH(npages) (((npages) / 8) + ((npages) % 8 != 0))
 // Each bit represents the state of a page. When initialized, 
 // all bits are set to 0, indicating that all pages are unallocated.
-char user_bitmap[FREE_USER_PAGE_NUM / 8] = { 0 }; // Each char has 8 bits to represent 8 pages
-char kernel_bitmap[FREE_KERNEL_PAGE_NUM / 8] = { 0 };
+volatile char user_bitmap[NPAGES2BITMAPCH(FREE_USER_PAGE_NUM)] = { 0 }; // Each char has 8 bits to represent 8 pages
+volatile char kernel_bitmap[NPAGES2BITMAPCH(FREE_KERNEL_PAGE_NUM)] = { 0 };
 void init_bitmap() {
     // 0xffffffc052000000 - 0xffffffc052004000 are used as stack, first 4 page
     kernel_bitmap[0] |= 0x0f;    // 0b1111
@@ -26,7 +27,7 @@ void init_mem_manager() {
 // return the page_idx in the bitmap
 uint64_t find_free_pages(char bitmap[], int page_num) {
     // Traverse each byte in the bitmap
-    for (uint64_t byte_idx = 0; byte_idx < page_num / 8; byte_idx++) {
+    for (uint64_t byte_idx = 0; byte_idx < NPAGES2BITMAPCH(page_num); byte_idx++) {
         if (bitmap[byte_idx] != 0xFF) {  // Check if there are any free bits in this byte
             // Traverse each bit in the current byte
             for (int bit = 0; bit < 8; bit++) {
@@ -208,4 +209,16 @@ uintptr_t shm_page_get(int key)
 void shm_page_dt(uintptr_t addr)
 {
     // TODO [P4-task4] shm_page_dt:
+}
+
+void check_uva_mem(uintptr_t uva_begin, uint64_t len) {
+    uint64_t vpn = uva_begin & ~(PAGE_SIZE - 1);
+    while (vpn <= uva_begin + len) {
+        PageNode_t *p = search_list_node(&user_page_sd_head, vpn, current_running);
+        if (p) {
+            //while (1);
+            swap_page_in(p);
+        }
+        vpn += PAGE_SIZE;
+    }
 }

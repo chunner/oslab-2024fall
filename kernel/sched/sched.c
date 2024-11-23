@@ -250,6 +250,7 @@ void setup_process_stack(pcb_t *pcb, int argc, char *argv[]) {
         int str_len = strlen(argv[i]) + 1;  // include '\0'
         user_sp_kva -= str_len;
         my_argv[i] = (char *) (user_sp_kva - user_sp_kva_uva_offset);
+        check_uva_mem(argv[i], 32);
         strcpy((char *) user_sp_kva, argv[i]);
     }
     pcb->user_sp = user_sp_kva - user_sp_kva_uva_offset;
@@ -317,28 +318,31 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
 
 }
 int do_kill(pid_t pid) {
-    // ----------pid to pcb_id
-    int i;
-    if ((i = pid_to_pcb_id(pid)) == -1) { // fail to find
-        return -1;
-    }
-    // ------------kill itself, then go to exit
-    if (&pcb[i] == current_running) {
-        do_exit();
+    while (1) {
+        // ----------pid to pcb_id
+        int i;
+        if ((i = pid_to_pcb_id(pid)) == -1) { // fail to find
+            return 1;
+        }
+        // ------------kill itself, then go to exit
+        if (&pcb[i] == current_running) {
+            do_exit();
+        }
+        // ----------wake up block queue
+        while (pcb[i].block_queue.next != &pcb[i].block_queue) {
+            do_unblock(pcb[i].block_queue.next);
+        }
+        // -----------release lock
+        release_process_mutex(pid);
+        // ------------recycle mem
+        if (pcb[i].pthread_id == 0) {
+            release_process_page(&pcb[i]);
+        }
+        // -------------recycle pcb
+        pcb[i].status = TASK_EXITED;
+        remove_pcb_queue(&pcb[i]);
         return 1;
     }
-    // ----------wake up block queue
-    while (pcb[i].block_queue.next != &pcb[i].block_queue) {
-        do_unblock(pcb[i].block_queue.next);
-    }
-    // -----------release lock
-    release_process_mutex(pid);
-    // ------------recycle mem
-    release_process_page(&pcb[i]);
-    // -------------recycle pcb
-    pcb[i].status = TASK_EXITED;
-    remove_pcb_queue(&pcb[i]);
-    return 1;
 }
 void do_exit(void) {
     // wake up wait queue
@@ -348,7 +352,9 @@ void do_exit(void) {
     // release lock
     release_process_mutex(current_running->pid);
     // ------------recycle mem
-    release_process_page(current_running);
+    if (current_running->pthread_id == 0) {
+        release_process_page(current_running);
+    }
     // recycle pcb
     current_running->status = TASK_EXITED;
     do_scheduler();

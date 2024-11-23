@@ -138,7 +138,6 @@ typedef struct mailbox
     int  cite_num;
     list_head full_queue;
     list_head empty_queue;
-    // TODO [P3-TASK2 mailbox]
 } mailbox_t;
 
 #define MBOX_NUM 16
