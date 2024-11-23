@@ -223,9 +223,7 @@ void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause) {
 
 
 void create_PageNode(uintptr_t kva, uintptr_t uva, PTE *pgdir, pcb_t *pcb) {
-    if (uva == 0) {
-        while (1);
-    }
+    assert(uva != 0);
     int i = get_free_PageNode();
     pn_list[i].status = PN_ACTIVE;
     pn_list[i].addr.kva = kva;
@@ -233,7 +231,7 @@ void create_PageNode(uintptr_t kva, uintptr_t uva, PTE *pgdir, pcb_t *pcb) {
     pn_list[i].uva = uva;
     printl("<%d> create pagenode, addr = %lx, pid = %d, uva = %lx\n", i, &pn_list[i], pn_list[i].pid, pn_list[i].uva);
 
-    if (uva & 1 << 28) {    // kernel space, 2 level page table
+    if (uva == kva) {    // kernel space, 2 level page table
         uva &= VA_MASK;
         uint64_t vpn2 = uva >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
         uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (uva >> (NORMAL_PAGE_SHIFT + PPN_BITS));
@@ -264,10 +262,10 @@ void shm_page_dt(uintptr_t addr)
     // TODO [P4-task4] shm_page_dt:
 }
 
-void check_uva_mem(uintptr_t uva_begin, uint64_t len) {
+void check_uva_mem(uintptr_t uva_begin, uint64_t len, pcb_t *pcb) {
     uint64_t vpn = uva_begin & ~(PAGE_SIZE - 1);
     while (vpn <= uva_begin + len) {
-        PageNode_t *p = search_list_node(&user_page_sd_head, vpn, current_running);
+        PageNode_t *p = search_list_node(&user_page_sd_head, vpn, pcb);
         if (p) {
             if (p->uva == 0) {
                 while (1);   // error

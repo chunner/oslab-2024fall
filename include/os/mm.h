@@ -67,7 +67,7 @@ extern void mark_page_allocated(uint64_t page_idx, char bitmap[]);
 extern void unmark_page_free(uint64_t page_idx, char bitmap[]);
 
 uint64_t sd_sector_end;
-extern void check_uva_mem(uintptr_t uva_begin, uint64_t len);
+extern void check_uva_mem(uintptr_t uva_begin, uint64_t len, pcb_t *pcb);
 extern void create_PageNode(uintptr_t kva, uintptr_t uva, PTE *pgdir, pcb_t *pcb);
 
 // TODO [P4-task4]: shm_page_get/dt */
