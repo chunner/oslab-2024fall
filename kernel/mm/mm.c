@@ -1,4 +1,6 @@
 #include <os/mm.h>
+#include <os/irq.h>
+#include <assert.h>
 
 /* ---------------------------------------------BIT MAP------------------------------------------------------------ */
 #define NPAGES2BITMAPCH(npages) (((npages) / 8) + ((npages) % 8 != 0))
@@ -32,6 +34,9 @@ uint64_t find_free_pages(char bitmap[], int page_num) {
             // Traverse each bit in the current byte
             for (int bit = 0; bit < 8; bit++) {
                 uint64_t page_idx = byte_idx * 8 + bit;
+                if (page_idx >= page_num) {
+                    return -1;
+                }
 
                 if (!(bitmap[byte_idx] & (1 << bit))) {  // Check if the page is free
                     return page_idx;
@@ -149,6 +154,7 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb)  // offse
 }
 /* -----------------------------------------PAGE NODE LIST---------------------------------------------------------------------------- */
 uintptr_t swap_page() {
+    assert(user_page_mem_head.next != &user_page_mem_head);
     while (get_attribute(*user_page_mem_head.next->pte_entry, _PAGE_ACCESSED | _PAGE_DIRTY)) {    // the page has be accessed
         clear_attribute(user_page_mem_head.next->pte_entry, _PAGE_ACCESSED | _PAGE_DIRTY);
         forward_list_head(&user_page_mem_head);
@@ -161,7 +167,11 @@ uintptr_t swap_page() {
     local_flush_tlb_page(swapped_page->uva);        // refresh tlb
     uintptr_t kva = swapped_page->addr.kva;
     // write into sd card
-    printl("swap out kva = %lx, uva = %lx\n", kva, swapped_page->uva);
+    if (swapped_page->uva == 0) {
+        printl("error: user.next = %lx\n", swapped_page);
+        while (1);
+    }
+    printl("swap out kva = %lx, uva = %lx, pid = %d\n", kva, swapped_page->uva, swapped_page->pid);
     sd_write(kva2pa(kva), PAGE_SIZE / SECTOR_SIZE, sd_sector_end);
     swapped_page->addr.sector_id = sd_sector_end;
     sd_sector_end += PAGE_SIZE / SECTOR_SIZE;
@@ -169,10 +179,11 @@ uintptr_t swap_page() {
     return kva;
 }
 void swap_page_in(PageNode_t *p) {
+    assert(p->uva != 0);
     delete_list_node(p);                       // remove from sd_list
     uintptr_t kva = alloc_user_page();
     sd_read(kva2pa(kva), PAGE_SIZE / SECTOR_SIZE, p->addr.sector_id);
-    printl("swap in kva = %lx, uva = %lx\n", kva, p->uva);
+    printl("swap in kva = %lx, uva = %lx, pid = %d\n", kva, p->uva, p->pid);
     p->addr.kva = kva;
     set_pfn(p->pte_entry, kva2pa(kva) >> NORMAL_PAGE_SHIFT);
     set_attribute(
@@ -184,6 +195,7 @@ void swap_page_in(PageNode_t *p) {
 
 void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause) {
     uint64_t vpn = stval & ~(PAGE_SIZE - 1);
+
     // first time to visit the page
     PageNode_t *p;
     p = search_list_node(&user_page_mem_head, vpn, current_running);
@@ -194,6 +206,7 @@ void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause) {
     // page is swapped to sd
     p = search_list_node(&user_page_sd_head, vpn, current_running);
     if (p) { // success to find the swapped page
+        assert(p->uva != 0);
         swap_page_in(p);
         return;
     }
@@ -216,7 +229,9 @@ void check_uva_mem(uintptr_t uva_begin, uint64_t len) {
     while (vpn <= uva_begin + len) {
         PageNode_t *p = search_list_node(&user_page_sd_head, vpn, current_running);
         if (p) {
-            //while (1);
+            if (p->uva == 0) {
+                while (1);   // error
+            }
             swap_page_in(p);
         }
         vpn += PAGE_SIZE;
