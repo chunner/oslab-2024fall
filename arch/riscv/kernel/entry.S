@@ -161,10 +161,24 @@ ENTRY(switch_to)
 
   sd sp, PCB_KERNEL_SP(a0)    # updata pre pcb's kernel sp
 
-  li a0,8   // SATP_MODE_SV39
-  lw a1,PCB_PID(a1)
-  ld a2, PCB_PGDIR(a1)
-  jal set_satp
+  // mod
+  li s0,8   // SATP_MODE_SV39
+  li t0, 60                   # Load SATP_MODE_SHIFT into t0
+  sll t1, s0, t0              # t1 = mode << SATP_MODE_SHIFT
+  // asid
+  lw s1,PCB_PID(a1)
+  li t0, 44                   # Load SATP_ASID_SHIFT into t0
+  sll t2, s1, t0              # t2 = asid << SATP_ASID_SHIFT
+  // ppn
+  ld s2, PCB_PGDIR(a1)        # kva
+  li t0, 0xffffffc000000000
+  sub s2, s2, t0              # pa
+  li t0, 12                   # NORMAL_PAGE_SHIFT
+  srl t3, s2, t0
+  // get satp
+  or t4, t1, t2               # t4 = (mode << SATP_MODE_SHIFT) | (asid << SATP_ASID_SHIFT)
+  or t4, t3, t4               # t4 = t4 | ppn
+  csrw satp, t4               # Write t3 to the satp CSR
   sfence.vma 
 
   /* restore all callee save registers from kernel stack,
