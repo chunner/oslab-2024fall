@@ -58,6 +58,8 @@ enum ExcCode
     EXCC_STORE_PAGE_FAULT = 15,
     EXCC_COUNT
 };
+#define SCAUSE_IRQ_FLAG   (1UL << 63)
+#define SCAUSE_EXC_CODE   ~(1UL << 63)
 
 typedef void (*handler_t)(regs_context_t *, uint64_t, uint64_t);
 

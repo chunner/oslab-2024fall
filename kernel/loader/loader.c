@@ -9,11 +9,15 @@ uint64_t load_task_img(pcb_t *pcb, task_info_t task) {    /* setup code and data
     /*----------------------alloc and map vm------------------------------*/
     uint32_t pagenum = NBYTES2PAGE(task.memsize + SECTOR_SIZE); // spare 512 B to handle the offset in image
     uint64_t uva = task.entrypoint;
+    uint64_t kva_entry;
 
     uint32_t sector_num = task.sector_num;
     uint32_t sector_pointer = task.firstsector;
     for (int i = 0;i < pagenum;i++) {
         uint64_t kva = alloc_page_helper(uva, pcb->pgdir, pcb);
+        if (i == 0) {
+            kva_entry = kva;
+        }
         uva += 0x1000lu;       // 4KB == 1000
         if (sector_num * SECTOR_SIZE >= PAGE_SIZE) {    // read (a page == 8 block) per time
             bios_sd_read(kva2pa(kva), PAGE_SIZE / SECTOR_SIZE, sector_pointer); // mem_address, num_of_blocks, block_id
@@ -25,15 +29,11 @@ uint64_t load_task_img(pcb_t *pcb, task_info_t task) {    /* setup code and data
             sector_pointer += sector_num;
         }
     }
-    set_satp(SATP_MODE_SV39, pcb->pid, kva2pa(pcb->pgdir) >> NORMAL_PAGE_SHIFT);    // Temporarily switch satp
-    local_flush_tlb_all();
     // counteract the offset in the image
-    uint8_t *dest = (uint8_t *) task.entrypoint;
-    uint8_t *src = (uint8_t *) (task.entrypoint + task.offset);
+    uint8_t *dest = (uint8_t *) kva_entry;
+    uint8_t *src = (uint8_t *) (kva_entry + task.offset);
     uint32_t len = SECTOR_SIZE * task.sector_num - task.offset;
     memcpy(dest, src, len);
-    set_satp(SATP_MODE_SV39, current_running->pid, kva2pa(current_running->pgdir) >> NORMAL_PAGE_SHIFT);    // switch satp back
-    local_flush_tlb_all();
     return task.entrypoint;
 }
 

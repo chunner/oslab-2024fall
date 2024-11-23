@@ -124,7 +124,7 @@ static inline void insert_list_tail(PageNode_t *p, PageNode_t *head) {
     head->prev = p;
 }
 static inline void forward_list_head(PageNode_t *head) {
-    if (head->next == head) return; // list is empty
+    if (head->next == head || head->next->next == head) return; // list is empty
     // exchange node2 and head
     PageNode_t *node1 = head->prev;
     PageNode_t *node2 = head->next;

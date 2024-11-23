@@ -243,14 +243,15 @@ void setup_process_stack(pcb_t *pcb, int argc, char *argv[]) {
     user_sp_kva -= sizeof(int64_t);    // argc_base
     *(int64_t *) user_sp_kva = (int64_t) argc;
 
+    check_uva_mem(argv, sizeof(char *) * argc);
     user_sp_kva = user_sp_kva - sizeof(char *) * argc;       // kernel_sp_argv_base
     uint64_t argv_base = user_sp_kva - user_sp_kva_uva_offset;    //
     char **my_argv = (char **) user_sp_kva;
     for (int i = 0; i < argc; i++) {
+        check_uva_mem(argv[i], 64);
         int str_len = strlen(argv[i]) + 1;  // include '\0'
         user_sp_kva -= str_len;
         my_argv[i] = (char *) (user_sp_kva - user_sp_kva_uva_offset);
-        check_uva_mem(argv[i], 32);
         strcpy((char *) user_sp_kva, argv[i]);
     }
     pcb->user_sp = user_sp_kva - user_sp_kva_uva_offset;
@@ -289,6 +290,7 @@ void setup_process_stack(pcb_t *pcb, int argc, char *argv[]) {
 }
 pid_t do_exec(char *name, int argc, char *argv[]) {
     /* =============================get taskid and pcb_id */
+    check_uva_mem(name, 32);
     int taskid;
     if ((taskid = taskname_to_taskid(name)) == -1) {
         return -1;  // fail to find valid task
