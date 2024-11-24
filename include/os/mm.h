@@ -74,6 +74,8 @@ extern void create_PageNode(uintptr_t kva, uintptr_t uva, PTE *pgdir, pcb_t *pcb
 uintptr_t shm_page_get(int key);
 void shm_page_dt(uintptr_t addr);
 
+int do_mprotect(void *addr, size_t len, int prot);
+
 /* -----------------------------------------PageNode ------------------------------------------------------- */
 typedef enum {
     PN_INACTIVE,
@@ -176,5 +178,13 @@ typedef struct
     int user_num;
 } shm_page_t;
 shm_page_t shm_pages[SHM_PAGE_NUM];
+/* ---------------------------------------------mprotect ------------------------------------------ */
+enum prot {
+    PROT_NONE,
+    PROT_READ,
+    PROT_WRITE,
+    PROT_EXEC
+};
+
 
 #endif /* MM_H */

@@ -295,4 +295,10 @@ void sys_pthread_join(pthread_t thread)
 {
     invoke_syscall((long) SYSCALL_PTHREAD_JOIN, (long) thread, IGNORE, IGNORE, IGNORE, IGNORE);
 }
+
+
+int sys_mprotect(void *addr, size_t len, int prot) {
+    int retval = invoke_syscall((long) SYSCALL_SHM_DT, (long) addr, (long) len, (long) prot, IGNORE, IGNORE);
+    return retval;
+}
 /************************************************************/

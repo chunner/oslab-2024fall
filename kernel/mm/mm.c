@@ -250,7 +250,19 @@ void create_PageNode(uintptr_t kva, uintptr_t uva, PTE *pgdir, pcb_t *pcb) {
         insert_list_tail(&pn_list[i], &user_page_mem_head);
     }
 }
-
+void check_uva_mem(uintptr_t uva_begin, uint64_t len, pcb_t *pcb) {
+    uint64_t vpn = uva_begin & ~(PAGE_SIZE - 1);
+    while (vpn <= uva_begin + len) {
+        PageNode_t *p = search_list_node(&user_page_sd_head, vpn, pcb);
+        if (p) {
+            if (p->uva == 0) {
+                while (1);   // error
+            }
+            swap_page_in(p);
+        }
+        vpn += PAGE_SIZE;
+    }
+}
 /* --------------------------------------------------------shmpage ------------------------------------------------------ */
 static ptr_t userMemCurr = USER_STACK_ADDR;
 int check_free_uva(uintptr_t va, uintptr_t pgdir) {
@@ -401,16 +413,36 @@ void shm_page_dt(uintptr_t addr)
         }
     }
 }
-void check_uva_mem(uintptr_t uva_begin, uint64_t len, pcb_t *pcb) {
-    uint64_t vpn = uva_begin & ~(PAGE_SIZE - 1);
-    while (vpn <= uva_begin + len) {
-        PageNode_t *p = search_list_node(&user_page_sd_head, vpn, pcb);
-        if (p) {
-            if (p->uva == 0) {
-                while (1);   // error
-            }
-            swap_page_in(p);
-        }
-        vpn += PAGE_SIZE;
+
+/* ------------------------------------------------mprotect -------------------------------------------------------*/
+int do_mprotect(void *addr, size_t len, int prot) {
+    if ((uintptr_t) addr & 0xFFF != 0) { // not aligned to page bound
+        return -1;
     }
+    int n_page = NBYTES2PAGE(len);
+    for (int i = 0;i < n_page;i++) {
+        uintptr_t uva = (uintptr_t) addr + i * PAGE_SIZE;
+        uint64_t vpn2 = uva >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
+        uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (uva >> (NORMAL_PAGE_SHIFT + PPN_BITS));
+        uint64_t vpn0 = (uva >> NORMAL_PAGE_SHIFT) ^ (vpn2 << (2 * PPN_BITS)) ^ (vpn1 << PPN_BITS);
+        PTE *lv3_pgdir = current_running->pgdir;
+        PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
+        PTE *lv1_pgdir = (PTE *) pa2kva(get_pa(lv2_pgdir[vpn1]));
+        PTE *pte = lv1_pgdir[vpn0];
+        if (prot == PROT_NONE) {
+            clear_attribute(pte, _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC);
+        } else if (prot == PROT_READ) {
+            clear_attribute(pte, _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC);
+            set_attribute(pte, _PAGE_READ);
+        } else if (prot == PROT_WRITE) {
+            clear_attribute(pte, _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC);
+            set_attribute(pte, _PAGE_WRITE);
+        } else if (prot == PROT_EXEC) {
+            clear_attribute(pte, _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC);
+            set_attribute(pte, _PAGE_EXEC);
+        } else {
+            return -1;
+        }
+    }
+    return 0;
 }
