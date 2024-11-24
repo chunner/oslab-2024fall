@@ -13,15 +13,15 @@
 pcb_t pcb[NUM_MAX_TASK];
 const ptr_t pid0_stack = INIT_KERNEL_STACK + PAGE_SIZE;     // master kernel 
 const ptr_t pid1_stack = INIT_KERNEL_STACK + PAGE_SIZE * 3;            // slave kernel
-pcb_t pid0_pcb = {
+pcb_t slave_pid0_pcb = {
     .pid = 0,
     .kernel_sp = (ptr_t) pid0_stack,
     .user_sp = (ptr_t) pid0_stack + PAGE_SIZE,
     .cpu_mask = 0x1,
     .pgdir = PGDIR_VA
 };
-pcb_t pid1_pcb = {
-    .pid = 1,
+pcb_t master_pid0_pcb = {
+    .pid = 0,
     .kernel_sp = (ptr_t) pid1_stack,
     .user_sp = (ptr_t) pid1_stack + PAGE_SIZE,
     .cpu_mask = 0x2,
@@ -32,7 +32,7 @@ LIST_HEAD(ready_queue);
 LIST_HEAD(sleep_queue);
 
 /* global process id */
-pid_t process_id = 1;
+pid_t process_id = 0;
 /*=======================================do_scheduler=======================================================*/
 int get_next_running() {    //  Modify the current_running pointer.
     if (current_running->status == TASK_RUNNING)      // put the current_runnning to the tail of ready_queue
@@ -67,10 +67,10 @@ void do_scheduler(void)
         return;
     } else {
         if (get_current_cpu_id() == 0) {
-            current_running = &pid0_pcb;
+            current_running = &master_pid0_pcb;
             switch_to(prepcb, current_running);
         } else {
-            current_running = &pid1_pcb;
+            current_running = &slave_pid0_pcb;
             switch_to(prepcb, current_running);
         }
         return;

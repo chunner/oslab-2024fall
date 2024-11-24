@@ -83,10 +83,10 @@ static void init_pcb(void)
     }
 
     /* TODO: [p2-task1] remember to initialize 'current_running' */
-    current_running_0 = &pid0_pcb;
-    current_running = &pid0_pcb;
+    current_running_0 = &master_pid0_pcb;
+    current_running = &master_pid0_pcb;
 
-    current_running_1 = &pid1_pcb;
+    current_running_1 = &slave_pid0_pcb;
 }
 
 static void init_syscall(void)
