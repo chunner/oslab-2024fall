@@ -198,7 +198,9 @@ void swap_page_in(PageNode_t *p) {
 
 void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause) {
     uint64_t vpn = stval & ~(PAGE_SIZE - 1);
-
+    if (check_mprotect(regs, stval, scause) == 1) {
+        return;
+    }
     // first time to visit the page
     PageNode_t *p;
     p = search_list_node(&user_page_mem_head, vpn, current_running);
@@ -428,7 +430,7 @@ int do_mprotect(void *addr, size_t len, int prot) {
         PTE *lv3_pgdir = current_running->pgdir;
         PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
         PTE *lv1_pgdir = (PTE *) pa2kva(get_pa(lv2_pgdir[vpn1]));
-        PTE *pte = lv1_pgdir[vpn0];
+        PTE *pte = &lv1_pgdir[vpn0];
         if (prot == PROT_NONE) {
             clear_attribute(pte, _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC);
         } else if (prot == PROT_READ) {
@@ -445,4 +447,28 @@ int do_mprotect(void *addr, size_t len, int prot) {
         }
     }
     return 0;
+}
+int check_mprotect(regs_context_t *regs, uint64_t stval, uint64_t scause) {
+    if (check_free_uva(stval, current_running->pgdir) == 1) {     // have no pte
+        return 0;
+    }
+    uintptr_t uva = stval;
+    uint64_t vpn2 = uva >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
+    uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (uva >> (NORMAL_PAGE_SHIFT + PPN_BITS));
+    uint64_t vpn0 = (uva >> NORMAL_PAGE_SHIFT) ^ (vpn2 << (2 * PPN_BITS)) ^ (vpn1 << PPN_BITS);
+    PTE *lv3_pgdir = current_running->pgdir;
+    PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
+    PTE *lv1_pgdir = (PTE *) pa2kva(get_pa(lv2_pgdir[vpn1]));
+    PTE *pte = &lv1_pgdir[vpn0];
+    if ((scause & SCAUSE_EXC_CODE == EXCC_INST_PAGE_FAULT) && get_attribute(pte, _PAGE_EXEC)) {
+        printk("mprotect: addr = 0x%lx, cant exec\n", stval);
+    } else if ((scause & SCAUSE_EXC_CODE == EXCC_LOAD_PAGE_FAULT) && get_attribute(pte, _PAGE_READ)) {
+        printk("mprotect: addr = 0x%lx, cant read\n", stval);
+    } else if ((scause & SCAUSE_EXC_CODE == EXCC_STORE_PAGE_FAULT) && get_attribute(pte, _PAGE_WRITE)) {
+        printk("mprotect: addr = 0x%lx, cant write\n", stval);
+    } else {
+        return 0;
+    }
+    regs->sepc += 4;
+    return 1;
 }

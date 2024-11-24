@@ -63,6 +63,8 @@ void *sys_shmpageget(int key);
 void sys_shmpagedt(void *addr);
 
 void sys_screen_clear(void);
+
+int sys_mprotect(void *addr, size_t len, int prot);
 /************************************************************/
 
 #endif

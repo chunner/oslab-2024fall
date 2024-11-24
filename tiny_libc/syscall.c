@@ -298,7 +298,7 @@ void sys_pthread_join(pthread_t thread)
 
 
 int sys_mprotect(void *addr, size_t len, int prot) {
-    int retval = invoke_syscall((long) SYSCALL_SHM_DT, (long) addr, (long) len, (long) prot, IGNORE, IGNORE);
+    int retval = invoke_syscall((long) SYSCALL_MPTOTECT, (long) addr, (long) len, (long) prot, IGNORE, IGNORE);
     return retval;
 }
 /************************************************************/
