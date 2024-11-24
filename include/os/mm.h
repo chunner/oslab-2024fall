@@ -160,4 +160,21 @@ static inline PageNode_t *search_list_node(PageNode_t *head, uintptr_t uva, pcb_
     }
     return NULL;
 }
+
+/* --------------------------------------------------shmpage------------------------------------*/
+# define SHM_PAGE_NUM 16
+typedef enum {
+    SHM_UNUSED,
+    SHM_USING
+}shm_status_t;
+typedef struct
+{
+    // TODO [P3-TASK2 condition]
+    int key;
+    shm_status_t status;
+    uint64_t kva;
+    int user_num;
+} shm_page_t;
+shm_page_t shm_pages[SHM_PAGE_NUM];
+
 #endif /* MM_H */

@@ -126,6 +126,8 @@ static void init_syscall(void)
     syscall[SYSCALL_TASKSET] = (long (*)())do_taskset;
     syscall[SYSCALL_PTHREAD_CREATE] = (long (*)()) do_pthread_create;
     syscall[SYSCALL_PTHREAD_JOIN] = (long(*)()) do_pthread_join;
+    syscall[SYSCALL_SHM_GET] = (long(*)()) shm_page_get;
+    syscall[SYSCALL_SHM_DT] = (long(*)()) shm_page_dt;
 }
 /************************************************************/
 
@@ -170,6 +172,7 @@ int main(void)
         }
     }
     init_mem_manager();
+    init_shmpage();
 
     // Init jump table provided by kernel and bios(ΦωΦ)
     init_jmptab();

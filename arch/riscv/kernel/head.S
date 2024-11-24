@@ -10,7 +10,7 @@
 #define SLAVE_KERNEL_STACK    0xffffffc050504000
 #define tasknum_loc 0xffffffc0502001f6
 #define taskinfo_offset_loc 0xffffffc0502001f8 # store the offset of task_info in kernel
-#define taskinfo_size 64
+#define taskinfo_size 88
 #define kernel 0xffffffc050202000
 .section ".entry_function","ax"
 ENTRY(_start)

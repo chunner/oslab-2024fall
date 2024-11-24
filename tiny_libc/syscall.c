@@ -276,11 +276,15 @@ int sys_taskset(char *name, pid_t pid, uint64_t mask, int mod) {
 void *sys_shmpageget(int key)
 {
     /* TODO: [p4-task4] call invoke_syscall to implement sys_shmpageget */
+    int retval = invoke_syscall((long) SYSCALL_SHM_GET, (long) key, IGNORE, IGNORE, IGNORE, IGNORE);
+    return retval;
 }
 
 void sys_shmpagedt(void *addr)
 {
     /* TODO: [p4-task4] call invoke_syscall to implement sys_shmpagedt */
+    int retval = invoke_syscall((long) SYSCALL_SHM_DT, (long) addr, IGNORE, IGNORE, IGNORE, IGNORE);
+    return retval;
 }
 
 void sys_pthread_create(pthread_t thread, void (*start_routine)(void *), void *arg, uint64_t exit_funct)

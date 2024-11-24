@@ -20,16 +20,16 @@
 
 #define NBYTES2SEC(nbytes) (((nbytes) / SECTOR_SIZE) + ((nbytes) % SECTOR_SIZE != 0))
 
-#define MAX_NAME_LEN 40       // the max len of task name
+#define MAX_NAME_LEN 64       // the max len of task name
 
 typedef struct {
     char taskname[MAX_NAME_LEN];
+    uint64_t entrypoint;
     uint32_t sector_num;
     uint32_t firstsector;
     uint32_t offset;
-    uint64_t entrypoint;
     uint32_t memsize;
-} task_info_t;      // size == 64 B
+} task_info_t;      // size == 88 B
 
 #define TASK_MAXNUM 16
 static task_info_t taskinfo[TASK_MAXNUM];
