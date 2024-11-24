@@ -2,6 +2,12 @@
 .section ".entry_function","ax"
 ENTRY(_start)
 
+
+    // sys call to record brk
+    li a7, 61         # SYSCALL_GET_BRK
+    la a0, __BSS_END__
+    ecall   
+
     /* TODO: [p1-task3] setup C runtime environment for the user program */
     la t0, __bss_start        # load .bss 's start and end addr
     la t1, __BSS_END__

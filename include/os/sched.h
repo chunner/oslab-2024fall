@@ -120,6 +120,8 @@ typedef struct pcb
     thread_type_t thread_type;
     pthread_t pthread_id;
 
+    uintptr_t brk;
+
 } pcb_t;
 
 /* ready queue to run */

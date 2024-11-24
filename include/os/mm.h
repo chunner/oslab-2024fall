@@ -186,4 +186,6 @@ enum prot {
     PROT_EXEC
 };
 
+extern void do_getbrk(uint64_t bss_end);
+
 #endif /* MM_H */

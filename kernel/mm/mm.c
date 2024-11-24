@@ -475,3 +475,10 @@ int check_mprotect(regs_context_t *regs, uint64_t stval, uint64_t scause) {
     do_exit();
     return 1;
 }
+
+
+
+
+void do_getbrk(uint64_t bss_end) {
+    current_running->brk = ROUNDDOWN(bss_end, PAGE_SIZE);
+}

@@ -300,4 +300,10 @@ int sys_mprotect(void *addr, size_t len, int prot) {
     int retval = invoke_syscall((long) SYSCALL_MPTOTECT, (long) addr, (long) len, (long) prot, IGNORE, IGNORE);
     return retval;
 }
+
+void sys_getbrk(uint64_t bss_end)
+{
+    invoke_syscall((long) SYSCALL_GET_BRK, (long) bss_end, IGNORE, IGNORE, IGNORE, IGNORE);
+}
+
 /************************************************************/
