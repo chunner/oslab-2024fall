@@ -63,14 +63,17 @@ void do_scheduler(void)
     /************************************************************/
     pcb_t *prepcb = current_running;
     if (get_next_running()) {
+        screen_move_cursor(current_running->cursor_x, current_running->cursor_y);
         switch_to(prepcb, current_running);
         return;
     } else {
         if (get_current_cpu_id() == 0) {
             current_running = &master_pid0_pcb;
+            screen_move_cursor(current_running->cursor_x, current_running->cursor_y);
             switch_to(prepcb, current_running);
         } else {
             current_running = &slave_pid0_pcb;
+            screen_move_cursor(current_running->cursor_x, current_running->cursor_y);
             switch_to(prepcb, current_running);
         }
         return;
