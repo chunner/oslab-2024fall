@@ -353,7 +353,21 @@ uintptr_t shm_page_get(int key)
     shm_pages[i].user_num++;
     return uva;
 }
-
+// unmap the user pages
+static inline void delete_uva_page(uintptr_t vpn, pcb_t *pcb) {
+    PageNode_t *p = search_list_node(&user_page_mem_head, vpn, pcb);
+    if (p) {
+        uint64_t page_idx = (p->addr.kva - USER_MEM_BASE) / PAGE_SIZE;
+        unmark_page_free(page_idx, user_bitmap);
+        p->status = PN_INACTIVE;
+        delete_list_node(p);
+    }
+    p = search_list_node(&user_page_sd_head, vpn, pcb);
+    if (p) {
+        p->status = PN_INACTIVE;
+        delete_list_node(p);
+    }
+}
 void shm_page_dt(uintptr_t addr)
 {
     // TODO [P4-task4] shm_page_dt:
@@ -370,9 +384,12 @@ void shm_page_dt(uintptr_t addr)
 
     for (int i = 0; i < SHM_PAGE_NUM; i++) {
         if (shm_pages[i].status == SHM_USING && shm_pages[i].kva == kva) {
+            // delete pagenode
+            uint64_t  vpn = uva & ~(PAGE_SIZE - 1);
+            delete_uva_page(vpn, current_running);
+            // unmap 
             clear_attribute(&lv1_pgdir[vpn0], _PAGE_PRESENT);
             local_flush_tlb_all();
-
             shm_pages[i].user_num--;
             // no thread use it
             if (shm_pages[i].user_num == 0) {

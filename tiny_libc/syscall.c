@@ -276,7 +276,7 @@ int sys_taskset(char *name, pid_t pid, uint64_t mask, int mod) {
 void *sys_shmpageget(int key)
 {
     /* TODO: [p4-task4] call invoke_syscall to implement sys_shmpageget */
-    int retval = invoke_syscall((long) SYSCALL_SHM_GET, (long) key, IGNORE, IGNORE, IGNORE, IGNORE);
+    void *retval = invoke_syscall((long) SYSCALL_SHM_GET, (long) key, IGNORE, IGNORE, IGNORE, IGNORE);
     return retval;
 }
 
