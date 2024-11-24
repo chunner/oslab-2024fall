@@ -75,7 +75,7 @@ uintptr_t shm_page_get(int key);
 void shm_page_dt(uintptr_t addr);
 
 int do_mprotect(void *addr, size_t len, int prot);
-
+extern int check_mprotect(regs_context_t *regs, uint64_t stval, uint64_t scause);
 /* -----------------------------------------PageNode ------------------------------------------------------- */
 typedef enum {
     PN_INACTIVE,
@@ -185,6 +185,5 @@ enum prot {
     PROT_WRITE,
     PROT_EXEC
 };
-
 
 #endif /* MM_H */

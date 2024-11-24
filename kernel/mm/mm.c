@@ -6,8 +6,8 @@
 #define NPAGES2BITMAPCH(npages) (((npages) / 8) + ((npages) % 8 != 0))
 // Each bit represents the state of a page. When initialized, 
 // all bits are set to 0, indicating that all pages are unallocated.
-volatile char user_bitmap[NPAGES2BITMAPCH(FREE_USER_PAGE_NUM)] = { 0 }; // Each char has 8 bits to represent 8 pages
-volatile char kernel_bitmap[NPAGES2BITMAPCH(FREE_KERNEL_PAGE_NUM)] = { 0 };
+char user_bitmap[NPAGES2BITMAPCH(FREE_USER_PAGE_NUM)] = { 0 }; // Each char has 8 bits to represent 8 pages
+char kernel_bitmap[NPAGES2BITMAPCH(FREE_KERNEL_PAGE_NUM)] = { 0 };
 void init_bitmap() {
     // 0xffffffc052000000 - 0xffffffc052004000 are used as stack, first 4 page
     kernel_bitmap[0] |= 0x0f;    // 0b1111
@@ -126,10 +126,9 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb)  // offse
     uint64_t vpn2 = va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
     uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (va >> (NORMAL_PAGE_SHIFT + PPN_BITS));
     uint64_t vpn0 = (va >> NORMAL_PAGE_SHIFT) ^ (vpn2 << (2 * PPN_BITS)) ^ (vpn1 << PPN_BITS);
-    uint64_t offset = va & 0xFFF;   // first 12 bit
     if (lv3_pgdir[vpn2] == 0) {     // alloc a new second-level page directory
         PTE *lv2_pgdir = (PTE *) alloc_kernel_page();
-        create_PageNode((uintptr_t) lv2_pgdir, (uintptr_t) lv2_pgdir, (uintptr_t) PGDIR_VA, pcb);
+        create_PageNode((uintptr_t) lv2_pgdir, (uintptr_t) lv2_pgdir, (PTE *) PGDIR_VA, pcb);
         set_pfn(&lv3_pgdir[vpn2], (uint64_t) kva2pa(lv2_pgdir) >> NORMAL_PAGE_SHIFT);
         set_attribute(&lv3_pgdir[vpn2], _PAGE_PRESENT);
         clear_pgdir(lv2_pgdir);   // clear second-level pgdir page
@@ -137,7 +136,7 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb)  // offse
     PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
     if (lv2_pgdir[vpn1] == 0) {     // alloc a new first_level page directory
         PTE *lv1_pgdir = (PTE *) alloc_kernel_page();
-        create_PageNode((uintptr_t) lv1_pgdir, (uintptr_t) lv1_pgdir, (uintptr_t) PGDIR_VA, pcb);
+        create_PageNode((uintptr_t) lv1_pgdir, (uintptr_t) lv1_pgdir, (PTE *) PGDIR_VA, pcb);
         set_pfn(&lv2_pgdir[vpn1], kva2pa(lv1_pgdir) >> NORMAL_PAGE_SHIFT);
         set_attribute(&lv2_pgdir[vpn1], _PAGE_PRESENT);
         clear_pgdir(lv1_pgdir);   // clear second-level pgdir page
@@ -197,6 +196,7 @@ void swap_page_in(PageNode_t *p) {
 }
 
 void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause) {
+    assert(stval != 0);
     uint64_t vpn = stval & ~(PAGE_SIZE - 1);
     if (check_mprotect(regs, stval, scause) == 1) {
         return;
@@ -418,7 +418,7 @@ void shm_page_dt(uintptr_t addr)
 
 /* ------------------------------------------------mprotect -------------------------------------------------------*/
 int do_mprotect(void *addr, size_t len, int prot) {
-    if ((uintptr_t) addr & 0xFFF != 0) { // not aligned to page bound
+    if (((uintptr_t) addr & 0xFFF) != 0) { // not aligned to page bound
         return -1;
     }
     int n_page = NBYTES2PAGE(len);
@@ -446,6 +446,8 @@ int do_mprotect(void *addr, size_t len, int prot) {
             return -1;
         }
     }
+    local_flush_tlb_all();
+    local_flush_icache_all();
     return 0;
 }
 int check_mprotect(regs_context_t *regs, uint64_t stval, uint64_t scause) {
@@ -460,15 +462,16 @@ int check_mprotect(regs_context_t *regs, uint64_t stval, uint64_t scause) {
     PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
     PTE *lv1_pgdir = (PTE *) pa2kva(get_pa(lv2_pgdir[vpn1]));
     PTE *pte = &lv1_pgdir[vpn0];
-    if ((scause & SCAUSE_EXC_CODE == EXCC_INST_PAGE_FAULT) && get_attribute(pte, _PAGE_EXEC)) {
-        printk("mprotect: addr = 0x%lx, cant exec\n", stval);
-    } else if ((scause & SCAUSE_EXC_CODE == EXCC_LOAD_PAGE_FAULT) && get_attribute(pte, _PAGE_READ)) {
-        printk("mprotect: addr = 0x%lx, cant read\n", stval);
-    } else if ((scause & SCAUSE_EXC_CODE == EXCC_STORE_PAGE_FAULT) && get_attribute(pte, _PAGE_WRITE)) {
-        printk("mprotect: addr = 0x%lx, cant write\n", stval);
+
+    if (((scause & SCAUSE_EXC_CODE) == EXCC_INST_PAGE_FAULT) && get_attribute(*pte, _PAGE_EXEC) == 0) {
+        printk("ERROR: mprotect: addr = 0x%lx, cannot exe", stval);
+    } else if (((scause & SCAUSE_EXC_CODE) == EXCC_LOAD_PAGE_FAULT) && get_attribute(*pte, _PAGE_READ) == 0) {
+        printk("ERROR: mprotect: addr = 0x%lx, cannot read", stval);
+    } else if (((scause & SCAUSE_EXC_CODE) == EXCC_STORE_PAGE_FAULT) && get_attribute(*pte, _PAGE_WRITE) == 0) {
+        printk("ERROR: mprotect: addr = 0x%lx, cannot write", stval);
     } else {
         return 0;
     }
-    regs->sepc += 4;
+    do_exit();
     return 1;
 }

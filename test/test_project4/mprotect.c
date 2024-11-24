@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <assert.h>
+#include <string.h>
 
 #define PAGE_SIZE 4096 // 4K = 0x1000
 enum prot {
@@ -13,48 +14,62 @@ enum prot {
     PROT_WRITE,
     PROT_EXEC
 };
-unsigned char code[] = {
-    // // NOP 指令 : 填充无操作指令
-    // 0x13, 0x00, 0x00, 0x00,  // NOP: addi x0, x0, 0
-    0x80, 0x82
-    // RET 指令 (jalr x1, x0, 0): 跳转到 x1 寄存器保存的返回地址
-    // 0x00, 0x00, 0x00, 0xF7,  // jalr x1, x0, 0 -> 返回到保存的地址
-};
-int main() {
+#define BUF_LEN 20
+
+int main(int argc, char *argv[]) {
+    assert(argc >= 2);
+    int print_location = (argc == 2) ? 0 : atoi(argv[2]);
+    sys_move_cursor(0, print_location);
 
     long value;
     uintptr_t mem1 = 0x20000;
     uintptr_t mem2 = 0x21000;
     void (*func)() = (void (*)())mem2;
-    sys_move_cursor(0, 2);
 
     *(long *) mem1 = 12;
-    memcpy(mem2, code, sizeof(code));
+    *(long *) mem2 = 0x8082;
 
-    printf("--------------------test begin\n");
-    /* -------------------------------------test prot noe */
-    sys_mprotect(mem1, PAGE_SIZE + 1, PROT_NONE);
-    printf("try to prot_none:\n");
-    value = *(long *) mem2;
-    memcpy(mem2, code, sizeof(code));
-    func();
-    /* -------------------------------------test prot read */
-    sys_mprotect(mem1, PAGE_SIZE + 1, PROT_READ);
-    printf("try to prot_read:\n");
-    value = *(long *) mem2;
-    memcpy(mem2, code, sizeof(code));
-    func();
-    /* -------------------------------------test prot write */
-    sys_mprotect(mem1, PAGE_SIZE + 1, PROT_WRITE);
-    printf("try to prot_write:\n");
-    value = *(long *) mem2;
-    memcpy(mem2, code, sizeof(code));
-    func();
-    /* -------------------------------------test prot write */
-    sys_mprotect(mem1, PAGE_SIZE + 1, PROT_EXEC);
-    printf("try to prot_exec:\n");
-    value = *(long *) mem2;
-    memcpy(mem2, code, sizeof(code));
-    func();
+    if (argv[1][0] == 1 + '0') {     // read
+        sys_mprotect(mem1, PAGE_SIZE + 1, PROT_NONE);
+        printf("try to prot_none:");
+        value = *(long *) mem2;
+    } else if (argv[1][0] == 2 + '0') {  //write
+        sys_mprotect(mem1, PAGE_SIZE + 1, PROT_NONE);
+        *(long *) mem2 = 0x8082;
+    } else if (argv[1][0] == 3 + '0') {
+        sys_mprotect(mem1, PAGE_SIZE + 1, PROT_NONE);
+        func();
+    } else if (argv[1][0] == 4 + '0') {
+        sys_mprotect(mem1, PAGE_SIZE + 1, PROT_READ);
+        printf("try to prot_read:");
+        value = *(long *) mem2; // read
+    } else if (argv[1][0] == 5 + '0') {
+        sys_mprotect(mem1, PAGE_SIZE + 1, PROT_READ);
+        *(long *) mem2 = 0x8082;   // wirte
+    } else if (argv[1][0] == 6 + '0') {
+        sys_mprotect(mem1, PAGE_SIZE + 1, PROT_READ);
+        func();
+    } else if (argv[1][0] == 7 + '0') {
+        sys_mprotect(mem1, PAGE_SIZE + 1, PROT_EXEC);
+        printf("try to prot_exec:");
+        value = *(long *) mem2; // read
+    } else if (argv[1][0] == 8 + '0') {
+        sys_mprotect(mem1, PAGE_SIZE + 1, PROT_EXEC);
+        *(long *) mem2 = 0x8082;   // wirte
+    } else if (argv[1][0] == 9 + '0') {
+        sys_mprotect(mem1, PAGE_SIZE + 1, PROT_EXEC);
+        func();
+    } else if (argv[1][0] == 0 + '0') {
+        for (int i = 1;i <= 9;i++) {
+            char buf_location[BUF_LEN];
+            char buf_handle[BUF_LEN];
+            assert(itoa(i, buf_location, BUF_LEN, 10) != -1);
+            assert(itoa(i, buf_handle, BUF_LEN, 10) != -1);
+            int print_loc = i;
+            char *argv[] = { "mprotect", buf_handle, buf_location };
+            int argc = 3;
+            sys_exec(argv[0], 3, argv);
+        }
+    }
     return 0;
 }
