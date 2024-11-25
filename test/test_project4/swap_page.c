@@ -10,11 +10,13 @@
 #define PAGE_SIZE 4096 // 4K = 0x1000
 int main() {
     srand(clock());
-    uintptr_t mem1 = 0x20000;
-    uintptr_t mem2 = 0x20000;
+    // uintptr_t mem1 = 0x20000;
+    // uintptr_t mem2 = 0x20000;
     int curs = 0;
     int i;
     while (1) {
+        uintptr_t mem1 = malloc(PAGE_SIZE * PAGE_NUM);
+        uintptr_t mem2 = mem1;
         sys_move_cursor(0, 2);
         long val[PAGE_NUM];
         for (i = 0; i < PAGE_NUM; i++)

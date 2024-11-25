@@ -486,7 +486,7 @@ void do_getbrk(uint64_t bss_end) {
 int check_brk(uintptr_t vpn) {
     if (vpn > current_running->brk && vpn < USER_STACK_END) {
         printk("ERROR: segment fault");
-        do_exit;
+        do_exit();
         return 1;
     } else {
         return 0;
