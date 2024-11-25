@@ -15,6 +15,7 @@ enum prot {
     PROT_EXEC
 };
 #define BUF_LEN 20
+#define PAGE_SIZE 4096 // 4K = 0x1000
 
 int main(int argc, char *argv[]) {
     assert(argc >= 2);
@@ -22,8 +23,8 @@ int main(int argc, char *argv[]) {
     sys_move_cursor(0, print_location);
 
     long value;
-    uintptr_t mem1 = 0x20000;
-    uintptr_t mem2 = 0x21000;
+    uintptr_t mem1 = malloc(PAGE_SIZE * 2);;
+    uintptr_t mem2 = mem1 + PAGE_SIZE;
     void (*func)() = (void (*)())mem2;
 
     *(long *) mem1 = 12;
