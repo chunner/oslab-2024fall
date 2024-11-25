@@ -68,6 +68,10 @@ int sys_mprotect(void *addr, size_t len, int prot);
 void sys_getbrk(uint64_t bss_end);
 int brk(void *addr);
 void *sbrk(intptr_t increment);
+
+/* net send and recv */
+int sys_net_send(void *txpacket, int length);
+int sys_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens);
 /************************************************************/
 
 #endif
