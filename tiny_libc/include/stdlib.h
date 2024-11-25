@@ -11,6 +11,9 @@ int rand(void);
 
 long atol(const char *str);
 int atoi(const char *str);
-int itoa(int num, char* str, int len, int base);
+int itoa(int num, char *str, int len, int base);
+
+void *malloc(size_t size);
+void free(void *ptr);
 
 #endif

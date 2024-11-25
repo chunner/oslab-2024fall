@@ -130,6 +130,8 @@ static void init_syscall(void)
     syscall[SYSCALL_SHM_DT] = (long(*)()) shm_page_dt;
     syscall[SYSCALL_MPTOTECT] = (long(*)()) do_mprotect;
     syscall[SYSCALL_GET_BRK] = (long(*)()) do_getbrk;
+    syscall[SYSCALL_BRK] = (long(*)()) do_brk;
+    syscall[SYSCALL_SBRK] = (long(*)()) do_sbrk;
 }
 /************************************************************/
 

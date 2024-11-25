@@ -431,6 +431,7 @@ void init_pthread_pcb(pcb_t *pcb, pthread_t thread, uint64_t start_routine) {
     strcpy(pcb->taskname, current_running->taskname);
     pcb->thread_type = PTHREAD;
     pcb->pthread_id = thread;
+    pcb->brk = current_running->brk;
 }
 void setup_pthread_stack(pcb_t *pcb, void *arg, uint64_t exit_funt) {
     // -------- user stack

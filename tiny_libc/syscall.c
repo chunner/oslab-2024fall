@@ -306,4 +306,14 @@ void sys_getbrk(uint64_t bss_end)
     invoke_syscall((long) SYSCALL_GET_BRK, (long) bss_end, IGNORE, IGNORE, IGNORE, IGNORE);
 }
 
+int brk(void *addr)
+{
+    invoke_syscall((long) SYSCALL_BRK, (long) addr, IGNORE, IGNORE, IGNORE, IGNORE);
+}
+
+void *sbrk(intptr_t increment)
+{
+    invoke_syscall((long) SYSCALL_SBRK, (long) increment, IGNORE, IGNORE, IGNORE, IGNORE);
+}
+
 /************************************************************/

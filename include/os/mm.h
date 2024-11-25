@@ -51,6 +51,7 @@
 #define NBYTES2PAGE(nbytes) (((nbytes) / PAGE_SIZE) + ((nbytes) % PAGE_SIZE != 0))
 
 #define USER_STACK_ADDR 0xf00010000     // user sp : 0xf_0000_f000 - 0xf_0001_0000
+#define USER_STACK_END USER_STACK_ADDR-5*PAGE_SIZE
 #define nsectors_image_loc 0xffffffc0502001f2
 
 // TODO [P4-task1] */
@@ -187,5 +188,8 @@ enum prot {
 };
 
 extern void do_getbrk(uint64_t bss_end);
+extern int check_brk(uintptr_t vpn);
+extern int do_brk(void *addr);
+extern void *do_sbrk(intptr_t icrement);
 
 #endif /* MM_H */

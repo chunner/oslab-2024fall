@@ -65,6 +65,9 @@ void sys_shmpagedt(void *addr);
 void sys_screen_clear(void);
 
 int sys_mprotect(void *addr, size_t len, int prot);
+void sys_getbrk(uint64_t bss_end);
+int brk(void *addr);
+void *sbrk(intptr_t increment);
 /************************************************************/
 
 #endif

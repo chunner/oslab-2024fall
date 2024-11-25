@@ -218,6 +218,9 @@ void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause) {
         return;
     }
     // have not create page_node
+    if (check_brk(vpn) == 1) {
+        return;
+    }
     alloc_page_helper(vpn, current_running->pgdir, current_running);  // stval is va triggering exception
     return;     // jump to ret_from_exception, redo the inst
 }
@@ -476,9 +479,35 @@ int check_mprotect(regs_context_t *regs, uint64_t stval, uint64_t scause) {
     return 1;
 }
 
-
-
-
+/* ------------------------------------------brk/sbrk----------------------------------------------------- */
 void do_getbrk(uint64_t bss_end) {
-    current_running->brk = ROUNDDOWN(bss_end, PAGE_SIZE);
+    current_running->brk = ROUNDDOWN(bss_end + PAGE_SIZE, PAGE_SIZE);
+}
+int check_brk(uintptr_t vpn) {
+    if (vpn > current_running->brk && vpn < USER_STACK_END) {
+        printk("ERROR: segment fault");
+        do_exit;
+        return 1;
+    } else {
+        return 0;
+    }
+}
+int do_brk(void *addr) {
+    uintptr_t vpn = (uintptr_t) addr & ~(PAGE_SIZE - 1);;
+    if (vpn > current_running->brk && vpn < USER_STACK_END) {
+        current_running->brk = (uintptr_t) addr;
+        return 0;
+    } else {
+        return -1;
+    }
+}
+void *do_sbrk(intptr_t increment) {
+    increment = ROUND(increment, PAGE_SIZE);
+    if (current_running->brk + increment < USER_STACK_END) {
+        intptr_t old_brk = current_running->brk;
+        current_running->brk += increment;
+        return old_brk;
+    } else {
+        return (void *) -1;
+    }
 }

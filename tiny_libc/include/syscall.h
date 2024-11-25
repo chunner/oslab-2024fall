@@ -45,5 +45,7 @@
 #define SYSCALL_PTHREAD_JOIN 59
 #define SYSCALL_MPTOTECT 60
 #define SYSCALL_GET_BRK 61
+#define SYSCALL_BRK 62
+#define SYSCALL_SBRK 63
 
 #endif
