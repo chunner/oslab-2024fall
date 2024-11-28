@@ -8,10 +8,7 @@
 // all bits are set to 0, indicating that all pages are unallocated.
 char user_bitmap[NPAGES2BITMAPCH(FREE_USER_PAGE_NUM)] = { 0 }; // Each char has 8 bits to represent 8 pages
 char kernel_bitmap[NPAGES2BITMAPCH(FREE_KERNEL_PAGE_NUM)] = { 0 };
-void init_bitmap() {
-    // 0xffffffc052000000 - 0xffffffc052004000 are used as stack, first 4 page
-    kernel_bitmap[0] |= 0x0f;    // 0b1111
-}
+
 void init_mem_manager() {
     // sd buffer addr
     sd_sector_end = (uint64_t) * (short *) nsectors_image_loc;
@@ -20,11 +17,12 @@ void init_mem_manager() {
     for (int i = 0;i < PageNode_MAXNUM;i++) {
         pn_list[i].status = PN_INACTIVE;
     }
+    // list head
     init_list_head(&kernel_page_head);
     init_list_head(&user_page_mem_head);
     init_list_head(&user_page_sd_head);
-
-    init_bitmap();
+    // 0xffffffc052000000 - 0xffffffc052004000 are used as stack, first 4 page
+    kernel_bitmap[0] |= 0x0f;    // 0b1111
 }
 // return the page_idx in the bitmap
 uint64_t find_free_pages(char bitmap[], int page_num) {
@@ -57,65 +55,30 @@ void unmark_page_free(uint64_t page_idx, char bitmap[]) {
 
 
 /* -----------------------------------------------------------Alloc Page-------------------------------------------------------------------- */
+// alock a page of kva: 4KB for kernel, return kva  
 ptr_t alloc_kernel_page()
 {
     uint64_t page_idx = find_free_pages(kernel_bitmap, FREE_KERNEL_PAGE_NUM);
     if (page_idx == -1) {
-        return swap_page();      // fail to alloc
+        return swap_page_out();      // fail to alloc
     }
     mark_page_allocated(page_idx, kernel_bitmap);
 
     // return kva
     return INIT_KERNEL_STACK + PAGE_SIZE * page_idx;
 }
-
+// alock a page of kva: 4KB for user, return kva  
 ptr_t alloc_user_page() {
     uint64_t page_idx = find_free_pages(user_bitmap, FREE_USER_PAGE_NUM);
     if (page_idx == -1) {
-        return swap_page();      // fail to alloc
+        return swap_page_out();      // fail to alloc
     }
     mark_page_allocated(page_idx, user_bitmap);
 
     // return kva
     return USER_MEM_BASE + PAGE_SIZE * page_idx;
 }
-/* This is used for mapping kernel virtual address into user page table */
-void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir)
-{
-    // share_pgtable:
-    memcpy((uint8_t *) dest_pgdir, (uint8_t *) src_pgdir, PAGE_SIZE); // copy kernel pgdir
-}
 
-// ------------------------------------------------------------recycle page ---------------------------------------------------
-static inline void recycle_node_from_list(pcb_t *pcb, PageNode_t *head, int is_in_mem) {
-    PageNode_t *p = head->next;
-    while (p != head) {
-        PageNode_t *pnext = p->next;
-        if (p->pid == pcb->pid) {
-            // recycle PageNode
-            p->status = PN_INACTIVE;
-            // recycle MemPage
-            if (is_in_mem) {
-                if (p->uva != p->addr.kva) { // user page
-                    uint64_t page_idx = (p->addr.kva - USER_MEM_BASE) / PAGE_SIZE;
-                    unmark_page_free(page_idx, user_bitmap);
-                } else {
-                    uint64_t page_idx = (p->addr.kva - INIT_KERNEL_STACK) / PAGE_SIZE;
-                    unmark_page_free(page_idx, kernel_bitmap);
-                }
-            }
-            // remove from the list
-            delete_list_node(p);
-        }
-        p = pnext;
-    }
-}
-void release_process_page(pcb_t *pcb) {
-    recycle_node_from_list(pcb, &kernel_page_head, 1);
-    recycle_node_from_list(pcb, &user_page_mem_head, 1);
-    recycle_node_from_list(pcb, &user_page_sd_head, 0);
-}
-/* --------------------------------------------MAP VA to PAGE TABLE -------------------------------------------------------------------*/
 /* allocate physical page for `va`, mapping it into `pgdir`,
    return the kernel virtual address for the page
    */
@@ -153,9 +116,108 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb)  // offse
     local_flush_icache_all();
     return kva;
 }
-/* -----------------------------------------PAGE NODE LIST---------------------------------------------------------------------------- */
-uintptr_t swap_page() {
+// ------------------------------------------------------------recycle page ---------------------------------------------------
+static inline void recycle_node_from_list(pcb_t *pcb, PageNode_t *head, int is_in_mem) {
+    PageNode_t *p = head->next;
+    while (p != head) {
+        PageNode_t *pnext = p->next;
+        if (p->pid == pcb->pid) {
+            // recycle PageNode
+            p->status = PN_INACTIVE;
+            // recycle MemPage
+            if (is_in_mem) {
+                if (p->uva != p->addr.kva) { // user page
+                    uint64_t page_idx = (p->addr.kva - USER_MEM_BASE) / PAGE_SIZE;
+                    unmark_page_free(page_idx, user_bitmap);
+                } else {
+                    uint64_t page_idx = (p->addr.kva - INIT_KERNEL_STACK) / PAGE_SIZE;
+                    unmark_page_free(page_idx, kernel_bitmap);
+                }
+            }
+            // remove from the list
+            delete_list_node(p);
+        }
+        p = pnext;
+    }
+}
+void release_process_page(pcb_t *pcb) {
+    recycle_node_from_list(pcb, &kernel_page_head, 1);
+    recycle_node_from_list(pcb, &user_page_mem_head, 1);
+    recycle_node_from_list(pcb, &user_page_sd_head, 0);
+}
+/* --------------------------------------------tool fuction -------------------------------------------------------------------*/
+/* This is used for mapping kernel virtual address into user page table */
+void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir)
+{
+    // share_pgtable:
+    memcpy((uint8_t *) dest_pgdir, (uint8_t *) src_pgdir, PAGE_SIZE); // copy kernel pgdir
+}
+
+PTE *kva2pte(uintptr_t kva, PTE *pgdir) {
+    kva = kva & VA_MASK;
+    uint64_t vpn2 = kva >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
+    uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (kva >> (NORMAL_PAGE_SHIFT + PPN_BITS));
+    PTE *lv3_pgdir = current_running->pgdir;
+    if (lv3_pgdir[vpn2] == 0) {
+        return NULL;
+    }
+    PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
+
+    return (PTE *) (&lv2_pgdir[vpn1]);
+}
+PTE *uva2pte(uintptr_t uva, PTE *pgdir) {
+    PTE *lv3_pgdir = (PTE *) pgdir;
+    uva &= VA_MASK;
+    uint64_t vpn2 = uva >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
+    uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (uva >> (NORMAL_PAGE_SHIFT + PPN_BITS));
+    uint64_t vpn0 = (uva >> NORMAL_PAGE_SHIFT) ^ (vpn2 << (2 * PPN_BITS)) ^ (vpn1 << PPN_BITS);
+
+    if (lv3_pgdir[vpn2] == 0) {
+        return NULL;
+    }
+    PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
+    if (lv2_pgdir[vpn1] == 0) {
+        return NULL;
+    }
+    PTE *lv1_pgdir = (PTE *) pa2kva(get_pa(lv2_pgdir[vpn1]));
+    return (PTE *) (&lv1_pgdir[vpn0]);
+}
+void create_PageNode(uintptr_t kva, uintptr_t uva, PTE *pgdir, pcb_t *pcb) {
+    assert(uva != 0);
+    int i = get_free_PageNode();
+    pn_list[i].status = PN_ACTIVE;
+    pn_list[i].addr.kva = kva;
+    pn_list[i].pid = pcb->pid;
+    pn_list[i].uva = uva;
+    printl("<%d> create pagenode, addr = %lx, pid = %d, uva = %lx\n", i, &pn_list[i], pn_list[i].pid, pn_list[i].uva);
+
+    if (uva == kva) {    // kernel space, 2 level page table
+        pn_list[i].pte_entry = kva2pte(kva, pgdir);
+        insert_list_tail(&pn_list[i], &kernel_page_head);
+    } else {    // user space, 3 level page level
+        pn_list[i].pte_entry = uva2pte(uva, pgdir);
+        insert_list_tail(&pn_list[i], &user_page_mem_head);
+    }
+}
+// check the uva is in mem when kernel visit it
+void check_uva_mem(uintptr_t uva_begin, uint64_t len, pcb_t *pcb) {
+    uint64_t vpn = uva_begin & ~(PAGE_SIZE - 1);
+    while (vpn <= uva_begin + len) {
+        PageNode_t *p = search_list_node(&user_page_sd_head, vpn, pcb);
+        if (p) {
+            if (p->uva == 0) {
+                while (1);   // error
+            }
+            swap_page_in(p);
+        }
+        vpn += PAGE_SIZE;
+    }
+}
+/* -----------------------------------------PAGE Management--------------------------------------------------------------------------- */
+// swap out a page, return the kva
+uintptr_t swap_page_out() {
     assert(user_page_mem_head.next != &user_page_mem_head);
+    // select a page in user_page_mem
     while (get_attribute(*user_page_mem_head.next->pte_entry, _PAGE_ACCESSED | _PAGE_DIRTY)) {    // the page has be accessed
         clear_attribute(user_page_mem_head.next->pte_entry, _PAGE_ACCESSED | _PAGE_DIRTY);
         forward_list_head(&user_page_mem_head);
@@ -165,20 +227,18 @@ uintptr_t swap_page() {
     delete_list_node(swapped_page);
     clear_attribute(swapped_page->pte_entry, _PAGE_PRESENT);
     local_flush_tlb_page(swapped_page->uva);        // refresh tlb
-    local_flush_icache_all();
     uintptr_t kva = swapped_page->addr.kva;
-    // write into sd card
+
     printl("swap out kva = %lx, uva = %lx, pid = %d\n", kva, swapped_page->uva, swapped_page->pid);
-    if (swapped_page->uva == 0) {
-        printl("error: swapped_page = %lx, kva = %lx, pte = %lx, stateus = %d \n", swapped_page, swapped_page->addr.kva, *swapped_page->pte_entry, swapped_page->status);
-        while (1);
-    }
+    assert(swapped_page->uva != 0);
+    // write into sd card
     sd_write(kva2pa(kva), PAGE_SIZE / SECTOR_SIZE, sd_sector_end);
     swapped_page->addr.sector_id = sd_sector_end;
     sd_sector_end += PAGE_SIZE / SECTOR_SIZE;
     insert_list_tail(swapped_page, &user_page_sd_head);
     return kva;
 }
+// swap in a page
 void swap_page_in(PageNode_t *p) {
     assert(p->uva != 0);
     delete_list_node(p);                       // remove from sd_list
@@ -224,80 +284,8 @@ void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause) {
     alloc_page_helper(vpn, current_running->pgdir, current_running);  // stval is va triggering exception
     return;     // jump to ret_from_exception, redo the inst
 }
-
-
-void create_PageNode(uintptr_t kva, uintptr_t uva, PTE *pgdir, pcb_t *pcb) {
-    assert(uva != 0);
-    int i = get_free_PageNode();
-    pn_list[i].status = PN_ACTIVE;
-    pn_list[i].addr.kva = kva;
-    pn_list[i].pid = pcb->pid;
-    pn_list[i].uva = uva;
-    printl("<%d> create pagenode, addr = %lx, pid = %d, uva = %lx\n", i, &pn_list[i], pn_list[i].pid, pn_list[i].uva);
-
-    if (uva == kva) {    // kernel space, 2 level page table
-        uva &= VA_MASK;
-        uint64_t vpn2 = uva >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
-        uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (uva >> (NORMAL_PAGE_SHIFT + PPN_BITS));
-        PTE *lv3_pgdir = pgdir;
-        PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
-        pn_list[i].pte_entry = &lv2_pgdir[vpn1];
-        insert_list_tail(&pn_list[i], &kernel_page_head);
-    } else {    // user space, 3 level page level
-        uva &= VA_MASK;
-        uint64_t vpn2 = uva >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
-        uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (uva >> (NORMAL_PAGE_SHIFT + PPN_BITS));
-        uint64_t vpn0 = (uva >> NORMAL_PAGE_SHIFT) ^ (vpn2 << (2 * PPN_BITS)) ^ (vpn1 << PPN_BITS);
-        PTE *lv3_pgdir = pgdir;
-        PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
-        PTE *lv1_pgdir = (PTE *) pa2kva(get_pa(lv2_pgdir[vpn1]));
-        pn_list[i].pte_entry = &lv1_pgdir[vpn0];
-        insert_list_tail(&pn_list[i], &user_page_mem_head);
-    }
-}
-void check_uva_mem(uintptr_t uva_begin, uint64_t len, pcb_t *pcb) {
-    uint64_t vpn = uva_begin & ~(PAGE_SIZE - 1);
-    while (vpn <= uva_begin + len) {
-        PageNode_t *p = search_list_node(&user_page_sd_head, vpn, pcb);
-        if (p) {
-            if (p->uva == 0) {
-                while (1);   // error
-            }
-            swap_page_in(p);
-        }
-        vpn += PAGE_SIZE;
-    }
-}
-/* --------------------------------------------------------shmpage ------------------------------------------------------ */
-static ptr_t userMemCurr = USER_STACK_ADDR;
-int check_free_uva(uintptr_t va, uintptr_t pgdir) {
-    PTE *lv3_pgdir = (PTE *) pgdir;
-    va &= VA_MASK;
-    uint64_t vpn2 = va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
-    uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (va >> (NORMAL_PAGE_SHIFT + PPN_BITS));
-    uint64_t vpn0 = (va >> NORMAL_PAGE_SHIFT) ^ (vpn2 << (2 * PPN_BITS)) ^ (vpn1 << PPN_BITS);
-    uint64_t offset = va & 0xFFF;   // first 12 bit
-    if (lv3_pgdir[vpn2] == 0) {
-        return 1;
-    }
-    PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
-    if (lv2_pgdir[vpn1] == 0) {
-        return 1;
-    }
-    PTE *lv1_pgdir = (PTE *) pa2kva(get_pa(lv2_pgdir[vpn1]));
-    if (lv1_pgdir[vpn0] == 0) {
-        return 1;
-    }
-    return 0;
-}
-
-
-ptr_t allocFreeUva(int numPage) {
-    ptr_t ret = ROUND(userMemCurr, PAGE_SIZE);
-    userMemCurr = ret + numPage * PAGE_SIZE;
-    return ret;
-}
-int map_page(uintptr_t va, uintptr_t pa, uintptr_t pgdir, pcb_t *pcb) {
+/* -------------------------------------map va to pa ----------------------------------------------------------------- */
+int umap_page(uintptr_t va, uintptr_t pa, uintptr_t pgdir, pcb_t *pcb) {
     PTE *lv3_pgdir = (PTE *) pgdir;
     va &= VA_MASK;
     uint64_t vpn2 = va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
@@ -328,8 +316,15 @@ int map_page(uintptr_t va, uintptr_t pa, uintptr_t pgdir, pcb_t *pcb) {
         &lv1_pgdir[vpn0], _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE |
         _PAGE_EXEC | _PAGE_USER | _PAGE_DIRTY);
     local_flush_tlb_all();
-    local_flush_icache_all();
     return 1;
+}
+/* --------------------------------------------------------shmpage ------------------------------------------------------ */
+static ptr_t userMemCurr = USER_STACK_ADDR;
+
+ptr_t allocFreeUva(int numPage) {
+    ptr_t ret = ROUND(userMemCurr, PAGE_SIZE);
+    userMemCurr = ret + numPage * PAGE_SIZE;
+    return ret;
 }
 void init_shmpage() {
     for (int i = 0; i < SHM_PAGE_NUM; i++) {
@@ -348,8 +343,8 @@ uintptr_t shm_page_get(int key)
         if (shm_pages[i].status == SHM_USING && shm_pages[i].key == key) {
             do {
                 uva = allocFreeUva(1);
-            } while (check_free_uva(uva, current_running->pgdir) == 0);
-            map_page(uva, kva2pa(shm_pages[i].kva), current_running->pgdir, current_running);
+            } while (uva2pte(uva, current_running->pgdir) != NULL);
+            umap_page(uva, kva2pa(shm_pages[i].kva), current_running->pgdir, current_running);
             shm_pages[i].user_num++;
             return uva;
         }
@@ -362,7 +357,7 @@ uintptr_t shm_page_get(int key)
     }
     do {
         uva = allocFreeUva(1);
-    } while (check_free_uva(uva, current_running->pgdir) == 0);
+    } while ((uva, current_running->pgdir) != NULL);
 
     shm_pages[i].kva = alloc_page_helper(uva, current_running->pgdir, current_running);
     shm_pages[i].status = SHM_USING;
@@ -389,14 +384,8 @@ void shm_page_dt(uintptr_t addr)
 {
     // TODO [P4-task4] shm_page_dt:
     uintptr_t uva = addr & VA_MASK;
-    uint64_t vpn2 = uva >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
-    uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (uva >> (NORMAL_PAGE_SHIFT + PPN_BITS));
-    uint64_t vpn0 = (uva >> NORMAL_PAGE_SHIFT) ^ (vpn2 << (2 * PPN_BITS)) ^ (vpn1 << PPN_BITS);
-    PTE *lv3_pgdir = current_running->pgdir;
-    PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
-    PTE *lv1_pgdir = (PTE *) pa2kva(get_pa(lv2_pgdir[vpn1]));
-
-    uint64_t pa = get_pa(lv1_pgdir[vpn0]);
+    PTE *pte = uva2pte(uva, current_running->pgdir);
+    uint64_t pa = get_pa(*pte);
     uint64_t kva = pa2kva(pa);
 
     for (int i = 0; i < SHM_PAGE_NUM; i++) {
@@ -405,7 +394,7 @@ void shm_page_dt(uintptr_t addr)
             uint64_t  vpn = uva & ~(PAGE_SIZE - 1);
             delete_uva_page(vpn, current_running);
             // unmap 
-            clear_attribute(&lv1_pgdir[vpn0], _PAGE_PRESENT);
+            clear_attribute(pte, _PAGE_PRESENT);
             local_flush_tlb_all();
             shm_pages[i].user_num--;
             // no thread use it
@@ -427,13 +416,7 @@ int do_mprotect(void *addr, size_t len, int prot) {
     int n_page = NBYTES2PAGE(len);
     for (int i = 0;i < n_page;i++) {
         uintptr_t uva = (uintptr_t) addr + i * PAGE_SIZE;
-        uint64_t vpn2 = uva >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
-        uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (uva >> (NORMAL_PAGE_SHIFT + PPN_BITS));
-        uint64_t vpn0 = (uva >> NORMAL_PAGE_SHIFT) ^ (vpn2 << (2 * PPN_BITS)) ^ (vpn1 << PPN_BITS);
-        PTE *lv3_pgdir = current_running->pgdir;
-        PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
-        PTE *lv1_pgdir = (PTE *) pa2kva(get_pa(lv2_pgdir[vpn1]));
-        PTE *pte = &lv1_pgdir[vpn0];
+        PTE *pte = uva2pte(uva, current_running->pgdir);
         if (prot == PROT_NONE) {
             clear_attribute(pte, _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC);
         } else if (prot == PROT_READ) {
@@ -450,21 +433,13 @@ int do_mprotect(void *addr, size_t len, int prot) {
         }
     }
     local_flush_tlb_all();
-    local_flush_icache_all();
     return 0;
 }
 int check_mprotect(regs_context_t *regs, uint64_t stval, uint64_t scause) {
-    if (check_free_uva(stval, current_running->pgdir) == 1) {     // have no pte
+    PTE *pte;
+    if (pte = uva2pte(stval, current_running->pgdir) == NULL) {     // have no pte
         return 0;
     }
-    uintptr_t uva = stval;
-    uint64_t vpn2 = uva >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
-    uint64_t vpn1 = (vpn2 << PPN_BITS) ^ (uva >> (NORMAL_PAGE_SHIFT + PPN_BITS));
-    uint64_t vpn0 = (uva >> NORMAL_PAGE_SHIFT) ^ (vpn2 << (2 * PPN_BITS)) ^ (vpn1 << PPN_BITS);
-    PTE *lv3_pgdir = current_running->pgdir;
-    PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
-    PTE *lv1_pgdir = (PTE *) pa2kva(get_pa(lv2_pgdir[vpn1]));
-    PTE *pte = &lv1_pgdir[vpn0];
 
     if (((scause & SCAUSE_EXC_CODE) == EXCC_INST_PAGE_FAULT) && get_attribute(*pte, _PAGE_EXEC) == 0) {
         printk("ERROR: mprotect: addr = 0x%lx, cannot exe", stval);

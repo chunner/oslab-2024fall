@@ -63,9 +63,12 @@ extern uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb);
 extern void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause);
 
 extern void init_mem_manager();
-uintptr_t swap_page();
+extern uintptr_t swap_page_out();
 extern void mark_page_allocated(uint64_t page_idx, char bitmap[]);
 extern void unmark_page_free(uint64_t page_idx, char bitmap[]);
+
+extern PTE *kva2pte(uintptr_t kva, PTE *pgdir);
+extern PTE *uva2pte(uintptr_t uva, PTE *pgdir);
 
 uint64_t sd_sector_end;
 extern void check_uva_mem(uintptr_t uva_begin, uint64_t len, pcb_t *pcb);
