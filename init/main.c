@@ -46,6 +46,7 @@
 #include <csr.h>
 #include <os/smp.h>
 #include <pgtable.h>
+#include <os/net.h>
 
 #define VERSION_BUF 50
 
@@ -160,6 +161,8 @@ static void init_syscall(void)
     syscall[SYSCALL_GET_BRK] = (long(*)()) do_getbrk;
     syscall[SYSCALL_BRK] = (long(*)()) do_brk;
     syscall[SYSCALL_SBRK] = (long(*)()) do_sbrk;
+    syscall[SYSCALL_NET_SEND] = (long(*)()) do_net_send;
+    syscall[SYSCALL_NET_RECV] = (long(*)()) do_net_recv;
 }
 /************************************************************/
 

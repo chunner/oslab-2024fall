@@ -122,7 +122,7 @@ int e1000_transmit(void *txpacket, int length)
     /* TODO: [p5-task1] Transmit one packet from txpacket */
     while (e1000_read_reg(e1000, E1000_TDH) == e1000_read_reg(e1000, E1000_TDT) + 1);   // wait until there is a free descriptor
     int index = e1000_read_reg(e1000, E1000_TDT);
-    tx_desc_array[index].addr = (uint64_t) txpacket;
+    tx_desc_array[index].addr = kva2pa((uint64_t) txpacket);
     tx_desc_array[index].length = length;
     tx_desc_array[index].cmd = E1000_TXD_CMD_RS | E1000_TXD_CMD_EOP;
     tx_desc_array[index].status = 0;
