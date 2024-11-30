@@ -4,6 +4,10 @@
 #include <os/time.h>
 #include <assert.h>
 #include <pgtable.h>
+#include <os/sched.h>
+
+#define E1000_TCTL_CT_SHIFT   4 
+#define E1000_TCTL_COLD_SHIFT   12 
 
 // E1000 Registers Base Pointer
 volatile uint8_t *e1000;  // use virtual memory address
@@ -17,36 +21,36 @@ static char tx_pkt_buffer[TXDESCS][TX_PKT_SIZE];
 static char rx_pkt_buffer[RXDESCS][RX_PKT_SIZE];
 
 // Fixed Ethernet MAC Address of E1000
-static const uint8_t enetaddr[6] = {0x00, 0x0a, 0x35, 0x00, 0x1e, 0x53};
+static const uint8_t enetaddr[6] = { 0x00, 0x0a, 0x35, 0x00, 0x1e, 0x53 };
 
 /**
  * e1000_reset - Reset Tx and Rx Units; mask and clear all interrupts.
  **/
 static void e1000_reset(void)
 {
-	/* Turn off the ethernet interface */
+    /* Turn off the ethernet interface */
     e1000_write_reg(e1000, E1000_RCTL, 0);
     e1000_write_reg(e1000, E1000_TCTL, 0);
 
-	/* Clear the transmit ring */
+    /* Clear the transmit ring */
     e1000_write_reg(e1000, E1000_TDH, 0);
     e1000_write_reg(e1000, E1000_TDT, 0);
 
-	/* Clear the receive ring */
+    /* Clear the receive ring */
     e1000_write_reg(e1000, E1000_RDH, 0);
     e1000_write_reg(e1000, E1000_RDT, 0);
 
-	/**
+    /**
      * Delay to allow any outstanding PCI transactions to complete before
-	 * resetting the device
-	 */
+     * resetting the device
+     */
     latency(1);
 
-	/* Clear interrupt mask to stop board from generating interrupts */
+    /* Clear interrupt mask to stop board from generating interrupts */
     e1000_write_reg(e1000, E1000_IMC, 0xffffffff);
 
     /* Clear any pending interrupt events. */
-    while (0 != e1000_read_reg(e1000, E1000_ICR)) ;
+    while (0 != e1000_read_reg(e1000, E1000_ICR));
 }
 
 /**
@@ -57,10 +61,20 @@ static void e1000_configure_tx(void)
     /* TODO: [p5-task1] Initialize tx descriptors */
 
     /* TODO: [p5-task1] Set up the Tx descriptor base address and length */
+    uint32_t lower_base_addr = (uint32_t) ((uint64_t) tx_desc_array & UINT32_MAX);
+    lower_base_addr = get_pa(*(PTE *) kva2pte(lower_base_addr, current_running->pgdir));
+    uint32_t higher_base_addr = (uint32_t) ((uint64_t) tx_desc_array >> 32);
+    higher_base_addr = get_pa(*(PTE *) kva2pte(higher_base_addr, current_running->pgdir));
+    uint32_t array_size = TXDESCS * 16;
+    e1000_write_reg(e1000, E1000_TDBAL, lower_base_addr);
+    e1000_write_reg(e1000, E1000_TDBAH, higher_base_addr);
+    e1000_write_reg(e1000, E1000_TDLEN, array_size);
 
-	/* TODO: [p5-task1] Set up the HW Tx Head and Tail descriptor pointers */
-
+    /* TODO: [p5-task1] Set up the HW Tx Head and Tail descriptor pointers */
+    e1000_write_reg(e1000, E1000_TDH, 0);
+    e1000_write_reg(e1000, E1000_TDT, 0);
     /* TODO: [p5-task1] Program the Transmit Control Register */
+    uint32_t tctl_val = E1000_TCTL_EN | E1000_TCTL_PSP | (0x10 << E1000_TCTL_CT_SHIFT) | (0X40 << E1000_TCTL_COLD_SHIFT);
 }
 
 /**
