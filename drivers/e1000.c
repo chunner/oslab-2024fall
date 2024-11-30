@@ -75,6 +75,7 @@ static void e1000_configure_tx(void)
     e1000_write_reg(e1000, E1000_TDT, 0);
     /* TODO: [p5-task1] Program the Transmit Control Register */
     uint32_t tctl_val = E1000_TCTL_EN | E1000_TCTL_PSP | (0x10 << E1000_TCTL_CT_SHIFT) | (0X40 << E1000_TCTL_COLD_SHIFT);
+    e1000_write_reg(e1000, E1000_TCTL, tctl_val);
 }
 
 /**
@@ -119,8 +120,14 @@ void e1000_init(void)
 int e1000_transmit(void *txpacket, int length)
 {
     /* TODO: [p5-task1] Transmit one packet from txpacket */
-
-    return 0;
+    while (e1000_read_reg(e1000, E1000_TDH) == e1000_read_reg(e1000, E1000_TDT) + 1);   // wait until there is a free descriptor
+    int index = e1000_read_reg(e1000, E1000_TDT);
+    tx_desc_array[index].addr = (uint64_t) txpacket;
+    tx_desc_array[index].length = length;
+    tx_desc_array[index].cmd = E1000_TXD_CMD_RS | E1000_TXD_CMD_EOP;
+    tx_desc_array[index].status = 0;
+    e1000_write_reg(e1000, E1000_TDT, index + 1);   // update TDT
+    return length;
 }
 
 /**
