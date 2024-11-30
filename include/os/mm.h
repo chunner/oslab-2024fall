@@ -64,6 +64,7 @@ extern void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t sca
 
 extern void init_mem_manager();
 extern uintptr_t swap_page_out();
+extern void swap_page_in(PageNode_t *p);
 extern void mark_page_allocated(uint64_t page_idx, char bitmap[]);
 extern void unmark_page_free(uint64_t page_idx, char bitmap[]);
 

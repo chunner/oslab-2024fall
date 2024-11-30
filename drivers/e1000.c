@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <pgtable.h>
 #include <os/sched.h>
+#include <os/mm.h>
 
 #define E1000_TCTL_CT_SHIFT   4 
 #define E1000_TCTL_COLD_SHIFT   12 

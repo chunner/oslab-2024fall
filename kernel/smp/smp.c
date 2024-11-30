@@ -3,6 +3,7 @@
 #include <os/smp.h>
 #include <os/lock.h>
 #include <os/kernel.h>
+#include <type.h>
 
 
 
