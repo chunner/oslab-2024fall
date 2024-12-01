@@ -46,7 +46,7 @@ void *ioremap(unsigned long phys_addr, unsigned long size)
     if (io_base + size <= IO_ADDR_END) {
         uintptr_t io_start = io_base;
         for (uintptr_t pa = pa_start;pa < pa_end;pa += PAGE_SIZE) {
-            iomap_page(io_base, pa, current_running->pgdir);
+            iomap_page(io_base, pa, (PTE *) PGDIR_VA);
             io_base += PAGE_SIZE;
         }
         return io_start;
@@ -59,6 +59,6 @@ void iounmap(void *io_addr)
 {
     // TODO: [p5-task1] a very naive iounmap() is OK
     // maybe no one would call this function?
-    PTE *pte = kva2pte(io_addr, current_running->pgdir);
+    PTE *pte = uva2pte(io_addr, current_running->pgdir);
     clear_attribute(pte, _PAGE_PRESENT);
 }

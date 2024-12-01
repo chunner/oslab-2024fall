@@ -235,7 +235,9 @@ int main(void)
     e1000 = (uint8_t *) ioremap((uint64_t) e1000, 8 * NORMAL_PAGE_SIZE);
     printk("> [INIT] IOremap initialization succeeded.\n");
     PTE *pte = uva2pte((uintptr_t) e1000, (PTE *) PGDIR_VA);
+    PTE *pte1 = uva2pte((uintptr_t) (e1000 + 0xc0), (PTE *) PGDIR_VA);
     uint64_t debug = get_pa(*pte);
+    uint64_t debug1 = get_pa(*pte1);
 
 
     // Init lock mechanism o(´^｀)o

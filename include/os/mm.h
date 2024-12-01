@@ -75,10 +75,11 @@ extern void check_uva_mem(uintptr_t uva_begin, uint64_t len, pcb_t *pcb);
 extern void create_PageNode(uintptr_t kva, uintptr_t uva, PTE *pgdir, pcb_t *pcb);
 
 // TODO [P4-task4]: shm_page_get/dt */
-uintptr_t shm_page_get(int key);
-void shm_page_dt(uintptr_t addr);
+extern void init_shmpage();
+extern uintptr_t shm_page_get(int key);
+extern void shm_page_dt(uintptr_t addr);
 
-int do_mprotect(void *addr, size_t len, int prot);
+extern int do_mprotect(void *addr, size_t len, int prot);
 extern int check_mprotect(regs_context_t *regs, uint64_t stval, uint64_t scause);
 /* -----------------------------------------PageNode ------------------------------------------------------- */
 typedef enum {

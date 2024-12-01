@@ -60,17 +60,21 @@ static void e1000_reset(void)
 static void e1000_configure_tx(void)
 {
     /* TODO: [p5-task1] Initialize tx descriptors */
-
+    for (int i = 0;i < TXDESCS;i++) {
+        tx_desc_array[i].addr = kva2pa((uint64_t) tx_pkt_buffer[i]);
+        tx_desc_array[i].length = 0;
+        tx_desc_array[i].cmd = E1000_TXD_CMD_RS;
+        tx_desc_array[i].status = E1000_TXD_STAT_DD;
+    }
+    local_flush_dcache();       // flush the cache after write txd
     /* TODO: [p5-task1] Set up the Tx descriptor base address and length */
-    uint32_t lower_base_addr = (uint32_t) ((uint64_t) tx_desc_array & UINT32_MAX);
-    lower_base_addr = get_pa(*(PTE *) kva2pte(lower_base_addr, current_running->pgdir));
-    uint32_t higher_base_addr = (uint32_t) ((uint64_t) tx_desc_array >> 32);
-    higher_base_addr = get_pa(*(PTE *) kva2pte(higher_base_addr, current_running->pgdir));
-    uint32_t array_size = TXDESCS * 16;
+    uint16_t tx_desc_base = kva2pa((uintptr_t) tx_desc_array);
+    uint32_t lower_base_addr = (uint32_t) (tx_desc_base & UINT32_MAX);
+    uint32_t higher_base_addr = (uint32_t) (tx_desc_base >> 32);
+    uint32_t array_size = TXDESCS * sizeof(struct e1000_tx_desc);
     e1000_write_reg(e1000, E1000_TDBAL, lower_base_addr);
     e1000_write_reg(e1000, E1000_TDBAH, higher_base_addr);
     e1000_write_reg(e1000, E1000_TDLEN, array_size);
-
     /* TODO: [p5-task1] Set up the HW Tx Head and Tail descriptor pointers */
     e1000_write_reg(e1000, E1000_TDH, 0);
     e1000_write_reg(e1000, E1000_TDT, 0);
@@ -121,13 +125,17 @@ void e1000_init(void)
 int e1000_transmit(void *txpacket, int length)
 {
     /* TODO: [p5-task1] Transmit one packet from txpacket */
-    while (e1000_read_reg(e1000, E1000_TDH) == e1000_read_reg(e1000, E1000_TDT) + 1);   // wait until there is a free descriptor
     int index = e1000_read_reg(e1000, E1000_TDT);
-    tx_desc_array[index].addr = kva2pa((uint64_t) txpacket);
+    local_flush_dcache();       // flush the cache before read txd
+    while (tx_desc_array[index].status & E1000_TXD_STAT_DD == 0) {
+        local_flush_dcache();       // flush the cache before read txd
+    };   // wait until there is a free descriptor
     tx_desc_array[index].length = length;
     tx_desc_array[index].cmd = E1000_TXD_CMD_RS | E1000_TXD_CMD_EOP;
     tx_desc_array[index].status = 0;
-    e1000_write_reg(e1000, E1000_TDT, index + 1);   // update TDT
+    memcpy(tx_pkt_buffer[index], txpacket, length);
+    local_flush_dcache();       // flush the cache after write txd and tx buffer
+    e1000_write_reg(e1000, E1000_TDT, (index + 1) % TXDESCS);   // update TDT
     return length;
 }
 
