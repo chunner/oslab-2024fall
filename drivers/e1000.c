@@ -91,15 +91,31 @@ static void e1000_configure_tx(void)
 static void e1000_configure_rx(void)
 {
     /* TODO: [p5-task2] Set e1000 MAC Address to RAR[0] */
-
+    e1000_write_reg_array(e1000, E1000_RA, 0, *(uint32_t *) enetaddr);      // 4 Bytes
+    e1000_write_reg_array(e1000, E1000_RA, 1, (*(uint16_t *) (enetaddr + 4)) | E1000_RAH_AV);    // 2 Bytes
     /* TODO: [p5-task2] Initialize rx descriptors */
-
+    for (int i = 0;i < RXDESCS;i++) {
+        rx_desc_array[i].addr = kva2pa((uint64_t) rx_pkt_buffer[i]);
+        rx_desc_array[i].special = 0;
+        rx_desc_array[i].errors = 0;
+        rx_desc_array[i].status = 0;
+        rx_desc_array[i].csum = 0;
+        rx_desc_array[i].length = 0;
+    }
     /* TODO: [p5-task2] Set up the Rx descriptor base address and length */
-
+    uint16_t rx_desc_base = kva2pa((uintptr_t) rx_desc_array);
+    uint32_t lower_base_addr = (uint32_t) (rx_desc_base & UINT32_MAX);
+    uint32_t higher_base_addr = (uint32_t) (rx_desc_base >> 32);
+    uint32_t array_size = TXDESCS * sizeof(struct e1000_rx_desc);
+    e1000_write_reg(e1000, E1000_RDBAL, lower_base_addr);
+    e1000_write_reg(e1000, E1000_RDBAH, higher_base_addr);
+    e1000_write_reg(e1000, E1000_RDLEN, array_size);
     /* TODO: [p5-task2] Set up the HW Rx Head and Tail descriptor pointers */
-
+    e1000_write_reg(e1000, E1000_RDH, 0);
+    e1000_write_reg(e1000, E1000_RDT, 0);
     /* TODO: [p5-task2] Program the Receive Control Register */
-
+    uint32_t rctl_val = E1000_RCTL_EN | E1000_RCTL_BAM | E1000_RCTL_SZ_2048;
+    e1000_write_reg(e1000, E1000_RCTL, rctl_val);
     /* TODO: [p5-task4] Enable RXDMT0 Interrupt */
 }
 
