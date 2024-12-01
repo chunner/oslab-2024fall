@@ -11,11 +11,14 @@ static LIST_HEAD(recv_block_queue);
 int do_net_send(void *txpacket, int length)
 {
     // TODO: [p5-task1] Transmit one network packet via e1000 device
-    int transmited_len = e1000_transmit(txpacket, length);
+    int transmit_len = 0;
+    while (length > transmit_len) {
+        transmit_len += e1000_transmit(txpacket + transmit_len, length - transmit_len);
+    }
     // TODO: [p5-task3] Call do_block when e1000 transmit queue is full
     // TODO: [p5-task4] Enable TXQE interrupt if transmit queue is full
 
-    return transmited_len;  // Bytes it has transmitted
+    return transmit_len;  // Bytes it has transmitted
 }
 
 int do_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens)

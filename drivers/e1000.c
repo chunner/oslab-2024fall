@@ -51,7 +51,9 @@ static void e1000_reset(void)
     e1000_write_reg(e1000, E1000_IMC, 0xffffffff);
 
     /* Clear any pending interrupt events. */
-    while (0 != e1000_read_reg(e1000, E1000_ICR));
+    // while (0 != e1000_read_reg(e1000, E1000_ICR)) {
+    //     local_flush_dcache();       // flush the cache before read ICR
+    // };
 }
 
 /**
@@ -130,13 +132,14 @@ int e1000_transmit(void *txpacket, int length)
     while (tx_desc_array[index].status & E1000_TXD_STAT_DD == 0) {
         local_flush_dcache();       // flush the cache before read txd
     };   // wait until there is a free descriptor
-    tx_desc_array[index].length = length;
+    int transmit_len = length > TX_PKT_SIZE ? TX_PKT_SIZE : length;
+    tx_desc_array[index].length = transmit_len;
     tx_desc_array[index].cmd = E1000_TXD_CMD_RS | E1000_TXD_CMD_EOP;
     tx_desc_array[index].status = 0;
-    memcpy(tx_pkt_buffer[index], txpacket, length);
+    memcpy(tx_pkt_buffer[index], txpacket, transmit_len);
     local_flush_dcache();       // flush the cache after write txd and tx buffer
     e1000_write_reg(e1000, E1000_TDT, (index + 1) % TXDESCS);   // update TDT
-    return length;
+    return transmit_len;
 }
 
 /**
