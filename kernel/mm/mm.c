@@ -1,7 +1,7 @@
 #include <os/mm.h>
 #include <os/irq.h>
 #include <assert.h>
-
+void swap_page_in(PageNode_t *p);
 /* ---------------------------------------------BIT MAP------------------------------------------------------------ */
 #define NPAGES2BITMAPCH(npages) (((npages) / 8) + ((npages) % 8 != 0))
 // Each bit represents the state of a page. When initialized, 
