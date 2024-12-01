@@ -134,7 +134,11 @@ int e1000_transmit(void *txpacket, int length)
     };   // wait until there is a free descriptor
     int transmit_len = length > TX_PKT_SIZE ? TX_PKT_SIZE : length;
     tx_desc_array[index].length = transmit_len;
-    tx_desc_array[index].cmd = E1000_TXD_CMD_RS | E1000_TXD_CMD_EOP;
+    if (length > TX_PKT_SIZE) {
+        tx_desc_array[index].cmd = E1000_TXD_CMD_RS;
+    } else {
+        tx_desc_array[index].cmd = E1000_TXD_CMD_RS | E1000_TXD_CMD_EOP;
+    }
     tx_desc_array[index].status = 0;
     memcpy(tx_pkt_buffer[index], txpacket, transmit_len);
     local_flush_dcache();       // flush the cache after write txd and tx buffer
