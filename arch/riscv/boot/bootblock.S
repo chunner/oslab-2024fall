@@ -28,39 +28,47 @@ main:
 	li a7, BIOS_PUTSTR
 	la a0, msg					// char *str
 	jal bios_func_entry
+
 // call BIOS to read kernel in SD card
 	// 64 sector per time
-	li a0, kernel				// a0: mem_address = kernel
-	li a2, 1					// unsigned block_id
-	li a7, BIOS_SDREAD
+	li s0, kernel				// mem_address = kernel
+	li s1, 1					// unsigned block_id
+	# li a7, BIOS_SDREAD
 
 	li t0, os_size_loc
-	lh t1, 0(t0)				// t1 = os_size			
+	lh s2, 0(t0)				// s2 = os_size			
 
 sd_read_loop:
 	li t2, 64
-	bltu t1, t2, final_read_sd_read 	// branch if t1: os_size <= 64
+	bltu s2, t2, final_read_sd_read 	// branch if s2 <= 64
 
+	li a7, BIOS_SDREAD
+	mv a0, s0					// unsigned mem_address
 	li a1, 64					// a1: num_of_block
+	mv a2, s1					// unsigned block_id
 	jal bios_func_entry
+
 	li t3, sd_read_size
-	add a0, a0, t3				// mem_address += sd_read_size
-	addi t1, t1, -64			// os_size -= 64
-	addi a2, a2, 64				// sd block_id += 64
+	add s0, s0, t3				// mem_address += sd_read_size
+	addi s2, s2, -64			// os_size -= 64
+	addi s1, s1, 64				// sd block_id += 64
 	j sd_read_loop
 
 final_read_sd_read:
-	mv a1, t1
+	li a7, BIOS_SDREAD
+	mv a0, s0					// unsigned mem_address
+	mv a1, s2					// unsigned num_of_blocks
+	mv a2, s1					// unsigned block_id
 	jal bios_func_entry
 
 
 
-	li a7, BIOS_SDREAD
-	li a0, kernel				// unsigned mem_address
-	li t0, os_size_loc
-	lh a1, 0(t0)			// unsigned num_of_blocks
-	li a2, 1					// unsigned block_id
-	jal bios_func_entry		
+	# li a7, BIOS_SDREAD
+	# li a0, kernel				// unsigned mem_address
+	# li t0, os_size_loc
+	# lh a1, 0(t0)			// unsigned num_of_blocks
+	# li a2, 1					// unsigned block_id
+	# jal bios_func_entry		
 
 	jal kernel					// jump to kernel entry 	
 
