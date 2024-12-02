@@ -51,9 +51,7 @@ static void e1000_reset(void)
     e1000_write_reg(e1000, E1000_IMC, 0xffffffff);
 
     /* Clear any pending interrupt events. */
-    // while (0 != e1000_read_reg(e1000, E1000_ICR)) {
-    //     local_flush_dcache();       // flush the cache before read ICR
-    // };
+    while (0 != e1000_read_reg(e1000, E1000_ICR));
 }
 
 /**
