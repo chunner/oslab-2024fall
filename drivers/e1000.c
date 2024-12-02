@@ -68,7 +68,6 @@ static void e1000_configure_tx(void)
         tx_desc_array[i].cmd = E1000_TXD_CMD_RS;
         tx_desc_array[i].status = E1000_TXD_STAT_DD;
     }
-    local_flush_dcache();       // flush the cache after write txd
     /* TODO: [p5-task1] Set up the Tx descriptor base address and length */
     uint16_t tx_desc_base = kva2pa((uintptr_t) tx_desc_array);
     uint32_t lower_base_addr = (uint32_t) (tx_desc_base & UINT32_MAX);
@@ -83,6 +82,8 @@ static void e1000_configure_tx(void)
     /* TODO: [p5-task1] Program the Transmit Control Register */
     uint32_t tctl_val = E1000_TCTL_EN | E1000_TCTL_PSP | (0x10 << E1000_TCTL_CT_SHIFT) | (0X40 << E1000_TCTL_COLD_SHIFT);
     e1000_write_reg(e1000, E1000_TCTL, tctl_val);
+
+    local_flush_dcache();       // flush the cache after write txd
 }
 
 /**
@@ -112,11 +113,14 @@ static void e1000_configure_rx(void)
     e1000_write_reg(e1000, E1000_RDLEN, array_size);
     /* TODO: [p5-task2] Set up the HW Rx Head and Tail descriptor pointers */
     e1000_write_reg(e1000, E1000_RDH, 0);
-    e1000_write_reg(e1000, E1000_RDT, 0);
+    e1000_write_reg(e1000, E1000_RDT, RXDESCS - 1);
     /* TODO: [p5-task2] Program the Receive Control Register */
     uint32_t rctl_val = E1000_RCTL_EN | E1000_RCTL_BAM | E1000_RCTL_SZ_2048;
     e1000_write_reg(e1000, E1000_RCTL, rctl_val);
     /* TODO: [p5-task4] Enable RXDMT0 Interrupt */
+
+
+    local_flush_dcache();       // flush the cache after write rxd
 }
 
 /**
@@ -157,8 +161,9 @@ int e1000_transmit(void *txpacket, int length)
     }
     tx_desc_array[index].status = 0;
     memcpy(tx_pkt_buffer[index], txpacket, transmit_len);
-    local_flush_dcache();       // flush the cache after write txd and tx buffer
     e1000_write_reg(e1000, E1000_TDT, (index + 1) % TXDESCS);   // update TDT
+
+    local_flush_dcache();       // flush the cache after write txd and tx buffer
     return transmit_len;
 }
 
@@ -170,6 +175,19 @@ int e1000_transmit(void *txpacket, int length)
 int e1000_poll(void *rxbuffer)
 {
     /* TODO: [p5-task2] Receive one packet and put it into rxbuffer */
+    int index = (e1000_read_reg(e1000, E1000_RDT) + 1) % RXDESCS;
+    local_flush_dcache();       // flush the cache before read rxd
+    while (rx_desc_array[index].status & E1000_RXD_STAT_DD == 0) {
+        local_flush_dcache();       // flush the cache before read rxd
+    };   // wait until there is a packet
+    memcpy((char *) rxbuffer, rx_pkt_buffer[index], rx_desc_array[index].length);
+    rx_desc_array[index].special = 0;
+    rx_desc_array[index].errors = 0;
+    rx_desc_array[index].status = 0;
+    rx_desc_array[index].csum = 0;
+    rx_desc_array[index].length = 0;
+    e1000_write_reg(e1000, E1000_RDT, index);   // update RDT   
 
-    return 0;
+    local_flush_dcache();       // flush the cache after read rxd and rx buffer
+    return rx_desc_array[index].length;
 }

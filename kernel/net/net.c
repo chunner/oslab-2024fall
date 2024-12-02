@@ -24,9 +24,15 @@ int do_net_send(void *txpacket, int length)
 int do_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens)
 {
     // TODO: [p5-task2] Receive one network packet via e1000 device
+    int recv_len = 0;
+    for (int i = 0; i < pkt_num; i++) {
+        pkt_lens[i] = e1000_receive(rxbuffer + recv_len);
+        recv_len += pkt_lens[i];
+        rxbuffer += pkt_lens[i];
+    }
     // TODO: [p5-task3] Call do_block when there is no packet on the way
 
-    return 0;  // Bytes it has received
+    return recv_len;  // Bytes it has received
 }
 
 void net_handle_irq(void)
