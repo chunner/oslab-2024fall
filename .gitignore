@@ -3,3 +3,4 @@ build
 *.txt
 .gdbinit
 fpga.log
+pkt-rx-tx-master

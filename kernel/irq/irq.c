@@ -37,6 +37,15 @@ void handle_irq_ext(regs_context_t *regs, uint64_t stval, uint64_t scause)
 {
     // TODO: [p5-task4] external interrupt handler.
     // Note: plic_claim and plic_complete will be helpful ...
+    uint32_t id;
+    id = plic_claim();
+    if (id == 33 || id == 3) {
+        //e1000_irq_handle();
+        plic_complete(id);
+        return;
+    } else {
+        return;
+    }
 }
 
 void init_exception()
@@ -62,7 +71,7 @@ void init_exception()
     irq_table[IRQC_U_TIMER] = handle_other;
     irq_table[IRQC_M_TIMER] = handle_other;
     irq_table[IRQC_U_EXT] = handle_other;
-    irq_table[IRQC_S_EXT] = handle_other;
+    irq_table[IRQC_S_EXT] = handle_irq_ext;
     irq_table[IRQC_M_EXT] = handle_other;
     /* set up the entrypoint of exceptions */
     setup_exception();
