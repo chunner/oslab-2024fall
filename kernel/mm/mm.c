@@ -436,7 +436,7 @@ int do_mprotect(void *addr, size_t len, int prot) {
 }
 int check_mprotect(regs_context_t *regs, uint64_t stval, uint64_t scause) {
     PTE *pte;
-    if (pte = uva2pte(stval, current_running->pgdir) == NULL) {     // have no pte
+    if ((pte = uva2pte(stval, current_running->pgdir)) == NULL) {     // have no pte
         return 0;
     }
 

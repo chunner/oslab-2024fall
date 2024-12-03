@@ -178,6 +178,7 @@ int e1000_transmit(void *txpacket, int length)
         tx_desc_array[index].cmd = E1000_TXD_CMD_RS | E1000_TXD_CMD_EOP;
     }
     tx_desc_array[index].status = 0;
+    check_uva_mem(txpacket, length, current_running);
     memcpy(pa2kva(tx_desc_array[index].addr), txpacket, transmit_len);
     e1000_write_reg(e1000, E1000_TDT, (index + 1) % TXDESCS);   // update TDT
 
@@ -207,6 +208,7 @@ int e1000_poll(void *rxbuffer)
         local_flush_dcache();       // flush the cache before read rxd
     };   // wait until there is a packet
     int poll_len = rx_desc_array[index].length;
+    check_uva_mem(rxbuffer, poll_len, current_running);
     memcpy((char *) rxbuffer, rx_pkt_buffer[index], poll_len);
     rx_desc_array[index].special = 0;
     rx_desc_array[index].errors = 0;
