@@ -215,7 +215,20 @@ int e1000_poll(void *rxbuffer)
     rx_desc_array[index].status = 0;
     rx_desc_array[index].csum = 0;
     rx_desc_array[index].length = 0;
-    e1000_write_reg(e1000, E1000_RDT, index);   // update RDT   
+    e1000_write_reg(e1000, E1000_RDT, index);   // update RDT
+
+    char *curr = (char *) rx_pkt_buffer[index];
+    for (int j = 0; j < (poll_len + 47) / 48; ++j) {
+        for (int k = 0; k < 48 && (j * 48 + k < poll_len); ++k) {
+            int c = *(uint8_t *) curr;
+            if (c >= 32 && c <= 126)
+                printl("%c", c);
+            else
+                printl(".");
+            ++curr;
+        }
+        printl("\n");
+    }
 
     local_flush_dcache();       // flush the cache after read rxd and rx buffer
     return poll_len;

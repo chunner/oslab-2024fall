@@ -26,7 +26,7 @@ int do_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens)
     // TODO: [p5-task2] Receive one network packet via e1000 device
     int recv_len = 0;
     for (int i = 0; i < pkt_num; i++) {
-        pkt_lens[i] = e1000_poll(rxbuffer + recv_len);
+        pkt_lens[i] = e1000_poll(rxbuffer);
         recv_len += pkt_lens[i];
         rxbuffer += pkt_lens[i];
     }
