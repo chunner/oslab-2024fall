@@ -214,10 +214,6 @@ ENTRY(ret_from_exception)
   la a0, whole_kernel_lock
   call unlock_kernel
 
-  # enable_preempt
-  not t0, x0
-  csrs CSR_SIE, t0  
-
   RESTORE_CONTEXT
   sret    // return to sepc
 ENDPROC(ret_from_exception)

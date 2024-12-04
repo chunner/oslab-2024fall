@@ -122,7 +122,7 @@ static void e1000_configure_rx(void)
     uint32_t rctl_val = E1000_RCTL_EN | E1000_RCTL_BAM | E1000_RCTL_SZ_2048;
     e1000_write_reg(e1000, E1000_RCTL, rctl_val);
     /* TODO: [p5-task4] Enable RXDMT0 Interrupt */
-
+    e1000_write_reg(e1000, E1000_IMS, E1000_IMS_RXDMT0);
 
     local_flush_dcache();       // flush the cache after write rxd
     printl("RCTL: %x\n", e1000_read_reg(e1000, E1000_RCTL));
@@ -165,11 +165,13 @@ int e1000_transmit(void *txpacket, int length)
     printl("TDH: %x\n", e1000_read_reg(e1000, E1000_TDH));
     printl("TDT: %x\n", e1000_read_reg(e1000, E1000_TDT));
     /* TODO: [p5-task1] Transmit one packet from txpacket */
+
     int index = e1000_read_reg(e1000, E1000_TDT);
     local_flush_dcache();       // flush the cache before read txd
-    while (tx_desc_array[index].status & E1000_TXD_STAT_DD == 0) {
-        local_flush_dcache();       // flush the cache before read txd
+    if (tx_desc_array[index].status & E1000_TXD_STAT_DD == 0) {
+        return 0;       // flush the cache before read txd
     };   // wait until there is a free descriptor
+
     int transmit_len = length > TX_PKT_SIZE ? TX_PKT_SIZE : length;
     tx_desc_array[index].length = transmit_len;
     if (length > TX_PKT_SIZE) {
@@ -201,12 +203,14 @@ int e1000_poll(void *rxbuffer)
     printl("RDT: %x\n", e1000_read_reg(e1000, E1000_RDT));
     printl("RAL: %x\n", e1000_read_reg_array(e1000, E1000_RA, 0));
     printl("RAH: %x\n", e1000_read_reg_array(e1000, E1000_RA, 1));
+
     /* TODO: [p5-task2] Receive one packet and put it into rxbuffer */
     int index = (e1000_read_reg(e1000, E1000_RDT) + 1) % RXDESCS;
     local_flush_dcache();       // flush the cache before read rxd
-    while ((rx_desc_array[index].status & E1000_RXD_STAT_DD) == 0) {
-        local_flush_dcache();       // flush the cache before read rxd
+    if ((rx_desc_array[index].status & E1000_RXD_STAT_DD) == 0) {
+        return 0;
     };   // wait until there is a packet
+
     int poll_len = rx_desc_array[index].length;
     check_uva_mem(rxbuffer, poll_len, current_running);
     memcpy((char *) rxbuffer, rx_pkt_buffer[index], poll_len);

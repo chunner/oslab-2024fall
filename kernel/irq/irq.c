@@ -40,7 +40,7 @@ void handle_irq_ext(regs_context_t *regs, uint64_t stval, uint64_t scause)
     uint32_t id;
     id = plic_claim();
     if (id == 33 || id == 3) {
-        //e1000_irq_handle();
+        net_handle_irq();
         plic_complete(id);
         return;
     } else {
