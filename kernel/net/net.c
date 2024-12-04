@@ -23,6 +23,7 @@ int do_net_send(void *txpacket, int length)
                 e1000_write_reg(e1000, E1000_IMS, E1000_IMS_TXQE);
             }
             do_block(&current_running->list, &send_block_queue);
+            do_scheduler();
         }
     }
     // TODO: [p5-task3] Call do_block when e1000 transmit queue is full
@@ -41,6 +42,7 @@ int do_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens)
         rxbuffer += pkt_lens[i];
         if (pkt_lens[i] == 0) {
             do_block(&current_running->list, &recv_block_queue);
+            do_scheduler();
             i--;
         }
     }
@@ -53,12 +55,14 @@ void net_handle_irq(void)
 {
     // TODO: [p5-task4] Handle interrupts from network device
     uint32_t icr_val = e1000_read_reg(e1000, E1000_ICR);
-    if (icr_val & E1000_ICR_TXQE) {
+    uint32_t ims_val = e1000_read_reg(e1000, E1000_IMS);
+    if ((icr_val & E1000_ICR_TXQE) & (ims_val & E1000_IMS_TXQE)) {
         while (send_block_queue.next != &send_block_queue) {
             do_unblock(send_block_queue.next);
         }
         e1000_write_reg(e1000, E1000_IMC, E1000_IMS_TXQE); // disable TXQE interrupt
-    } else if (icr_val & E1000_ICR_RXDMT0) {
+    }
+    if ((icr_val & E1000_ICR_RXDMT0) & (ims_val & E1000_IMS_RXDMT0)) {
         while (recv_block_queue.next != &recv_block_queue) {
             do_unblock(recv_block_queue.next);
         }

@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <screen.h>
 #include <os/smp.h>
+#include <plic.h>
 
 handler_t irq_table[IRQC_COUNT];
 handler_t exc_table[EXCC_COUNT];
@@ -39,7 +40,7 @@ void handle_irq_ext(regs_context_t *regs, uint64_t stval, uint64_t scause)
     // Note: plic_claim and plic_complete will be helpful ...
     uint32_t id;
     id = plic_claim();
-    if (id == 33 || id == 3) {
+    if (id == PLIC_E1000_QEMU_IRQ || id == PLIC_E1000_PYNQ_IRQ) {
         net_handle_irq();
         plic_complete(id);
         return;
