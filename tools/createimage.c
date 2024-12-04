@@ -34,6 +34,10 @@ typedef struct {
 #define TASK_MAXNUM 16
 static task_info_t taskinfo[TASK_MAXNUM];
 
+/* Rounding; only works for n = power of two */
+#define ROUND(a, n)     (((((uint64_t)(a))+(n)-1)) & ~((n)-1))
+#define ROUNDDOWN(a, n) (((uint64_t)(a)) & ~((n)-1))
+
 /* structure to store command line options */
 static struct {
     int vm;
@@ -158,11 +162,18 @@ static void create_image(int nfiles, char *files[])
         /* updata taskinfo */
         if (taskidx >= 0) {                // taskinfo data
             strcpy(taskinfo[taskidx].taskname, *files);                             // name
-            taskinfo[taskidx].sector_num = NBYTES2SEC(phyaddr) - NBYTES2SEC(fi_phyaddr_begin) + 1;      // sectors num
+            taskinfo[taskidx].sector_num = (ROUND(phyaddr, SECTOR_SIZE) - ROUNDDOWN(fi_phyaddr_begin, SECTOR_SIZE)) / SECTOR_SIZE;      // sectors num
             taskinfo[taskidx].offset = fi_phyaddr_begin % SECTOR_SIZE;                  // the offset in first sector in image
-            taskinfo[taskidx].firstsector = NBYTES2SEC(fi_phyaddr_begin) - 1;
+            taskinfo[taskidx].firstsector = fi_phyaddr_begin / SECTOR_SIZE;
             taskinfo[taskidx].entrypoint = get_entrypoint(ehdr);                     // entry point in mem
             taskinfo[taskidx].memsize = memsize;
+            printf("\ttaskinfo.name %s\n", taskinfo[taskidx].taskname);
+            printf("\t\ttaskinfo.sector_num 0x%x\n", taskinfo[taskidx].sector_num);
+            printf("\t\ttaskinfo.offset 0x%x\n", taskinfo[taskidx].offset);
+            printf("\t\ttaskinfo.firstsector 0x%x\n", taskinfo[taskidx].firstsector);
+            printf("\t\ttaskinfo.entrypoint 0x%04lx\n", taskinfo[taskidx].entrypoint);
+            printf("\t\ttaskinfo.memsize 0x%x\n", taskinfo[taskidx].memsize);
+            printf("\t\tfi_phyaddr_begin 0x%x\n", fi_phyaddr_begin);
         }
 
         fclose(fp);
