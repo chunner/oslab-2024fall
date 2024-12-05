@@ -42,7 +42,7 @@
 #define FREE_KERNEL_PAGE_NUM 0x2000
 
 #define USER_MEM_BASE 0xffffffc054000000
-#define FREE_USER_PAGE_NUM 0x32    // (0x5f00_0000 - 0x5200_0000) / 4K = 0xd00_0000/ 0x1000 = 0xd000
+#define FREE_USER_PAGE_NUM 0xb000    // (0x5f00_0000 - 0x5400_0000) / 4K = 0xb00_0000/ 0x1000 = 0xb000
 
  /* Rounding; only works for n = power of two */
 #define ROUND(a, n)     (((((uint64_t)(a))+(n)-1)) & ~((n)-1))
