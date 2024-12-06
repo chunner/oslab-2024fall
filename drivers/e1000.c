@@ -184,6 +184,17 @@ int e1000_transmit(void *txpacket, int length)
     memcpy(pa2kva(tx_desc_array[index].addr), txpacket, transmit_len);
     e1000_write_reg(e1000, E1000_TDT, (index + 1) % TXDESCS);   // update TDT
 
+    printl("-----------------------send: %d------------------\n", transmit_len);
+    char *curr = (char *) tx_pkt_buffer[index];
+    for (int j = 0; j < (transmit_len + 15) / 16; ++j) {
+        for (int k = 0; k < 16 && (j * 16 + k < transmit_len); ++k) {
+            printl("%02x ", (uint32_t) (*(uint8_t *) curr));
+            ++curr;
+        }
+        printl("\n");
+        //if (curr - tx_pkt_buffer[index] >= 80) break;
+    }
+
     local_flush_dcache();       // flush the cache after write txd and tx buffer
     return transmit_len;
 }
@@ -222,16 +233,14 @@ int e1000_poll(void *rxbuffer)
     e1000_write_reg(e1000, E1000_RDT, index);   // update RDT
 
     char *curr = (char *) rx_pkt_buffer[index];
-    for (int j = 0; j < (poll_len + 47) / 48; ++j) {
-        for (int k = 0; k < 48 && (j * 48 + k < poll_len); ++k) {
-            int c = *(uint8_t *) curr;
-            if (c >= 32 && c <= 126)
-                printl("%c", c);
-            else
-                printl(".");
+    printl("--------------------------recv: %d------------------\n", poll_len);
+    for (int j = 0; j < (poll_len + 15) / 16; ++j) {
+        for (int k = 0; k < 16 && (j * 16 + k < poll_len); ++k) {
+            printl("%02x ", (uint32_t) (*(uint8_t *) curr));
             ++curr;
         }
         printl("\n");
+        //if (curr - rx_pkt_buffer[index] >= 80) break;
     }
 
     local_flush_dcache();       // flush the cache after read rxd and rx buffer

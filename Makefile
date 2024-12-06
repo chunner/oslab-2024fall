@@ -47,16 +47,24 @@ USER_CFLAGS     = $(CFLAGS) $(USER_INCLUDE)
 USER_LDFLAGS    = -L$(DIR_BUILD) -ltinyc
 
 QEMU_LOG_FILE   = $(DIR_OSLAB)/oslab-log.txt
+QEMU_LOG_FILE2   = $(DIR_OSLAB)/oslab-log2.txt
 QEMU_OPTS       = -nographic -machine virt -m 256M -kernel $(UBOOT) -bios none \
                      -drive if=none,format=raw,id=image,file=${ELF_IMAGE} \
                      -device virtio-blk-device,drive=image \
                      -monitor telnet::45454,server,nowait -serial mon:stdio \
                      -D $(QEMU_LOG_FILE) -d oslab
+QEMU_OPTS2       = -nographic -machine virt -m 256M -kernel $(UBOOT) -bios none \
+                     -drive if=none,format=raw,id=image,file=${ELF_IMAGE2} \
+                     -device virtio-blk-device,drive=image \
+                     -monitor telnet::45455,server,nowait -serial mon:stdio \
+                     -D $(QEMU_LOG_FILE2) -d oslab				 
 QEMU_DEBUG_OPT  = -s -S
+QEMU_DEBUG_OPT2  = -gdb tcp:1235 -S
 QEMU_SMP_OPT	= -smp 2
 QEMU_NET_OPT    = -netdev tap,id=mytap,ifname=tap0,script=${DIR_QEMU}/etc/qemu-ifup,downscript=${DIR_QEMU}/etc/qemu-ifdown \
                     -device e1000,netdev=mytap
-
+QEMU_NET_OPT2    = -netdev tap,id=mytap,ifname=tap1,script=${DIR_QEMU}/etc/qemu-ifup2,downscript=${DIR_QEMU}/etc/qemu-ifdown \
+                    -device e1000,netdev=mytap
 # -----------------------------------------------------------------------
 # UCAS-OS Entrypoints and Variables
 # -----------------------------------------------------------------------
@@ -93,6 +101,7 @@ SRC_MAIN    = $(SRC_ARCH) $(SRC_START) $(SRC_INIT) $(SRC_BIOS) $(SRC_DRIVER) $(S
 ELF_BOOT    = $(DIR_BUILD)/bootblock
 ELF_MAIN    = $(DIR_BUILD)/main
 ELF_IMAGE   = $(DIR_BUILD)/image
+ELF_IMAGE2  = $(DIR_BUILD)/image2
 
 # -----------------------------------------------------------------------
 # UCAS-OS User Source Files
@@ -148,6 +157,9 @@ run-net:
 	-@sudo kill `sudo lsof | grep tun | awk '{print $$2}'`
 	sudo $(QEMU) $(QEMU_OPTS) $(QEMU_NET_OPT) $(QEMU_SMP_OPT)
 
+run-net2:
+	sudo $(QEMU) $(QEMU_OPTS2) $(QEMU_NET_OPT2) $(QEMU_SMP_OPT)
+
 debug:
 	$(QEMU) $(QEMU_OPTS) $(QEMU_DEBUG_OPT)
 
@@ -157,6 +169,9 @@ debug-smp:
 debug-net:
 	-@sudo kill `sudo lsof | grep tun | awk '{print $$2}'`
 	sudo $(QEMU) $(QEMU_OPTS) $(QEMU_DEBUG_OPT) $(QEMU_NET_OPT) $(QEMU_SMP_OPT)
+
+debug-net2:
+	sudo $(QEMU) $(QEMU_OPTS2) $(QEMU_DEBUG_OPT2) $(QEMU_NET_OPT2) $(QEMU_SMP_OPT)
 
 viewlog:
 	@if [ ! -e $(QEMU_LOG_FILE) ]; then touch $(QEMU_LOG_FILE); fi;
@@ -207,5 +222,7 @@ image: $(ELF_CREATEIMAGE) $(ELF_BOOT) $(ELF_MAIN) $(ELF_USER)
 	cd $(DIR_BUILD) && ./$(<F) --extended $(filter-out $(<F), $(^F))
 	@echo "Padding the image with 64MB of zeros..."
 	dd if=/dev/zero of=$(DIR_BUILD)/image oflag=append conv=notrunc bs=64MB count=1
-
+	@echo "Copying the image to image2..."
+	cp $(DIR_BUILD)/image $(DIR_BUILD)/image2
+	
 .PHONY: image

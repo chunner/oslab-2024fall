@@ -30,10 +30,11 @@ int main(void)
         .ether_type = ETH_P_IP                                  // 2 B
     };
     memcpy(buffer, &eh, sizeof(eh));
-    *(char *) (buffer + sizeof(eh)) = 43;   // magic num
+    *(char *) ((char *) buffer + sizeof(eh)) = 43;   // magic num
     sys_move_cursor(0, 0);
     printf("> [SEND1] start send package.               \n");
     for (int i = 0;i < 1024;i++) {
+        sys_move_cursor(0, 0);
         sys_net_send(buffer, len);
         uint32_t checksum = adler32((char *) buffer, len);
         printf("> [SEND1] totally send package %d/%d !         \n", i + 1, 1024);
