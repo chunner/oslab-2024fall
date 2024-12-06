@@ -82,12 +82,12 @@ static void e1000_configure_tx(void)
     e1000_write_reg(e1000, E1000_TCTL, tctl_val);
 
     local_flush_dcache();       // flush the cache after write txd
-    printl("TCTL: %x\n", e1000_read_reg(e1000, E1000_TCTL));
-    printl("TDBAL: %x\n", e1000_read_reg(e1000, E1000_TDBAL));
-    printl("TDBAH: %x\n", e1000_read_reg(e1000, E1000_TDBAH));
-    printl("TDLEN: %x\n", e1000_read_reg(e1000, E1000_TDLEN));
-    printl("TDH: %x\n", e1000_read_reg(e1000, E1000_TDH));
-    printl("TDT: %x\n", e1000_read_reg(e1000, E1000_TDT));
+    // printl("TCTL: %x\n", e1000_read_reg(e1000, E1000_TCTL));
+    // printl("TDBAL: %x\n", e1000_read_reg(e1000, E1000_TDBAL));
+    // printl("TDBAH: %x\n", e1000_read_reg(e1000, E1000_TDBAH));
+    // printl("TDLEN: %x\n", e1000_read_reg(e1000, E1000_TDLEN));
+    // printl("TDH: %x\n", e1000_read_reg(e1000, E1000_TDH));
+    // printl("TDT: %x\n", e1000_read_reg(e1000, E1000_TDT));
 }
 
 /**
@@ -125,14 +125,14 @@ static void e1000_configure_rx(void)
     e1000_write_reg(e1000, E1000_IMS, E1000_IMS_RXDMT0);
 
     local_flush_dcache();       // flush the cache after write rxd
-    printl("RCTL: %x\n", e1000_read_reg(e1000, E1000_RCTL));
-    printl("RDBAL: %x\n", e1000_read_reg(e1000, E1000_RDBAL));
-    printl("RDBAH: %x\n", e1000_read_reg(e1000, E1000_RDBAH));
-    printl("RDLEN: %x\n", e1000_read_reg(e1000, E1000_RDLEN));
-    printl("RDH: %x\n", e1000_read_reg(e1000, E1000_RDH));
-    printl("RDT: %x\n", e1000_read_reg(e1000, E1000_RDT));
-    printl("RAL: %x\n", e1000_read_reg_array(e1000, E1000_RA, 0));
-    printl("RAH: %x\n", e1000_read_reg_array(e1000, E1000_RA, 1));
+    // printl("RCTL: %x\n", e1000_read_reg(e1000, E1000_RCTL));
+    // printl("RDBAL: %x\n", e1000_read_reg(e1000, E1000_RDBAL));
+    // printl("RDBAH: %x\n", e1000_read_reg(e1000, E1000_RDBAH));
+    // printl("RDLEN: %x\n", e1000_read_reg(e1000, E1000_RDLEN));
+    // printl("RDH: %x\n", e1000_read_reg(e1000, E1000_RDH));
+    // printl("RDT: %x\n", e1000_read_reg(e1000, E1000_RDT));
+    // printl("RAL: %x\n", e1000_read_reg_array(e1000, E1000_RA, 0));
+    // printl("RAH: %x\n", e1000_read_reg_array(e1000, E1000_RA, 1));
 }
 
 /**
@@ -158,12 +158,12 @@ void e1000_init(void)
  **/
 int e1000_transmit(void *txpacket, int length)
 {
-    printl("TCTL: %x\n", e1000_read_reg(e1000, E1000_TCTL));
-    printl("TDBAL: %x\n", e1000_read_reg(e1000, E1000_TDBAL));
-    printl("TDBAH: %x\n", e1000_read_reg(e1000, E1000_TDBAH));
-    printl("TDLEN: %x\n", e1000_read_reg(e1000, E1000_TDLEN));
-    printl("TDH: %x\n", e1000_read_reg(e1000, E1000_TDH));
-    printl("TDT: %x\n", e1000_read_reg(e1000, E1000_TDT));
+    // printl("TCTL: %x\n", e1000_read_reg(e1000, E1000_TCTL));
+    // printl("TDBAL: %x\n", e1000_read_reg(e1000, E1000_TDBAL));
+    // printl("TDBAH: %x\n", e1000_read_reg(e1000, E1000_TDBAH));
+    // printl("TDLEN: %x\n", e1000_read_reg(e1000, E1000_TDLEN));
+    // printl("TDH: %x\n", e1000_read_reg(e1000, E1000_TDH));
+    // printl("TDT: %x\n", e1000_read_reg(e1000, E1000_TDT));
     /* TODO: [p5-task1] Transmit one packet from txpacket */
 
     int index = e1000_read_reg(e1000, E1000_TDT);
@@ -184,16 +184,16 @@ int e1000_transmit(void *txpacket, int length)
     memcpy(pa2kva(tx_desc_array[index].addr), txpacket, transmit_len);
     e1000_write_reg(e1000, E1000_TDT, (index + 1) % TXDESCS);   // update TDT
 
-    printl("-----------------------send: %d------------------\n", transmit_len);
-    char *curr = (char *) tx_pkt_buffer[index];
-    for (int j = 0; j < (transmit_len + 15) / 16; ++j) {
-        for (int k = 0; k < 16 && (j * 16 + k < transmit_len); ++k) {
-            printl("%02x ", (uint32_t) (*(uint8_t *) curr));
-            ++curr;
-        }
-        printl("\n");
-        //if (curr - tx_pkt_buffer[index] >= 80) break;
-    }
+    // printl("-----------------------send: %d------------------\n", transmit_len);
+    // char *curr = (char *) tx_pkt_buffer[index];
+    // for (int j = 0; j < (transmit_len + 15) / 16; ++j) {
+    //     for (int k = 0; k < 16 && (j * 16 + k < transmit_len); ++k) {
+    //         printl("%02x ", (uint32_t) (*(uint8_t *) curr));
+    //         ++curr;
+    //     }
+    //     printl("\n");
+    //     //if (curr - tx_pkt_buffer[index] >= 80) break;
+    // }
 
     local_flush_dcache();       // flush the cache after write txd and tx buffer
     return transmit_len;
@@ -206,14 +206,14 @@ int e1000_transmit(void *txpacket, int length)
  **/
 int e1000_poll(void *rxbuffer)
 {
-    printl("RCTL: %x\n", e1000_read_reg(e1000, E1000_RCTL));
-    printl("RDBAL: %x\n", e1000_read_reg(e1000, E1000_RDBAL));
-    printl("RDBAH: %x\n", e1000_read_reg(e1000, E1000_RDBAH));
-    printl("RDLEN: %x\n", e1000_read_reg(e1000, E1000_RDLEN));
-    printl("RDH: %x\n", e1000_read_reg(e1000, E1000_RDH));
-    printl("RDT: %x\n", e1000_read_reg(e1000, E1000_RDT));
-    printl("RAL: %x\n", e1000_read_reg_array(e1000, E1000_RA, 0));
-    printl("RAH: %x\n", e1000_read_reg_array(e1000, E1000_RA, 1));
+    // printl("RCTL: %x\n", e1000_read_reg(e1000, E1000_RCTL));
+    // printl("RDBAL: %x\n", e1000_read_reg(e1000, E1000_RDBAL));
+    // printl("RDBAH: %x\n", e1000_read_reg(e1000, E1000_RDBAH));
+    // printl("RDLEN: %x\n", e1000_read_reg(e1000, E1000_RDLEN));
+    // printl("RDH: %x\n", e1000_read_reg(e1000, E1000_RDH));
+    // printl("RDT: %x\n", e1000_read_reg(e1000, E1000_RDT));
+    // printl("RAL: %x\n", e1000_read_reg_array(e1000, E1000_RA, 0));
+    // printl("RAH: %x\n", e1000_read_reg_array(e1000, E1000_RA, 1));
 
     /* TODO: [p5-task2] Receive one packet and put it into rxbuffer */
     int index = (e1000_read_reg(e1000, E1000_RDT) + 1) % RXDESCS;
@@ -232,16 +232,16 @@ int e1000_poll(void *rxbuffer)
     rx_desc_array[index].length = 0;
     e1000_write_reg(e1000, E1000_RDT, index);   // update RDT
 
-    char *curr = (char *) rx_pkt_buffer[index];
-    printl("--------------------------recv: %d------------------\n", poll_len);
-    for (int j = 0; j < (poll_len + 15) / 16; ++j) {
-        for (int k = 0; k < 16 && (j * 16 + k < poll_len); ++k) {
-            printl("%02x ", (uint32_t) (*(uint8_t *) curr));
-            ++curr;
-        }
-        printl("\n");
-        //if (curr - rx_pkt_buffer[index] >= 80) break;
-    }
+    // char *curr = (char *) rx_pkt_buffer[index];
+    // printl("--------------------------recv: %d------------------\n", poll_len);
+    // for (int j = 0; j < (poll_len + 15) / 16; ++j) {
+    //     for (int k = 0; k < 16 && (j * 16 + k < poll_len); ++k) {
+    //         printl("%02x ", (uint32_t) (*(uint8_t *) curr));
+    //         ++curr;
+    //     }
+    //     printl("\n");
+    //     //if (curr - rx_pkt_buffer[index] >= 80) break;
+    // }
 
     local_flush_dcache();       // flush the cache after read rxd and rx buffer
     return poll_len;
