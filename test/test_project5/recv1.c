@@ -25,12 +25,14 @@ int main(void)
         int ret = sys_net_recv(recv_buffer, MAX_RECV_CNT, recv_length);
         // speed caculation
         ++cnt;
+        total_package += MAX_RECV_CNT;
         uint64_t new_clk = sys_get_tick();
         uint64_t clks = (new_clk - old_clk);
-        uint32_t speed = ret * time_base / clks / 1000;      // KB/s
+        uint64_t speed = ret * time_base / clks / 1000;      // KB/s
         old_clk = new_clk;
         sys_move_cursor(0, print_location + 7);
-        printf("<%d>: ret = %x, clk = %x, timebase = %d, speed = %x\n", cnt, ret, clks, time_base, speed);
+        printf("<%d>: ret = %x, clk = %x, timebase = %d, speed = %dKB/s\n", cnt, ret, clks, time_base, speed);
+        printf("> [RECV1] totally recieve package %d/%d !         \n", total_package, 1024);
         char *curr = (char *) recv_buffer;
         char *next = curr;
         for (int i = 0; i < MAX_RECV_CNT; ++i) {
@@ -40,19 +42,8 @@ int main(void)
                 continue;
             }
             uint32_t checksum = adler32(curr, recv_length[i]);
-            if (recv_length[i] > len_lim)
-                recv_length[i] = len_lim;
-            sys_move_cursor(0, print_location + 1);
-            printf("> [RECV1] totally recieve package %d/%d !         \n", ++total_package, 1024);
-            printf("> [RECV1] speed: %dKB/s\n", speed);
-            printf("> [RECV1] checksum: %x\n", checksum);
-            // for (int j = 0; j < (recv_length[i] + 15) / 16; ++j) {
-            //     for (int k = 0; k < 16 && (j * 16 + k < recv_length[i]); ++k) {
-            //         printf("%02x ", (uint32_t) (*(uint8_t *) curr));
-            //         ++curr;
-            //     }
-            //     printf("\n");
-            // }
+            // sys_move_cursor(0, print_location + 1);
+            printf("> [RECV1] checksum: %x", checksum);
             curr = next;
         }
     }

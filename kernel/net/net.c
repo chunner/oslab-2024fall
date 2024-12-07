@@ -5,8 +5,8 @@
 #include <os/list.h>
 #include <os/smp.h>
 
-static LIST_HEAD(send_block_queue);
-static LIST_HEAD(recv_block_queue);
+LIST_HEAD(send_block_queue);
+LIST_HEAD(recv_block_queue);
 
 int do_net_send(void *txpacket, int length)
 {
@@ -17,14 +17,14 @@ int do_net_send(void *txpacket, int length)
         txpacket += trans_len;
         length -= trans_len;
         total_len += trans_len;
-        if (trans_len == 0) {
-            uint32_t ims_val = e1000_read_reg(e1000, E1000_IMS);
-            if (ims_val & E1000_IMS_TXQE == 0) {    // if not enabled TXQE interrupt
-                e1000_write_reg(e1000, E1000_IMS, E1000_IMS_TXQE);
-            }
-            do_block(&current_running->list, &send_block_queue);
-            do_scheduler();
-        }
+        // if (trans_len == 0) {
+        //     uint32_t ims_val = e1000_read_reg(e1000, E1000_IMS);
+        //     if (ims_val & E1000_IMS_TXQE == 0) {    // if not enabled TXQE interrupt
+        //         e1000_write_reg(e1000, E1000_IMS, E1000_IMS_TXQE);
+        //     }
+        //     do_block(&current_running->list, &send_block_queue);
+        //     do_scheduler();
+        // }
     }
     // TODO: [p5-task3] Call do_block when e1000 transmit queue is full
     // TODO: [p5-task4] Enable TXQE interrupt if transmit queue is full
@@ -38,11 +38,11 @@ int do_net_multisend(void *txbuffer, int pkt_num, int pkt_len)
     for (int i = 0; i < pkt_num; i++) {
         int trans_len = e1000_transmit(txbuffer, pkt_len);
         toltal_len += trans_len;
-        if (trans_len == 0) {
-            do_block(&current_running->list, &send_block_queue);
-            do_scheduler();
-            i--;
-        }
+        // if (trans_len == 0) {
+        //     do_block(&current_running->list, &send_block_queue);
+        //     do_scheduler();
+        //     i--;
+        // }
     }
     // TODO: [p5-task3] Call do_block when there is no packet on the way
 
@@ -62,11 +62,11 @@ int do_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens)
         pkt_lens[i] = e1000_poll(rxbuffer);
         recv_len += pkt_lens[i];
         rxbuffer += pkt_lens[i];
-        if (pkt_lens[i] == 0) {
-            do_block(&current_running->list, &recv_block_queue);
-            do_scheduler();
-            i--;
-        }
+        // if (pkt_lens[i] == 0) {
+        //     do_block(&current_running->list, &recv_block_queue);
+        //     do_scheduler();
+        //     i--;
+        // }
     }
     // TODO: [p5-task3] Call do_block when there is no packet on the way
 

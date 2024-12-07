@@ -6,6 +6,7 @@
 #include <pgtable.h>
 #include <os/sched.h>
 #include <os/mm.h>
+#include <os/list.h>
 
 #define E1000_TCTL_CT_SHIFT   4 
 #define E1000_TCTL_COLD_SHIFT   12 
@@ -23,6 +24,10 @@ static char rx_pkt_buffer[RXDESCS][RX_PKT_SIZE];
 
 // Fixed Ethernet MAC Address of E1000
 static const uint8_t enetaddr[6] = { 0x00, 0x0a, 0x35, 0x00, 0x1e, 0x53 };
+
+
+extern list_head recv_block_queue;
+extern list_head send_block_queue;
 
 /**
  * e1000_reset - Reset Tx and Rx Units; mask and clear all interrupts.
@@ -166,10 +171,16 @@ int e1000_transmit(void *txpacket, int length)
     // printl("TDT: %x\n", e1000_read_reg(e1000, E1000_TDT));
     /* TODO: [p5-task1] Transmit one packet from txpacket */
 
-    int index = e1000_read_reg(e1000, E1000_TDT);
     local_flush_dcache();       // flush the cache before read txd
-    if (tx_desc_array[index].status & E1000_TXD_STAT_DD == 0) {
-        return 0;       // flush the cache before read txd
+    int index = e1000_read_reg(e1000, E1000_TDT);
+    while (tx_desc_array[index].status & E1000_TXD_STAT_DD == 0) {
+        uint32_t ims_val = e1000_read_reg(e1000, E1000_IMS);
+        if (ims_val & E1000_IMS_TXQE == 0) {    // if not enabled TXQE interrupt
+            e1000_write_reg(e1000, E1000_IMS, E1000_IMS_TXQE);
+        }
+        do_block(&current_running->list, &send_block_queue);
+        do_scheduler();
+        local_flush_dcache();       // flush the cache before read txd
     };   // wait until there is a free descriptor
 
     int transmit_len = length > TX_PKT_SIZE ? TX_PKT_SIZE : length;
@@ -206,51 +217,42 @@ int e1000_transmit(void *txpacket, int length)
  **/
 int e1000_poll(void *rxbuffer)
 {
-    // printl("RCTL: %x\n", e1000_read_reg(e1000, E1000_RCTL));
-    // printl("RDBAL: %x\n", e1000_read_reg(e1000, E1000_RDBAL));
-    // printl("RDBAH: %x\n", e1000_read_reg(e1000, E1000_RDBAH));
-    // printl("RDLEN: %x\n", e1000_read_reg(e1000, E1000_RDLEN));
-    // printl("RDH: %x\n", e1000_read_reg(e1000, E1000_RDH));
-    // printl("RDT: %x\n", e1000_read_reg(e1000, E1000_RDT));
-    // printl("RAL: %x\n", e1000_read_reg_array(e1000, E1000_RA, 0));
-    // printl("RAH: %x\n", e1000_read_reg_array(e1000, E1000_RA, 1));
-
     /* TODO: [p5-task2] Receive one packet and put it into rxbuffer */
-    int index = (e1000_read_reg(e1000, E1000_RDT) + 1) % RXDESCS;
-    local_flush_dcache();       // flush the cache before read rxd
-    if ((rx_desc_array[index].status & E1000_RXD_STAT_DD) == 0) {
-        return 0;
-    };   // wait until there is a packet
-    // if ((rx_pkt_buffer[index][14] != 43)) {
-    //     rx_desc_array[index].status = 0;
-    //     rx_desc_array[index].csum = 0;
-    //     rx_desc_array[index].length = 0;
-    //     e1000_write_reg(e1000, E1000_RDT, index);   // update RDT
-    //     local_flush_dcache();       // flush the cache after write rxd and rx buffer
-    //     return 0;
-    // }
+    int poll_len = 0;
+    int eop = 0;
+    do {
+        local_flush_dcache();       // flush the cache before read rxd
+        int index = (e1000_read_reg(e1000, E1000_RDT) + 1) % RXDESCS;
+        while ((rx_desc_array[index].status & E1000_RXD_STAT_DD) == 0) {
+            do_block(&current_running->list, &recv_block_queue);
+            do_scheduler();
+            local_flush_dcache();       // flush the cache before read rxd
+        };   // wait until there is a packet
 
-    int poll_len = rx_desc_array[index].length;
-    check_uva_mem(rxbuffer, poll_len, current_running);
-    memcpy((char *) rxbuffer, rx_pkt_buffer[index], poll_len);
-    rx_desc_array[index].special = 0;
-    rx_desc_array[index].errors = 0;
-    rx_desc_array[index].status = 0;
-    rx_desc_array[index].csum = 0;
-    rx_desc_array[index].length = 0;
-    e1000_write_reg(e1000, E1000_RDT, index);   // update RDT
+        poll_len += rx_desc_array[index].length;
+        check_uva_mem(rxbuffer, poll_len, current_running);
+        memcpy((char *) rxbuffer, rx_pkt_buffer[index], poll_len);
+        eop = rx_desc_array[index].status & E1000_RXD_STAT_EOP;
 
-    // char *curr = (char *) rx_pkt_buffer[index];
-    // printl("--------------------------recv: %d------------------\n", poll_len);
-    // for (int j = 0; j < (poll_len + 15) / 16; ++j) {
-    //     for (int k = 0; k < 16 && (j * 16 + k < poll_len); ++k) {
-    //         printl("%02x ", (uint32_t) (*(uint8_t *) curr));
-    //         ++curr;
-    //     }
-    //     printl("\n");
-    //     //if (curr - rx_pkt_buffer[index] >= 80) break;
-    // }
+        rx_desc_array[index].special = 0;
+        rx_desc_array[index].errors = 0;
+        rx_desc_array[index].status = 0;
+        rx_desc_array[index].csum = 0;
+        rx_desc_array[index].length = 0;
+        e1000_write_reg(e1000, E1000_RDT, index);   // update RDT
 
-    local_flush_dcache();       // flush the cache after read rxd and rx buffer
+        // char *curr = (char *) rx_pkt_buffer[index];
+        // printl("--------------------------recv: %d------------------\n", poll_len);
+        // for (int j = 0; j < (poll_len + 15) / 16; ++j) {
+        //     for (int k = 0; k < 16 && (j * 16 + k < poll_len); ++k) {
+        //         printl("%02x ", (uint32_t) (*(uint8_t *) curr));
+        //         ++curr;
+        //     }
+        //     printl("\n");
+        //     //if (curr - rx_pkt_buffer[index] >= 80) break;
+        // }
+
+        local_flush_dcache();       // flush the cache after read rxd and rx buffer
+    } while (!eop);
     return poll_len;
 }

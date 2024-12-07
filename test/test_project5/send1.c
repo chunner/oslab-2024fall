@@ -3,12 +3,17 @@
 #include <string.h>
 #include <stdint.h>
 #include <mailbox.h>
-static uint32_t buffer[256] = {
+#define TXDESCS 64          // Number of tx descriptors
+#define RXDESCS 64          // Number of rx descriptors
+#define TX_PKT_SIZE 2048
+#define RX_PKT_SIZE 2048
+
+static uint32_t buffer[TXDESCS * TX_PKT_SIZE / 4] = {
     0xffffffff, 0x5500ffff, 0xf77db57d, 0x00430008, 0x0000d400, 0x11ff0040,
     0xa8c073d8, 0x00e00101, 0xe914fb00, 0x0004e914, 0x0000,     0x005e0001,
     0x2300fb00, 0x84b7f28b, 0x00450008, 0x0000d400, 0x11ff0040, 0xa8c073d8,
     0x00e00101, 0xe914fb00, 0x0801e914, 0x0000 };
-static int len = 1024;
+static int len = TXDESCS * TX_PKT_SIZE;
 
 #define ETH_ALEN 6u                 // Length of MAC address
 #define ETH_P_IP 0x0800u            // IP protocol
@@ -18,7 +23,6 @@ struct ethhdr {
     uint8_t ether_smac[ETH_ALEN];   // source mac address
     uint16_t ether_type;            // protocol format
 };
-
 
 
 
@@ -35,9 +39,9 @@ int main(void)
     printf("> [SEND1] start send package.               \n");
     for (int i = 0;i < 16;i++) {
         sys_move_cursor(0, 0);
-        sys_net_multisend(buffer, 64, len);
+        sys_net_send(buffer, len);
         uint32_t checksum = adler32((char *) buffer, len);
-        printf("> [SEND1] totally send package %d/%d !         \n", (i + 1) * 64, 1024);
+        printf("> [SEND1] totally send package %dKB !         \n", (i + 1) * len / 1024);
         printf("> [SEND1] checksum: %x\n", checksum);
     }
 }

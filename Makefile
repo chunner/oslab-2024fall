@@ -224,8 +224,8 @@ $(ELF_CREATEIMAGE): $(SRC_CREATEIMAGE)
 
 image: $(ELF_CREATEIMAGE) $(ELF_BOOT) $(ELF_MAIN) $(ELF_USER)
 	cd $(DIR_BUILD) && ./$(<F) --extended $(filter-out $(<F), $(^F))
-	@echo "Padding the image with 64MB of zeros..."
-	dd if=/dev/zero of=$(DIR_BUILD)/image oflag=append conv=notrunc bs=64MB count=1
+# @echo "Padding the image with 64MB of zeros..."
+# dd if=/dev/zero of=$(DIR_BUILD)/image oflag=append conv=notrunc bs=64MB count=1
 	@echo "Copying the image to image2..."
 	cp $(DIR_BUILD)/image $(DIR_BUILD)/image2
 	
