@@ -35,9 +35,9 @@ int main(void)
     *(char *) ((char *) buffer + sizeof(eh)) = 43;   // magic num
     sys_move_cursor(0, 5);
     printf("> [SEND1] start send package.               \n");
-    for (int i = 0;i < 8;i++) {
+    for (int i = 0;i < 16;i++) {
         sys_move_cursor(0, 6);
-        sys_net_multisend(buffer, TXDESCS, len);        // send 64 packets one time, 2048 B * 64 = 128 KB
+        sys_net_multisend(buffer, TXDESCS, len);        // send 64 packets one time, 1500 B * 64 = 96 KB
         uint32_t checksum = adler32((char *) buffer, len);
         printf("> [SEND1] totally send %d   KB !         \n", (i + 1) * len * TXDESCS / 1024);
         printf("> [SEND1] checksum: %x\n", checksum);

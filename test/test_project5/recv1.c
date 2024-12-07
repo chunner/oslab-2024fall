@@ -19,11 +19,11 @@ int main(void)
     printf("[RECV1] start recv: ");
 
     uint64_t time_base = sys_get_timebase();
-    uint64_t old_clk = sys_get_tick();
     uint64_t cnt = 0;
 
     while (1)
     {
+        uint64_t old_clk = sys_get_tick();
         int ret = sys_net_recv(recv_buffer, RXDESCS, recv_length); // receive 64 packets one time
         total_KB += ret / 1024;
         ++cnt;
@@ -31,9 +31,8 @@ int main(void)
         uint64_t new_clk = sys_get_tick();
         uint64_t clks = (new_clk - old_clk);
         uint64_t speed = ret * time_base / clks / 1000;      // KB/s
-        old_clk = new_clk;
 
-        sys_move_cursor(0, print_location + 7);
+        sys_move_cursor(0, print_location + 3);
         printf("<%d>: ret = %x, clk = %x, timebase = %d, speed = %dKB/s\n", cnt, ret, clks, time_base, speed);
         printf("> [RECV1] totally recieve %d KB !         \n", total_KB);
         // uint32_t checksum = adler32((char *) recv_buffer, recv_length);
@@ -50,7 +49,7 @@ int main(void)
                 continue;
             }
             uint32_t checksum = adler32(curr, recv_length[i]);
-            sys_move_cursor(0, print_location + 1);
+            sys_move_cursor(0, print_location + 5);
             printf("> [RECV1] checksum: %x", checksum);
             curr = next;
         }
