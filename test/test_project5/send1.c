@@ -3,7 +3,6 @@
 #include <string.h>
 #include <stdint.h>
 #include <mailbox.h>
-#define TXDESCS 64
 #define TX_PKT_SIZE 1500
 
 static uint32_t buffer[TX_PKT_SIZE / 4] = {
@@ -35,11 +34,11 @@ int main(void)
     *(char *) ((char *) buffer + sizeof(eh)) = 43;   // magic num
     sys_move_cursor(0, 5);
     printf("> [SEND1] start send package.               \n");
-    for (int i = 0;i < 16;i++) {
+    for (int i = 0;i < 1024;i++) {
         sys_move_cursor(0, 6);
-        sys_net_multisend(buffer, TXDESCS, len);        // send 64 packets one time, 1500 B * 64 = 96 KB
+        sys_net_send(buffer, len);        // send 1 packet one time
         uint32_t checksum = adler32((char *) buffer, len);
-        printf("> [SEND1] totally send %d   KB !         \n", (i + 1) * len * TXDESCS / 1024);
+        printf("> [SEND1] totally send %d   KB !         \n", (i + 1) * len / 1024);
         printf("> [SEND1] checksum: %x\n", checksum);
     }
 }
