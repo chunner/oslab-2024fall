@@ -163,6 +163,7 @@ static void init_syscall(void)
     syscall[SYSCALL_SBRK] = (long(*)()) do_sbrk;
     syscall[SYSCALL_NET_SEND] = (long(*)()) do_net_send;
     syscall[SYSCALL_NET_RECV] = (long(*)()) do_net_recv;
+    syscall[SYSCALL_NET_MULISND] = (long(*)()) do_net_multisend;
 }
 /************************************************************/
 

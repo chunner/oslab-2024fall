@@ -324,6 +324,13 @@ int sys_net_send(void *txpacket, int length)
     return retval;
 }
 
+int sys_net_multisend(void *txpacket, int pkt_num, int pkt_len)
+{
+    /* TODO: [p5-task1] call invoke_syscall to implement sys_net_send */
+    int retval = invoke_syscall((long) SYSCALL_NET_MULISND, (long) txpacket, (long) pkt_num, (long) pkt_len, IGNORE, IGNORE);
+    return retval;
+}
+
 int sys_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens)
 {
     /* TODO: [p5-task2] call invoke_syscall to implement sys_net_recv */

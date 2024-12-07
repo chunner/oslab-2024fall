@@ -221,6 +221,14 @@ int e1000_poll(void *rxbuffer)
     if ((rx_desc_array[index].status & E1000_RXD_STAT_DD) == 0) {
         return 0;
     };   // wait until there is a packet
+    // if ((rx_pkt_buffer[index][14] != 43)) {
+    //     rx_desc_array[index].status = 0;
+    //     rx_desc_array[index].csum = 0;
+    //     rx_desc_array[index].length = 0;
+    //     e1000_write_reg(e1000, E1000_RDT, index);   // update RDT
+    //     local_flush_dcache();       // flush the cache after write rxd and rx buffer
+    //     return 0;
+    // }
 
     int poll_len = rx_desc_array[index].length;
     check_uva_mem(rxbuffer, poll_len, current_running);

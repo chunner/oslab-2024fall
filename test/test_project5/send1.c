@@ -33,11 +33,11 @@ int main(void)
     *(char *) ((char *) buffer + sizeof(eh)) = 43;   // magic num
     sys_move_cursor(0, 0);
     printf("> [SEND1] start send package.               \n");
-    for (int i = 0;i < 1024;i++) {
+    for (int i = 0;i < 16;i++) {
         sys_move_cursor(0, 0);
-        sys_net_send(buffer, len);
+        sys_net_multisend(buffer, 64, len);
         uint32_t checksum = adler32((char *) buffer, len);
-        printf("> [SEND1] totally send package %d/%d !         \n", i + 1, 1024);
+        printf("> [SEND1] totally send package %d/%d !         \n", (i + 1) * 64, 1024);
         printf("> [SEND1] checksum: %x\n", checksum);
     }
 }

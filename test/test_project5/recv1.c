@@ -30,7 +30,7 @@ int main(void)
         uint32_t speed = ret * time_base / clks / 1000;      // KB/s
         old_clk = new_clk;
         sys_move_cursor(0, print_location + 7);
-        printf("<%d>: ret = %x, clk = %x, speed = %x\n", cnt, ret, clks, speed);
+        printf("<%d>: ret = %x, clk = %x, timebase = %d, speed = %x\n", cnt, ret, clks, time_base, speed);
         char *curr = (char *) recv_buffer;
         char *next = curr;
         for (int i = 0; i < MAX_RECV_CNT; ++i) {
@@ -39,10 +39,10 @@ int main(void)
                 curr = next;
                 continue;
             }
+            uint32_t checksum = adler32(curr, recv_length[i]);
             if (recv_length[i] > len_lim)
                 recv_length[i] = len_lim;
             sys_move_cursor(0, print_location + 1);
-            uint32_t checksum = adler32(curr, 1024);
             printf("> [RECV1] totally recieve package %d/%d !         \n", ++total_package, 1024);
             printf("> [RECV1] speed: %dKB/s\n", speed);
             printf("> [RECV1] checksum: %x\n", checksum);

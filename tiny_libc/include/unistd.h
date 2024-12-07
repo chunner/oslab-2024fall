@@ -71,6 +71,7 @@ void *sbrk(intptr_t increment);
 
 /* net send and recv */
 int sys_net_send(void *txpacket, int length);
+int sys_net_multisend(void *txbuffer, int pkt_num, int pkt_len);
 int sys_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens);
 /************************************************************/
 

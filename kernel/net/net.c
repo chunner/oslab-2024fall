@@ -32,6 +32,28 @@ int do_net_send(void *txpacket, int length)
     return total_len;  // Bytes it has transmitted
 }
 
+int do_net_multisend(void *txbuffer, int pkt_num, int pkt_len)
+{
+    int toltal_len = 0;
+    for (int i = 0; i < pkt_num; i++) {
+        int trans_len = e1000_transmit(txbuffer, pkt_len);
+        toltal_len += trans_len;
+        if (trans_len == 0) {
+            do_block(&current_running->list, &send_block_queue);
+            do_scheduler();
+            i--;
+        }
+    }
+    // TODO: [p5-task3] Call do_block when there is no packet on the way
+
+    return toltal_len;  // Bytes it has received
+
+
+}
+
+
+
+
 int do_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens)
 {
     // TODO: [p5-task2] Receive one network packet via e1000 device
