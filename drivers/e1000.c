@@ -222,13 +222,26 @@ int e1000_poll(void *rxbuffer)
     int eop = 0;
     do {
         local_flush_dcache();       // flush the cache before read rxd
-        int index = (e1000_read_reg(e1000, E1000_RDT) + 1) % RXDESCS;
-        while ((rx_desc_array[index].status & E1000_RXD_STAT_DD) == 0) {
-            do_block(&current_running->list, &recv_block_queue);
-            do_scheduler();
-            local_flush_dcache();       // flush the cache before read rxd
-        };   // wait until there is a packet
-
+        int index;
+        while (1) {
+            index = (e1000_read_reg(e1000, E1000_RDT) + 1) % RXDESCS;
+            while ((rx_desc_array[index].status & E1000_RXD_STAT_DD) == 0) {
+                do_block(&current_running->list, &recv_block_queue);
+                do_scheduler();
+                local_flush_dcache();       // flush the cache before read rxd
+            };   // wait until there is a packet
+            if (rx_pkt_buffer[index][14] != 43) {
+                rx_desc_array[index].special = 0;
+                rx_desc_array[index].errors = 0;
+                rx_desc_array[index].status = 0;
+                rx_desc_array[index].csum = 0;
+                rx_desc_array[index].length = 0;
+                e1000_write_reg(e1000, E1000_RDT, index);   // update RDT
+                local_flush_dcache();
+            } else {
+                break;
+            }
+        }
         poll_len += rx_desc_array[index].length;
         check_uva_mem(rxbuffer, poll_len, current_running);
         memcpy((char *) rxbuffer, rx_pkt_buffer[index], poll_len);

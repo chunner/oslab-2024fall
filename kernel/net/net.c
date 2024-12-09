@@ -11,25 +11,21 @@ LIST_HEAD(recv_block_queue);
 int do_net_send(void *txpacket, int length)
 {
     // TODO: [p5-task1] Transmit one network packet via e1000 device
-    int total_len = 0;
-    while (length > 0) {
-        int trans_len = e1000_transmit(txpacket, length);
-        txpacket += trans_len;
-        length -= trans_len;
-        total_len += trans_len;
-        // if (trans_len == 0) {
-        //     uint32_t ims_val = e1000_read_reg(e1000, E1000_IMS);
-        //     if (ims_val & E1000_IMS_TXQE == 0) {    // if not enabled TXQE interrupt
-        //         e1000_write_reg(e1000, E1000_IMS, E1000_IMS_TXQE);
-        //     }
-        //     do_block(&current_running->list, &send_block_queue);
-        //     do_scheduler();
-        // }
-    }
-    // TODO: [p5-task3] Call do_block when e1000 transmit queue is full
-    // TODO: [p5-task4] Enable TXQE interrupt if transmit queue is full
 
-    return total_len;  // Bytes it has transmitted
+    int trans_len = e1000_transmit(txpacket, length);
+
+    // if (trans_len == 0) {
+    //     uint32_t ims_val = e1000_read_reg(e1000, E1000_IMS);
+    //     if (ims_val & E1000_IMS_TXQE == 0) {    // if not enabled TXQE interrupt
+    //         e1000_write_reg(e1000, E1000_IMS, E1000_IMS_TXQE);
+    //     }
+    //     do_block(&current_running->list, &send_block_queue);
+    //     do_scheduler();
+    // }
+// TODO: [p5-task3] Call do_block when e1000 transmit queue is full
+// TODO: [p5-task4] Enable TXQE interrupt if transmit queue is full
+
+    return trans_len;  // Bytes it has transmitted
 }
 
 int do_net_multisend(void *txbuffer, int pkt_num, int pkt_len)
