@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#define RXDESCS 8          // Number of rx descriptors
+#define RXDESCS 64          // Number of rx descriptors
 #define RX_PKT_SIZE 2048
 
 static int recv_length[RXDESCS];
@@ -25,7 +25,7 @@ int main(void)
     uint64_t new_clk;
     uint64_t total_B = 0;
     old_clk = sys_get_tick();
-    for (int i = 0;i < 16 * 8;i++)
+    for (int i = 0;i < 16;i++)
     {
         int ret = sys_net_recv(recv_buffer, RXDESCS, recv_length); // receive 64 packets one time
         total_packets += RXDESCS;
@@ -39,12 +39,12 @@ int main(void)
 
         //old_clk = new_clk;
 
-        //sys_move_cursor(0, print_location + 3);
+        sys_move_cursor(0, print_location + 1);
         //  printf("<%d>: ret = %x, clk = %x, timebase = %d, speed = %dKB/s\n", cnt, ret, clks, time_base, speed);
          // printf("> [RECV1] totally recieve %d KB !         \n", total_KB);
-         // printf("> [RECV1] totally recieve %d packets !         \n", total_packets);
-         // uint32_t checksum = adler32((char *) recv_buffer, recv_length);
-         // printf("> [RECV1] checksum: %x\n", checksum);
+        printf("> [RECV1] totally recieve %d packets !         \n", total_packets);
+        // uint32_t checksum = adler32((char *) recv_buffer, recv_length);
+        // printf("> [RECV1] checksum: %x\n", checksum);
 
 
 
@@ -58,7 +58,7 @@ int main(void)
             // }
             uint32_t checksum = adler32(curr, 1500); //recv_length[i]);
             total_checksum += checksum;
-            // sys_move_cursor(0, print_location + 7);
+
             // printf("> [RECV1] total_checksum: %x\n", total_checksum);
             // printf("> [RECV1] checksum: %x\n", checksum);
             curr = next;

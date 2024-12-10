@@ -210,6 +210,13 @@ int e1000_transmit(void *txpacket, int length)
     return transmit_len;
 }
 
+
+void mymemcpy(uint64_t *dest, const uint64_t *src, uint32_t len)
+{
+    for (; len != 0; len = len - 8) {
+        *dest++ = *src++;
+    }
+}
 /**
  * e1000_poll - Receive packet through e1000 net device
  * @param rxbuffer - The address of buffer to store received packet
@@ -244,7 +251,7 @@ int e1000_poll(void *rxbuffer)
         }
         poll_len += rx_desc_array[index].length;
         check_uva_mem(rxbuffer, poll_len, current_running);
-        memcpy((char *) rxbuffer, rx_pkt_buffer[index], poll_len);
+        mymemcpy((uint64_t *) rxbuffer, (uint64_t *) rx_pkt_buffer[index], poll_len);
         eop = rx_desc_array[index].status & E1000_RXD_STAT_EOP;
 
         rx_desc_array[index].special = 0;
