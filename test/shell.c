@@ -176,6 +176,78 @@ void handle_taskset_command(char *buffer) {
     }
 }
 
+void handle_mkfs_command() {
+    int retval = sys_mkfs();
+    if (retval == 0) {
+        printf("Info: mkfs successfully\n");
+    } else {
+        printf("Error: mkfs failed\n");
+    }
+}
+void handle_statfs_command() {
+    sys_statfs();
+}
+
+void handle_cd_command(char *buffer) {
+    char path[MAX_NAME_LEN];
+    int i = 3, path_idx = 0;
+    while (buffer[i] != '\0') {
+        path[path_idx++] = buffer[i++];
+    }
+    path[path_idx++] = '\0';
+    sys_cd(path);
+}
+void handle_mkdir_command(char *buffer) {
+    char path[MAX_NAME_LEN];
+    int i = 6, path_idx = 0;
+    while (buffer[i] != '\0') {
+        path[path_idx++] = buffer[i++];
+    }
+    path[path_idx++] = '\0';
+    int retval = sys_mkdir(path);
+    if (retval == 0) {
+        printf("Info: mkdir successfully\n");
+    } else {
+        printf("Error: fail to mkdir\n");
+    }
+}
+
+void handle_rmdir_command(char *buffer) {
+    char path[MAX_NAME_LEN];
+    int i = 6, path_idx = 0;
+    while (buffer[i] != '\0') {
+        path[path_idx++] = buffer[i++];
+    }
+    path[path_idx++] = '\0';
+    int retval = sys_rmdir(path);
+    if (retval == 0) {
+        printf("Info: rmdir successfully\n");
+    } else {
+        printf("Error: fail to rmdir\n");
+    }
+}
+void handle_ls_command(char *buffer) {
+    char path[MAX_NAME_LEN];
+    int i = 3, path_idx = 0;
+    int option = 0;
+    while (buffer[i] != '\0') {
+        if (buffer[i] == ' ') {
+            i++;
+            if (buffer[i] == '-') {
+                i++;
+                if (buffer[i] == 'l') {
+                    option = 1;
+                }
+                break;
+            }
+        }
+        path[path_idx++] = buffer[i++];
+    }
+    path[path_idx++] = '\0';
+    sys_ls(path, option);
+}
+
+
 
 int main(void) {
     sys_move_cursor(0, SHELL_BEGIN);
@@ -198,13 +270,27 @@ int main(void) {
             handle_kill_command(buffer);
         } else if (strncmp(buffer, "taskset", 7) == 0) {
             handle_taskset_command(buffer);
+        } else if (strncmp(buffer, "mkfs", 4) == 0) {
+            handle_mkfs_command();
+        } else if (strncmp(buffer, "statfs", 6) == 0) {
+            handle_statfs_command();
+        } else if (strncmp(buffer, "cd", 2) == 0) {
+            handle_cd_command(buffer);
+        } else if (strncmp(buffer, "mkdir", 5) == 0) {
+            handle_mkdir_command(buffer);
+        } else if (strncmp(buffer, "rmdir", 5) == 0) {
+            handle_rmdir_command(buffer);
+        } else if (strncmp(buffer, "ls", 2) == 0) {
+            handle_ls_command(buffer);
         } else {
-            printf("Error: Unknown Command %s!\n", buffer);
+            printf("Error: Unknown Command '%s'!\n", buffer);
         }
         /************************************************************/
-        /* Do not touch this comment. Reserved for future projects. */
-        /************************************************************/
-        /************************************************************/
+    // TODO [P6-task1]: mkfs, statfs, cd, mkdir, rmdir, ls
+
+    // TODO [P6-task2]: touch, cat, ln, ls -l, rm
+    /************************************************************/
+    /************************************************************/
     }
 
     return 0;

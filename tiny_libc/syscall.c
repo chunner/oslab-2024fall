@@ -49,7 +49,7 @@ void sys_move_cursor(int x, int y)
     invoke_syscall((long) SYSCALL_CURSOR, (long) x, (long) y, IGNORE, IGNORE, IGNORE);
 }
 
-void sys_write(char *buff)
+void sys_screen_write(char *buff)
 {
     /* TODO: [p2-task1] call call_jmptab to implement sys_write */
     // call_jmptab(SCREEN_WRITE, (long) buff, IGNORE, IGNORE, IGNORE, IGNORE);
@@ -336,5 +336,97 @@ int sys_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens)
     /* TODO: [p5-task2] call invoke_syscall to implement sys_net_recv */
     int retval = invoke_syscall((long) SYSCALL_NET_RECV, (long) rxbuffer, (long) pkt_num, (long) pkt_lens, IGNORE, IGNORE);
     return retval;
+}
+
+int sys_mkfs(void)
+{
+    // TODO [P6-task1]: Implement sys_mkfs
+    int retval = invoke_syscall((long) SYSCALL_FS_MKFS, IGNORE, IGNORE, IGNORE, IGNORE, IGNORE);
+    return retval;  // sys_mkfs succeeds
+}
+
+int sys_statfs(void)
+{
+    // TODO [P6-task1]: Implement sys_statfs
+    int retval = invoke_syscall((long) SYSCALL_FS_STATFS, IGNORE, IGNORE, IGNORE, IGNORE, IGNORE);
+    return retval;  // sys_statfs succeeds
+}
+
+int sys_cd(char *path)
+{
+    // TODO [P6-task1]: Implement sys_cd
+    int retval = invoke_syscall((long) SYSCALL_FS_CD, (long) path, IGNORE, IGNORE, IGNORE, IGNORE);
+    return retval;  // sys_cd succeeds
+}
+
+int sys_mkdir(char *path)
+{
+    // TODO [P6-task1]: Implement sys_mkdir
+    int retval = invoke_syscall((long) SYSCALL_FS_MKDIR, (long) path, IGNORE, IGNORE, IGNORE, IGNORE);
+    return retval;  // sys_mkdir succeeds
+}
+
+int sys_rmdir(char *path)
+{
+    // TODO [P6-task1]: Implement sys_rmdir
+    int retval = invoke_syscall((long) SYSCALL_FS_RMDIR, (long) path, IGNORE, IGNORE, IGNORE, IGNORE);
+    return retval;  // sys_rmdir succeeds
+}
+
+int sys_ls(char *path, int option)
+{
+    // TODO [P6-task1]: Implement sys_ls
+    // Note: argument 'option' serves for 'ls -l' in A-core
+    int retval = invoke_syscall((long) SYSCALL_FS_LS, (long) path, (long) option, IGNORE, IGNORE, IGNORE);
+    return retval;  // sys_ls succeeds
+}
+
+int sys_open(char *path, int mode)
+{
+    // TODO [P6-task2]: Implement sys_open
+    int retval = invoke_syscall((long) SYSCALL_FS_OPEN, (long) path, (long) mode, IGNORE, IGNORE, IGNORE);
+    return retval;  // return the id of file descriptor
+}
+
+int sys_read(int fd, char *buff, int length)
+{
+    // TODO [P6-task2]: Implement sys_read
+    int retval = invoke_syscall((long) SYSCALL_FS_READ, (long) fd, (long) buff, (long) length, IGNORE, IGNORE);
+    return retval;  // return the length of trully read data
+}
+
+int sys_write(int fd, char *buff, int length)
+{
+    // TODO [P6-task2]: Implement sys_write
+    int retval = invoke_syscall((long) SYSCALL_FS_WRITE, (long) fd, (long) buff, (long) length, IGNORE, IGNORE);
+    return retval;  // return the length of trully written data
+}
+
+int sys_close(int fd)
+{
+    // TODO [P6-task2]: Implement sys_close
+    int retval = invoke_syscall((long) SYSCALL_FS_CLOSE, (long) fd, IGNORE, IGNORE, IGNORE, IGNORE);
+    return retval;  // sys_close succeeds
+}
+
+int sys_ln(char *src_path, char *dst_path)
+{
+    // TODO [P6-task2]: Implement sys_ln
+    int retval = invoke_syscall((long) SYSCALL_FS_LN, (long) src_path, (long) dst_path, IGNORE, IGNORE, IGNORE);
+    return retval;  // sys_ln succeeds 
+}
+
+int sys_rm(char *path)
+{
+    // TODO [P6-task2]: Implement sys_rm
+    return invoke_syscall((long) SYSCALL_FS_RM, (long) path, IGNORE, IGNORE, IGNORE, IGNORE);
+    // sys_rm succeeds 
+}
+
+int sys_lseek(int fd, int offset, int whence)
+{
+    // TODO [P6-task2]: Implement sys_lseek
+    return invoke_syscall((long) SYSCALL_FS_LSEEK, (long) fd, (long) offset, (long) whence, IGNORE, IGNORE);
+    // the resulting offset location from the beginning of the file
 }
 /************************************************************/
