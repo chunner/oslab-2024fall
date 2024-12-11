@@ -33,7 +33,7 @@
 #define IT_FILE 2
 
 
-
+#define DIRECT_BLOCK_NUM 7
 
 
 
@@ -65,20 +65,21 @@ typedef struct superblock {
 
 typedef struct dentry {
     // TODO [P6-task1]: Implement the data structure of directory entry
-    char name[28];
+    char name[27];
+    uint8_t type;         // 0 is data, 1 is directory
     uint32_t ino;
 } dentry_t;               // Total: 32 bytes
 
 typedef struct inode {
     uint8_t mode;        // File type and permissions (1 bytes)
-    uint8_t type;        // Data or directory (1 bytes)
+    uint8_t type;        // 0 is data, 1 is directory (1 bytes)
     uint16_t nlink;       // Link count (2 bytes)
     uint32_t ino;         // Inode number (4 bytes)
     uint32_t size;        // File size (blocks) (4 bytes)
     uint32_t atime;       // Last access time (4 bytes)
     uint32_t mtime;       // Last modification time (4 bytes)
     uint32_t ctime;       // Creation time (4 bytes)
-    uint32_t blocks[7];  // Data block pointers (32 bytes)
+    uint32_t blocks[DIRECT_BLOCK_NUM];  // Data block pointers (32 bytes)
     uint32_t indirect;    // Single indirect pointer (4 bytes)
     uint32_t double_indirect; // Double indirect pointer (4 bytes)
     uint32_t triple_indirect; // Triple indirect pointer (4 bytes)

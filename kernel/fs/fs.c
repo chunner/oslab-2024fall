@@ -12,7 +12,7 @@ static char block_map[BLOCK_MAP_SIZE * SECTOR_SIZE];
 static inode_t inode_buffer[SECTOR_SIZE / sizeof(inode_t)];     // size = one sector, 512B
 static dentry_t dentry_buffer[BLOCK_SIZE / sizeof(dentry_t)];  // size = one block, 4KB
 
-
+static inode_t pwd_inode;
 
 
 uint32_t find_free_inode() {
@@ -32,7 +32,7 @@ uint32_t find_free_inode() {
     }
     return -1;  // Not enough consecutive free pages found
 }
-
+// return the first sector offset of the free block
 uint32_t find_free_block() {
     bios_sd_read(kva2pa(block_map), BLOCK_MAP_SIZE, BLOCK_MAP_OFFSET + FS_START_SECTOR);
     uint32_t data_block_num = SECTOR2BLOCK(DATA_SIZE);
@@ -104,7 +104,8 @@ int do_mkfs(void)
     uint32_t root_inode_idx = find_free_inode();
     uint32_t root_inode_sector = INODE_OFFSET + ROUNDDOWN(root_inode_idx * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
     uint32_t root_inode_offset = root_inode_idx % (SECTOR_SIZE / sizeof(inode_t));
-    bios_sd_read(kva2pa(inode_buffer), 1, root_inode_sector);
+    // bios_sd_read(kva2pa(inode_buffer), 1, root_inode_sector);
+    bzero((void *) inode_buffer, SECTOR_SIZE);
     inode_t *root_inode = &inode_buffer[root_inode_offset];
     root_inode->mode = O_RDWR;
     root_inode->size = 1;   // one block
@@ -114,13 +115,17 @@ int do_mkfs(void)
     root_inode->type = IT_DIR;
     root_inode->blocks[0] = find_free_block();
     bios_sd_write(kva2pa(inode_buffer), 1, root_inode_sector);
+    pwd_inode = *root_inode;
     // root dentry
     uint32_t root_dentry_sector = root_inode->blocks[0];
-    bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, root_dentry_sector);   // one block
+    // bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, root_dentry_sector);   // one block
+    bzero((void *) dentry_buffer, BLOCK_SIZE);
     strcpy(dentry_buffer[0].name, ".");
     dentry_buffer[0].ino = root_inode_idx;
+    dentry_buffer[0].type = IT_DIR;
     strcpy(dentry_buffer[1].name, "..");
     dentry_buffer[1].ino = root_inode_idx;
+    dentry_buffer[1].type = IT_DIR;
     bios_sd_write(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, root_dentry_sector);
     printk("[FS] Filesystem initialized successfully!\n");
     return 0;  // do_mkfs succeeds
@@ -184,7 +189,77 @@ int do_cd(char *path)
 int do_mkdir(char *path)
 {
     // TODO [P6-task1]: Implement do_mkdir
-
+    // search pwd whether has the same name
+    assert(strlen(path) <= 27);
+    assert(pwd_inode.size <= DIRECT_BLOCK_NUM);
+    for (int i = 0;i < pwd_inode.size;i++) {
+        bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, pwd_inode.blocks[i]);
+        for (int j = 0;j < BLOCK_SIZE / sizeof(dentry_t);j++) {
+            if (strcmp(dentry_buffer[j].name, path) == 0) {
+                printk("[FS] mkdir: cannot create directory '%s': File exists\n", path);
+                return -1;
+            } else if (dentry_buffer[j].ino == 0) {
+                dentry_buffer[j].ino = find_free_inode();
+            }
+        }
+    }
+    // find a free inode
+    uint32_t inode_idx = find_free_inode();
+    if (inode_idx == -1) {
+        printk("[FS] mkdir: cannot create directory '%s': No space left on device\n", path);
+        return -1;
+    }
+    uint32_t inode_sector = INODE_OFFSET + ROUNDDOWN(inode_idx * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
+    uint32_t inode_offset = inode_idx % (SECTOR_SIZE / sizeof(inode_t));
+    bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
+    inode_t *inode = &inode_buffer[inode_offset];
+    inode->mode = O_RDWR;
+    inode->size = 1;   // one block
+    inode->atime = inode->mtime = inode->ctime = get_timer();
+    inode->ino = inode_idx;
+    inode->nlink = 1;
+    inode->type = IT_DIR;
+    inode->blocks[0] = find_free_block();
+    bios_sd_write(kva2pa(inode_buffer), 1, inode_sector);
+    // add to pwd
+    int i;
+    for (i = 0;i < pwd_inode.size;i++) {
+        for (int j = 0;j < BLOCK_SIZE / sizeof(dentry_t);j++) {
+            if (dentry_buffer[j].ino == 0 && dentry_buffer[j].name[0] == 0) {
+                strcpy(dentry_buffer[j].name, path);
+                dentry_buffer[j].ino = inode_idx;
+                dentry_buffer[j].type = IT_DIR;
+                bios_sd_write(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, pwd_inode.blocks[i]);
+                break;
+            }
+        }
+    }
+    if (i == pwd_inode.size) {  // need to allocate a new block
+        pwd_inode.blocks[pwd_inode.size] = find_free_block();
+        pwd_inode.size++;
+        bios_sd_write(kva2pa(&pwd_inode), 1, inode_sector);
+        strcpy(dentry_buffer[0].name, path);
+        dentry_buffer[0].ino = inode_idx;
+        dentry_buffer[0].type = IT_DIR;
+        bios_sd_write(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, pwd_inode.blocks[pwd_inode.size - 1]);
+    }
+    // update pwd inode
+    pwd_inode.mtime = get_timer();
+    pwd_inode.nlink++;
+    uint32_t pwd_inode_sector = INODE_OFFSET + ROUNDDOWN(pwd_inode.ino * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
+    uint32_t pwd_inode_offset = pwd_inode.ino % (SECTOR_SIZE / sizeof(inode_t));
+    bios_sd_read(kva2pa(inode_buffer), 1, pwd_inode_sector);
+    inode_buffer[pwd_inode_offset] = pwd_inode;
+    bios_sd_write(kva2pa(inode_buffer), 1, pwd_inode_sector);
+    // add dentry
+    bzero((void *) dentry_buffer, BLOCK_SIZE);
+    strcpy(dentry_buffer[0].name, ".");
+    dentry_buffer[0].ino = inode_idx;
+    dentry_buffer[0].type = IT_DIR;
+    strcpy(dentry_buffer[1].name, "..");
+    dentry_buffer[1].ino = pwd_inode.ino;
+    dentry_buffer[1].type = IT_DIR;
+    bios_sd_write(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, inode->blocks[0]);
 
     return 0;  // do_mkdir succeeds
 }
