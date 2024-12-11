@@ -59,12 +59,31 @@ uint32_t find_free_block() {
     return -1;  // Not enough consecutive free pages found
 }
 void free_block(uint32_t block_sector) {
+    // clear block
+    bzero((void *) data_buffer, BLOCK_SIZE);
+    bios_sd_write(kva2pa(data_buffer), BLOCK_SIZE / SECTOR_SIZE, block_sector);
+    // clear block map
     bios_sd_read(kva2pa(block_map), BLOCK_MAP_SIZE, BLOCK_MAP_OFFSET + FS_START_SECTOR);
     uint32_t block_idx = SECTOR2BLOCK(block_sector - DATA_OFFSET - FS_START_SECTOR);
     uint32_t byte_idx = block_idx / 8;
     uint32_t bit = block_idx % 8;
     block_map[byte_idx] &= ~(1 << bit);  // Set the corresponding bit to 0
     bios_sd_write(kva2pa(block_map), BLOCK_MAP_SIZE, BLOCK_MAP_OFFSET + FS_START_SECTOR);
+}
+
+void free_inode(uint32_t inode_idx) {
+    // clear inode
+    uint32_t inode_sector = FS_START_SECTOR + INODE_OFFSET + ROUNDDOWN(inode_idx * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
+    uint32_t inode_offset = inode_idx % (SECTOR_SIZE / sizeof(inode_t));
+    bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
+    inode_buffer[inode_offset].size = 0;
+    bios_sd_write(kva2pa(inode_buffer), 1, inode_sector);
+    // clear inode map
+    bios_sd_read(kva2pa(inode_map), INODE_MAP_SIZE, INODE_MAP_OFFSET + FS_START_SECTOR);
+    uint32_t byte_idx = inode_idx / 8;
+    uint32_t bit = inode_idx % 8;
+    inode_map[byte_idx] &= ~(1 << bit);  // Set the corresponding bit to 0
+    bios_sd_write(kva2pa(inode_map), INODE_MAP_SIZE, INODE_MAP_OFFSET + FS_START_SECTOR);
 }
 
 uint32_t blockid2sector(uint32_t block_id, inode_t *inode) {
@@ -103,6 +122,7 @@ uint32_t blockid2sector(uint32_t block_id, inode_t *inode) {
         uint32_t indirect_block3_id = (block_id - DIRECT_BLOCK_NUM - BLOCK_SIZE / sizeof(uint32_t) - (BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t))) % (BLOCK_SIZE / sizeof(uint32_t));
         return indirect_block3[indirect_block3_id];
     }
+    return -1;
 }
 
 
@@ -320,29 +340,26 @@ int do_mkdir(char *path)
     return 0;  // do_mkdir succeeds
 }
 
-int nest_rmdir(char *path, inode_t parent_inode) {
-    bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, parent_inode.blocks[0]);
+void nest_rmdir(char *path, inode_t parent_inode) {
+    inode_t inode = *find_inode(path, &parent_inode);
+    // delete child
+    bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, inode.blocks[0]);
     for (int j = 2;j < BLOCK_SIZE / sizeof(dentry_t);j++) {
         if (dentry_buffer[j].name[0] != 0) {
             uint32_t inode_index = dentry_buffer[j].ino;
             uint32_t inode_sector = FS_START_SECTOR + INODE_OFFSET + ROUNDDOWN(inode_index * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
             uint32_t inode_offset = inode_index % (SECTOR_SIZE / sizeof(inode_t));
             bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
-            inode_t inode = inode_buffer[inode_offset];
-            if (inode.type == IT_DIR) { // child dir
-                nest_rmdir(dentry_buffer[j].name, inode);
+            inode_t child_inode = inode_buffer[inode_offset];
+            if (child_inode.type == IT_DIR) { // child dir
+                nest_rmdir(dentry_buffer[j].name, child_inode);
             } else {    // child file
-                uint32_t inode_sector = FS_START_SECTOR + INODE_OFFSET + ROUNDDOWN(inode.ino * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
-                uint32_t inode_offset = inode.ino % (SECTOR_SIZE / sizeof(inode_t));
-                bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
-                inode_t file_inode = inode_buffer[inode_offset];
-                for (int i = 0; i < file_inode.size; i++) {
-                    uint32_t block_sector = blockid2sector(i, &file_inode);
-                    bzero((void *) data_buffer, BLOCK_SIZE);
-                    bios_sd_write(kva2pa(data_buffer), BLOCK_SIZE / SECTOR_SIZE, block_sector);
+                for (int i = 0; i < child_inode.size; i++) {
+                    uint32_t block_sector = blockid2sector(i, &child_inode);
                     free_block(block_sector);
                 }
             }
+            free_inode(child_inode.ino);
         }
     }
 }
@@ -360,6 +377,27 @@ int do_rmdir(char *path)
         return -1;
     }
     nest_rmdir(path, pwd_inode);
+    // delete inode
+    free_inode(d_inode_p->ino);
+    // update pwd inode
+    pwd_inode.mtime = get_timer();
+    pwd_inode.nlink--;
+    uint32_t pwd_inode_sector = FS_START_SECTOR + INODE_OFFSET + ROUNDDOWN(pwd_inode.ino * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
+    uint32_t pwd_inode_offset = pwd_inode.ino % (SECTOR_SIZE / sizeof(inode_t));
+    bios_sd_read(kva2pa(inode_buffer), 1, pwd_inode_sector);
+    inode_buffer[pwd_inode_offset] = pwd_inode;
+    bios_sd_write(kva2pa(inode_buffer), 1, pwd_inode_sector);
+    // update pwd dentry
+    bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, pwd_inode.blocks[0]);
+    for (int j = 0; j < BLOCK_SIZE / sizeof(dentry_t); j++) {
+        if (dentry_buffer[j].ino == d_inode_p->ino) {
+            dentry_buffer[j].name[0] = 0;
+            dentry_buffer[j].ino = 0;
+            dentry_buffer[j].type = 0;
+            bios_sd_write(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, pwd_inode.blocks[0]);
+            break;
+        }
+    }
     return 0;  // do_rmdir succeeds
 }
 
