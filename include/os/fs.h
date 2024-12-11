@@ -17,16 +17,17 @@
 #define FS_NUM_SECTORS (1 << 20)                    // 512 MB = SECTOR_SIZE * NUM_SECTORS = 512 * 2^20
 #define FS_START_SECTOR (1 << 20)                // the start sector of file system
 
-// OFFSET
-#define BLOCK_MAP_OFFSET 1                          // 4 SECTOR
-#define INODE_MAP_OFFSET (BLOCK_MAP_OFFSET + 4)     // 1 SECTOR
-#define INODE_OFFSET (INODE_MAP_OFFSET + 1)         // 512 SECTOR
-#define DATA_OFFSET (INODE_OFFSET + 512)            
 // SIZE
 #define BLOCK_MAP_SIZE 4                            // 4 SECTOR
 #define INODE_MAP_SIZE 1                            // 1 SECTOR
 #define INODE_SIZE 512                              // 512 SECTOR
 #define DATA_SIZE (FS_NUM_SECTORS - DATA_OFFSET)
+
+// OFFSET
+#define BLOCK_MAP_OFFSET 1                          // 4 SECTOR
+#define INODE_MAP_OFFSET (BLOCK_MAP_OFFSET + BLOCK_MAP_SIZE)     // 1 SECTOR
+#define INODE_OFFSET (INODE_MAP_OFFSET + INODE_MAP_SIZE)         // 512 SECTOR
+#define DATA_OFFSET (INODE_OFFSET + INODE_SIZE) 
 
 // inode type
 #define IT_DIR 1

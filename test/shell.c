@@ -228,7 +228,7 @@ void handle_rmdir_command(char *buffer) {
 }
 void handle_ls_command(char *buffer) {
     char path[MAX_NAME_LEN];
-    int i = 3, path_idx = 0;
+    int i = 2, path_idx = 0;
     int option = 0;
     while (buffer[i] != '\0') {
         if (buffer[i] == ' ') {
