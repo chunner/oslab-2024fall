@@ -71,16 +71,16 @@ uint32_t blockid2sector(uint32_t block_id, inode_t *inode) {
     if (block_id < DIRECT_BLOCK_NUM) {  // direct block
         return inode->blocks[block_id];
     }
-    if(block_id < DIRECT_BLOCK_NUM + BLOCK_SIZE / sizeof(uint32_t)) {   // indirect block
+    if (block_id < DIRECT_BLOCK_NUM + BLOCK_SIZE / sizeof(uint32_t)) {   // indirect block
         bios_sd_read(kva2pa(data_buffer), 1, inode->blocks[DIRECT_BLOCK_NUM]);
         uint32_t *indirect_block = (uint32_t *) data_buffer;
         return indirect_block[block_id - DIRECT_BLOCK_NUM];
     }
     // double indirect block
-    if(block_id < DIRECT_BLOCK_NUM + BLOCK_SIZE / sizeof(uint32_t) + (BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t))) {
+    if (block_id < DIRECT_BLOCK_NUM + BLOCK_SIZE / sizeof(uint32_t) + (BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t))) {
         bios_sd_read(kva2pa(data_buffer), 1, inode->blocks[DIRECT_BLOCK_NUM + 1]);
         uint32_t *indirect_block = (uint32_t *) data_buffer;
-        uint32_t indirect_block_id = (block_id - DIRECT_BLOCK_NUM - BLOCK_SIZE / sizeof(uint32_t))/ (BLOCK_SIZE / sizeof(uint32_t));
+        uint32_t indirect_block_id = (block_id - DIRECT_BLOCK_NUM - BLOCK_SIZE / sizeof(uint32_t)) / (BLOCK_SIZE / sizeof(uint32_t));
         uint32_t indirect_block_sector = indirect_block[indirect_block_id];
         bios_sd_read(kva2pa(data_buffer), 1, indirect_block_sector);
         uint32_t *indirect_block2 = (uint32_t *) data_buffer;
@@ -89,7 +89,7 @@ uint32_t blockid2sector(uint32_t block_id, inode_t *inode) {
         return indirect_block2_sector;
     }
     // triple indirect block
-    if(block_id < DIRECT_BLOCK_NUM + BLOCK_SIZE / sizeof(uint32_t) + (BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t)) + (BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t))) {
+    if (block_id < DIRECT_BLOCK_NUM + BLOCK_SIZE / sizeof(uint32_t) + (BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t)) + (BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t))) {
         bios_sd_read(kva2pa(data_buffer), 1, inode->blocks[DIRECT_BLOCK_NUM + 2]);
         uint32_t *indirect_block = (uint32_t *) data_buffer;
         uint32_t indirect_block_id = (block_id - DIRECT_BLOCK_NUM - BLOCK_SIZE / sizeof(uint32_t) - (BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t))) / ((BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t)));
@@ -231,7 +231,15 @@ int do_statfs(void)
 int do_cd(char *path)
 {
     // TODO [P6-task1]: Implement do_cd
-
+    inode_t *inode = find_inode(path, &pwd_inode);
+    if (inode == NULL) {
+        printk("[FS] cd: %s: No such file or directory\n", path);
+        return -1;
+    } else if (inode->type != IT_DIR) {
+        printk("[FS] cd: %s: Not a directory\n", path);
+        return -1;
+    }
+    pwd_inode = *inode;
     return 0;  // do_cd succeeds
 }
 
@@ -328,11 +336,11 @@ int nest_rmdir(char *path, inode_t parent_inode) {
                 uint32_t inode_offset = inode.ino % (SECTOR_SIZE / sizeof(inode_t));
                 bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
                 inode_t file_inode = inode_buffer[inode_offset];
-                for (int i = 0; i < file_inode.sizes; i++) {    
-                        uint32_t block_sector = blockid2sector(i, &file_inode);
-                        bzero((void *) data_buffer, BLOCK_SIZE);
-                        bios_sd_write(kva2pa(data_buffer), BLOCK_SIZE / SECTOR_SIZE, block_sector);
-                        free_block(block_sector);
+                for (int i = 0; i < file_inode.size; i++) {
+                    uint32_t block_sector = blockid2sector(i, &file_inode);
+                    bzero((void *) data_buffer, BLOCK_SIZE);
+                    bios_sd_write(kva2pa(data_buffer), BLOCK_SIZE / SECTOR_SIZE, block_sector);
+                    free_block(block_sector);
                 }
             }
         }
