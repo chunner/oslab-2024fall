@@ -188,20 +188,18 @@ int do_cd(char *path)
 
 int do_mkdir(char *path)
 {
+    assert(strlen(path) <= 27);
     // TODO [P6-task1]: Implement do_mkdir
     // search pwd whether has the same name
-    assert(strlen(path) <= 27);
-    assert(pwd_inode.size <= DIRECT_BLOCK_NUM);
-
-    for (int i = 0; i < pwd_inode.size; i++) {
-        bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, pwd_inode.blocks[i]);
-        for (int j = 0; j < BLOCK_SIZE / sizeof(dentry_t); j++) {
-            if (strcmp(dentry_buffer[j].name, path) == 0) {
-                printk("[FS] mkdir: cannot create directory '%s': File exists\n", path);
-                return -1;
-            }
+    assert(pwd_inode.size == 1);
+    bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, pwd_inode.blocks[0]);
+    for (int j = 0; j < BLOCK_SIZE / sizeof(dentry_t); j++) {
+        if (strcmp(dentry_buffer[j].name, path) == 0) {
+            printk("[FS] mkdir: cannot create directory '%s': File exists\n", path);
+            return -1;
         }
     }
+
     // find a free inode
     uint32_t inode_idx = find_free_inode();
     if (inode_idx == -1) {
@@ -222,28 +220,19 @@ int do_mkdir(char *path)
     bios_sd_write(kva2pa(inode_buffer), 1, inode_sector);
     // update pwd dentry
     int found = 0;
-    for (int i = 0; i < pwd_inode.size && !found; i++) {
-        bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, pwd_inode.blocks[i]);
-        for (int j = 0; j < BLOCK_SIZE / sizeof(dentry_t); j++) {
-            if (dentry_buffer[j].ino == 0 && dentry_buffer[j].name[0] == 0) {
-                strcpy(dentry_buffer[j].name, path);
-                dentry_buffer[j].ino = inode_idx;
-                dentry_buffer[j].type = IT_DIR;
-                bios_sd_write(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, pwd_inode.blocks[i]);
-                found = 1;
-                break;
-            }
+    for (int j = 0; j < BLOCK_SIZE / sizeof(dentry_t); j++) {
+        if (dentry_buffer[j].ino == 0 && dentry_buffer[j].name[0] == 0) {
+            strcpy(dentry_buffer[j].name, path);
+            dentry_buffer[j].ino = inode_idx;
+            dentry_buffer[j].type = IT_DIR;
+            bios_sd_write(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, pwd_inode.blocks[0]);
+            found = 1;
+            break;
         }
     }
     if (!found) {
-        uint32_t new_block = find_free_block();
-        pwd_inode.blocks[pwd_inode.size++] = new_block;
-        
-        bzero(dentry_buffer, BLOCK_SIZE);
-        strcpy(dentry_buffer[0].name, path);
-        dentry_buffer[0].ino = inode_idx;
-        dentry_buffer[0].type = IT_DIR;
-        bios_sd_write(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, new_block);
+        printk("[FS] mkdir: cannot create directory '%s': no dentry\n", path);
+        return -1;
     }
     // update pwd inode
     pwd_inode.mtime = get_timer();
@@ -253,6 +242,7 @@ int do_mkdir(char *path)
     bios_sd_read(kva2pa(inode_buffer), 1, pwd_inode_sector);
     inode_buffer[pwd_inode_offset] = pwd_inode;
     bios_sd_write(kva2pa(inode_buffer), 1, pwd_inode_sector);
+
     // add dentry
     bzero((void *) dentry_buffer, BLOCK_SIZE);
     strcpy(dentry_buffer[0].name, ".");
@@ -273,11 +263,152 @@ int do_rmdir(char *path)
     return 0;  // do_rmdir succeeds
 }
 
+inode_t *find_inode(char *path, inode_t *parent_inode)
+{
+    if (path[0] == 0) {
+        return parent_inode;
+    }
+    // parse path, dir1/dir2/dir3
+    uint32_t inode_idx = 0;
+    char dir1[MAX_NAME_LEN] = { 0 };
+    char dir2[MAX_NAME_LEN] = { 0 };
+    char dir3[MAX_NAME_LEN] = { 0 };
+    int i = 0;
+    while (path[i] != '/' && path[i] != 0) {
+        dir1[i] = path[i];
+        i++;
+    }
+    dir1[i] = 0;
+    if (path[i] != 0) {
+        i++;
+        int j = 0;
+        while (path[i] != '/' && path[i] != 0) {
+            dir2[j] = path[i];
+            i++;
+            j++;
+        }
+        dir2[j] = 0;
+        if (path[i] != 0) {
+            i++;
+            int k = 0;
+            while (path[i] != '/' && path[i] != 0) {
+                dir3[k] = path[i];
+                i++;
+                k++;
+            }
+            dir3[k] = 0;
+        }
+    }
+    // find one level node
+    bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, parent_inode->blocks[0]);
+    int found = 0;
+    for (int j = 0; j < BLOCK_SIZE / sizeof(dentry_t); j++) {
+        if (strcmp(dentry_buffer[j].name, dir1) == 0) {
+            inode_idx = dentry_buffer[j].ino;
+            found = 1;
+            break;
+        }
+    }
+    if (!found) {
+        printk("[FS] find_inode: cannot access '%s': No such file or directory\n", path);
+        return NULL;
+    }
+    uint32_t inode_sector = INODE_OFFSET + ROUNDDOWN(inode_idx * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
+    uint32_t inode_offset = inode_idx % (SECTOR_SIZE / sizeof(inode_t));
+    bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
+    inode_t dir1_inode = inode_buffer[inode_offset];
+    if (dir2[0] == 0) {
+        return &inode_buffer[inode_offset];
+    }
+    // find two level node
+    bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, dir1_inode.blocks[0]);
+    found = 0;
+    for (int j = 0; j < BLOCK_SIZE / sizeof(dentry_t); j++) {
+        if (strcmp(dentry_buffer[j].name, dir2) == 0) {
+            inode_idx = dentry_buffer[j].ino;
+            found = 1;
+            break;
+        }
+    }
+    if (!found) {
+        printk("[FS] find_inode: cannot access '%s': No such file or directory\n", path);
+        return NULL;
+    }
+    inode_sector = INODE_OFFSET + ROUNDDOWN(inode_idx * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
+    inode_offset = inode_idx % (SECTOR_SIZE / sizeof(inode_t));
+    bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
+    inode_t dir2_inode = inode_buffer[inode_offset];
+    if (dir3[0] == 0) {
+        return &inode_buffer[inode_offset];
+    }
+    // find three level node
+    bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, dir2_inode.blocks[0]);
+    found = 0;
+    for (int j = 0; j < BLOCK_SIZE / sizeof(dentry_t); j++) {
+        if (strcmp(dentry_buffer[j].name, dir3) == 0) {
+            inode_idx = dentry_buffer[j].ino;
+            found = 1;
+            break;
+        }
+    }
+    if (!found) {
+        printk("[FS] find_inode: cannot access '%s': No such file or directory\n", path);
+        return NULL;
+    }
+    inode_sector = INODE_OFFSET + ROUNDDOWN(inode_idx * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
+    inode_offset = inode_idx % (SECTOR_SIZE / sizeof(inode_t));
+    bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
+    return &inode_buffer[inode_offset];
+}
+
+
+
+
+
+
+
 int do_ls(char *path, int option)
 {
     // TODO [P6-task1]: Implement do_ls
     // Note: argument 'option' serves for 'ls -l' in A-core
-
+    // find directory inode
+    inode_t *d_inode_p = find_inode(path, &pwd_inode);
+    if (d_inode_p == NULL) {
+        return -1;
+    } else if (d_inode_p->type != IT_DIR) {
+        printk("[FS] ls: cannot access '%s': Not a directory\n", path);
+        return -1;
+    }
+    inode_t d_inode = *d_inode_p;
+    if (option == 0) {
+        // list directory
+        bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, d_inode.blocks[0]);
+        for (int j = 0; j < BLOCK_SIZE / sizeof(dentry_t); j++) {
+            if (dentry_buffer[j].name[0] != 0) {
+                printk("%s\n", dentry_buffer[j].name);
+            }
+        }
+    } else {
+        // list directory with details
+        bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, d_inode.blocks[0]);
+        for (int j = 0; j < BLOCK_SIZE / sizeof(dentry_t); j++) {
+            if (dentry_buffer[j].name[0] != 0) {
+                inode_t *inode = find_inode(dentry_buffer[j].name, &d_inode);
+                assert(inode != NULL);
+                printk("%c%c%c nlink: %d ino: %d size: %d atime: %d mtime: %d ctime: %d %s\n",
+                    inode->type == IT_DIR ? 'd' : '-',
+                    inode->mode & O_RDWR ? 'r' : '-',
+                    inode->mode & O_RDWR ? 'w' : '-',
+                    inode->nlink,
+                    inode->ino,
+                    inode->size,
+                    inode->atime,
+                    inode->mtime,
+                    inode->ctime,
+                    dentry_buffer[j].name);
+            }
+        }
+    }
     return 0;  // do_ls succeeds
 }
 
