@@ -4,6 +4,7 @@
 #include <pgtable.h>
 #include <os/mm.h>
 #include <os/time.h>
+#include <assert.h>
 
 static fdesc_t fdesc_array[NUM_FDESCS];
 static char superblock_buffer[SECTOR_SIZE];
