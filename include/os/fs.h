@@ -14,7 +14,7 @@
 #define SECTOR2BLOCK(s) ((s) / (BLOCK_SIZE / SECTOR_SIZE))
 #define BLOCK2SECTOR(b) ((b) * (BLOCK_SIZE / SECTOR_SIZE))
 
-#define FS_NUM_SECTORS (1 << 20)                    // 512 MB = SECTOR_SIZE * NUM_SECTORS = 512 * 2^20
+#define FS_NUM_SECTORS (1 << 20)                    // 512 MB = SECTOR_SIZE * NUM_SECTORS = 512B * 2^20
 #define FS_START_SECTOR (1 << 20)                // the start sector of file system
 
 // SIZE

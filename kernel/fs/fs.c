@@ -47,7 +47,7 @@ uint32_t find_free_block() {
                 }
                 if (!(block_map[byte_idx] & (1 << bit))) {
                     block_map[byte_idx] |= (1 << bit);  // Set the corresponding bit to 1
-                    bios_sd_write(kva2pa(block_map), INODE_MAP_SIZE, INODE_MAP_OFFSET + FS_START_SECTOR);
+                    bios_sd_write(kva2pa(block_map), INODE_MAP_SIZE, BLOCK_MAP_OFFSET + FS_START_SECTOR);
                     return BLOCK2SECTOR(block_idx) + DATA_OFFSET + FS_START_SECTOR;
                 }
             }
