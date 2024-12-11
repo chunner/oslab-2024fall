@@ -265,10 +265,16 @@ int do_cd(char *path)
 
 int do_mkdir(char *path)
 {
-    assert(strlen(path) <= 27);
+    if (strlen(path) >= 27) {
+        printk("[FS] mkdir: cannot create directory '%s': File name too long\n", path);
+        return -1;
+    }
     // TODO [P6-task1]: Implement do_mkdir
     // search pwd whether has the same name
-    assert(pwd_inode.size == 1);
+    if (pwd_inode.size != 1) {
+        printk("[FS] mkdir: something wrong !\n", path);
+        return -1;
+    }
     bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, pwd_inode.blocks[0]);
     for (int j = 0; j < BLOCK_SIZE / sizeof(dentry_t); j++) {
         if (strcmp(dentry_buffer[j].name, path) == 0) {
@@ -340,11 +346,10 @@ int do_mkdir(char *path)
     return 0;  // do_mkdir succeeds
 }
 
-void nest_rmdir(char *path, inode_t parent_inode) {
-    inode_t inode = *find_inode(path, &parent_inode);
+void nest_rmdir(inode_t dir_inode) {
     // delete child
-    bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, inode.blocks[0]);
     for (int j = 2;j < BLOCK_SIZE / sizeof(dentry_t);j++) {
+        bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, dir_inode.blocks[0]);
         if (dentry_buffer[j].name[0] != 0) {
             uint32_t inode_index = dentry_buffer[j].ino;
             uint32_t inode_sector = FS_START_SECTOR + INODE_OFFSET + ROUNDDOWN(inode_index * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
@@ -352,7 +357,7 @@ void nest_rmdir(char *path, inode_t parent_inode) {
             bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
             inode_t child_inode = inode_buffer[inode_offset];
             if (child_inode.type == IT_DIR) { // child dir
-                nest_rmdir(dentry_buffer[j].name, child_inode);
+                nest_rmdir(child_inode);
             } else {    // child file
                 for (int i = 0; i < child_inode.size; i++) {
                     uint32_t block_sector = blockid2sector(i, &child_inode);
@@ -376,7 +381,7 @@ int do_rmdir(char *path)
         printk("[FS] ls: cannot remove '%s': Not a directory\n", path);
         return -1;
     }
-    nest_rmdir(path, pwd_inode);
+    nest_rmdir(*d_inode_p);
     // delete inode
     free_inode(d_inode_p->ino);
     // update pwd inode
