@@ -53,6 +53,7 @@ uint32_t find_free_block() {
             }
         }
     }
+    return -1;  // Not enough consecutive free pages found
 }
 
 
@@ -166,7 +167,6 @@ int do_statfs(void)
         if (inode_map[byte_idx] != 0x00) {  // Check if there are any free bits in this byte
             // Traverse each bit in the current byte
             for (int bit = 0; bit < 8; bit++) {
-                uint32_t inode_idx = byte_idx * 8 + bit;
                 if ((inode_map[byte_idx] & (1 << bit))) {
                     used_inodes++;
                 }
@@ -271,9 +271,9 @@ inode_t *find_inode(char *path, inode_t *parent_inode)
     }
     // parse path, dir1/dir2/dir3
     uint32_t inode_idx = 0;
-    char dir1[MAX_NAME_LEN] = { 0 };
-    char dir2[MAX_NAME_LEN] = { 0 };
-    char dir3[MAX_NAME_LEN] = { 0 };
+    char dir1[MAX_PATHNAME_LEN] = { 0 };
+    char dir2[MAX_PATHNAME_LEN] = { 0 };
+    char dir3[MAX_PATHNAME_LEN] = { 0 };
     int i = 0;
     while (path[i] != '/' && path[i] != 0) {
         dir1[i] = path[i];

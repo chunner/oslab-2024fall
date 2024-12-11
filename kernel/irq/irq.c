@@ -8,6 +8,7 @@
 #include <screen.h>
 #include <os/smp.h>
 #include <plic.h>
+#include <os/net.h>
 
 handler_t irq_table[IRQC_COUNT];
 handler_t exc_table[EXCC_COUNT];

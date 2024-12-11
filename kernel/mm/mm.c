@@ -92,21 +92,21 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb)  // offse
     if (lv3_pgdir[vpn2] == 0) {     // alloc a new second-level page directory
         PTE *lv2_pgdir = (PTE *) alloc_kernel_page();
         create_PageNode((uintptr_t) lv2_pgdir, (uintptr_t) lv2_pgdir, (PTE *) PGDIR_VA, pcb);
-        set_pfn(&lv3_pgdir[vpn2], (uint64_t) kva2pa(lv2_pgdir) >> NORMAL_PAGE_SHIFT);
+        set_pfn(&lv3_pgdir[vpn2], (uint64_t) kva2pa((uintptr_t) lv2_pgdir) >> NORMAL_PAGE_SHIFT);
         set_attribute(&lv3_pgdir[vpn2], _PAGE_PRESENT);
-        clear_pgdir(lv2_pgdir);   // clear second-level pgdir page
+        clear_pgdir((uintptr_t) lv2_pgdir);   // clear second-level pgdir page
     }
     PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
     if (lv2_pgdir[vpn1] == 0) {     // alloc a new first_level page directory
         PTE *lv1_pgdir = (PTE *) alloc_kernel_page();
         create_PageNode((uintptr_t) lv1_pgdir, (uintptr_t) lv1_pgdir, (PTE *) PGDIR_VA, pcb);
-        set_pfn(&lv2_pgdir[vpn1], kva2pa(lv1_pgdir) >> NORMAL_PAGE_SHIFT);
+        set_pfn(&lv2_pgdir[vpn1], kva2pa((uintptr_t) lv1_pgdir) >> NORMAL_PAGE_SHIFT);
         set_attribute(&lv2_pgdir[vpn1], _PAGE_PRESENT);
-        clear_pgdir(lv1_pgdir);   // clear second-level pgdir page
+        clear_pgdir((uintptr_t) lv1_pgdir);   // clear second-level pgdir page
     }
     PTE *lv1_pgdir = (PTE *) pa2kva(get_pa(lv2_pgdir[vpn1]));
     uintptr_t kva = (uintptr_t) alloc_user_page();
-    create_PageNode(kva, va, pcb->pgdir, pcb);
+    create_PageNode(kva, va, (PTE *) pcb->pgdir, pcb);
     uintptr_t upa = kva2pa(kva);
     set_pfn(&lv1_pgdir[vpn0], upa >> NORMAL_PAGE_SHIFT);
     set_attribute(
@@ -296,15 +296,15 @@ int umap_page(uintptr_t va, uintptr_t pa, uintptr_t pgdir, pcb_t *pcb) {
         create_PageNode((uintptr_t) lv2_pgdir, (uintptr_t) lv2_pgdir, (uintptr_t) PGDIR_VA, pcb);
         set_pfn(&lv3_pgdir[vpn2], (uint64_t) kva2pa(lv2_pgdir) >> NORMAL_PAGE_SHIFT);
         set_attribute(&lv3_pgdir[vpn2], _PAGE_PRESENT);
-        clear_pgdir(lv2_pgdir);   // clear second-level pgdir page
+        clear_pgdir((uintptr_t) lv2_pgdir);   // clear second-level pgdir page
     }
     PTE *lv2_pgdir = (PTE *) pa2kva(get_pa(lv3_pgdir[vpn2]));
     if (lv2_pgdir[vpn1] == 0) {     // alloc a new first_level page directory
         PTE *lv1_pgdir = (PTE *) alloc_kernel_page();
         create_PageNode((uintptr_t) lv1_pgdir, (uintptr_t) lv1_pgdir, (uintptr_t) PGDIR_VA, pcb);
-        set_pfn(&lv2_pgdir[vpn1], kva2pa(lv1_pgdir) >> NORMAL_PAGE_SHIFT);
+        set_pfn(&lv2_pgdir[vpn1], kva2pa((uintptr_t) lv1_pgdir) >> NORMAL_PAGE_SHIFT);
         set_attribute(&lv2_pgdir[vpn1], _PAGE_PRESENT);
-        clear_pgdir(lv1_pgdir);   // clear second-level pgdir page
+        clear_pgdir((uintptr_t) lv1_pgdir);   // clear second-level pgdir page
     }
     PTE *lv1_pgdir = (PTE *) pa2kva(get_pa(lv2_pgdir[vpn1]));
     uintptr_t kva = pa2kva(pa);
@@ -356,7 +356,7 @@ uintptr_t shm_page_get(int key)
     }
     do {
         uva = allocFreeUva(1);
-    } while ((uva, current_running->pgdir) != NULL);
+    } while (uva2pte(uva, current_running->pgdir) != NULL);
 
     shm_pages[i].kva = alloc_page_helper(uva, current_running->pgdir, current_running);
     shm_pages[i].status = SHM_USING;
@@ -383,7 +383,7 @@ void shm_page_dt(uintptr_t addr)
 {
     // TODO [P4-task4] shm_page_dt:
     uintptr_t uva = addr & VA_MASK;
-    PTE *pte = uva2pte(uva, current_running->pgdir);
+    PTE *pte = uva2pte(uva, (PTE *) current_running->pgdir);
     uint64_t pa = get_pa(*pte);
     uint64_t kva = pa2kva(pa);
 

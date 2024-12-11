@@ -8,8 +8,8 @@
 void my_memcpy(uint8_t *dest, const uint8_t *src, uint32_t len, pcb_t *pcb)
 {
     for (; len != 0; len--) {
-        check_uva_mem(dest, 1, pcb);
-        check_uva_mem(src, 1, pcb);
+        check_uva_mem((uintptr_t) dest, 1, pcb);
+        check_uva_mem((uintptr_t) src, 1, pcb);
         *dest++ = *src++;
     }
 }

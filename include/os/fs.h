@@ -34,7 +34,7 @@
 
 
 #define DIRECT_BLOCK_NUM 7
-#define MAX_NAME_LEN 27
+#define MAX_PATHNAME_LEN 27
 
 
 
@@ -65,7 +65,7 @@ typedef struct superblock {
 
 typedef struct dentry {
     // TODO [P6-task1]: Implement the data structure of directory entry
-    char name[MAX_NAME_LEN];
+    char name[MAX_PATHNAME_LEN];
     uint8_t type;         // 0 is data, 1 is directory
     uint32_t ino;
 } dentry_t;               // Total: 32 bytes

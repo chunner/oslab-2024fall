@@ -225,6 +225,7 @@ void sys_condition_destroy(int cond_idx)
 int sys_semaphore_init(int key, int init)
 {
     /* TODO: [p3-task2] call invoke_syscall to implement sys_semaphore_init */
+    return 0;
 }
 
 void sys_semaphore_up(int sema_idx)
@@ -308,12 +309,12 @@ void sys_getbrk(uint64_t bss_end)
 
 int brk(void *addr)
 {
-    invoke_syscall((long) SYSCALL_BRK, (long) addr, IGNORE, IGNORE, IGNORE, IGNORE);
+    return invoke_syscall((long) SYSCALL_BRK, (long) addr, IGNORE, IGNORE, IGNORE, IGNORE);
 }
 
 void *sbrk(intptr_t increment)
 {
-    invoke_syscall((long) SYSCALL_SBRK, (long) increment, IGNORE, IGNORE, IGNORE, IGNORE);
+    return (void *) invoke_syscall((long) SYSCALL_SBRK, (long) increment, IGNORE, IGNORE, IGNORE, IGNORE);
 }
 
 

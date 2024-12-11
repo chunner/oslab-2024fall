@@ -173,9 +173,9 @@ int e1000_transmit(void *txpacket, int length)
 
     local_flush_dcache();       // flush the cache before read txd
     int index = e1000_read_reg(e1000, E1000_TDT);
-    while (tx_desc_array[index].status & E1000_TXD_STAT_DD == 0) {
+    while ((tx_desc_array[index].status & E1000_TXD_STAT_DD) == 0) {
         uint32_t ims_val = e1000_read_reg(e1000, E1000_IMS);
-        if (ims_val & E1000_IMS_TXQE == 0) {    // if not enabled TXQE interrupt
+        if ((ims_val & E1000_IMS_TXQE) == 0) {    // if not enabled TXQE interrupt
             e1000_write_reg(e1000, E1000_IMS, E1000_IMS_TXQE);
         }
         do_block(&current_running->list, &send_block_queue);
@@ -191,8 +191,8 @@ int e1000_transmit(void *txpacket, int length)
         tx_desc_array[index].cmd = E1000_TXD_CMD_RS | E1000_TXD_CMD_EOP;
     }
     tx_desc_array[index].status = 0;
-    check_uva_mem(txpacket, length, current_running);
-    memcpy(pa2kva(tx_desc_array[index].addr), txpacket, transmit_len);
+    check_uva_mem((uintptr_t) txpacket, length, current_running);
+    memcpy((uint8_t *) pa2kva(tx_desc_array[index].addr), txpacket, transmit_len);
     e1000_write_reg(e1000, E1000_TDT, (index + 1) % TXDESCS);   // update TDT
 
     // printl("-----------------------send: %d------------------\n", transmit_len);
@@ -250,7 +250,7 @@ int e1000_poll(void *rxbuffer)
             }
         }
         poll_len += rx_desc_array[index].length;
-        check_uva_mem(rxbuffer, poll_len, current_running);
+        check_uva_mem((uintptr_t) rxbuffer, poll_len, current_running);
         mymemcpy((uint64_t *) rxbuffer, (uint64_t *) rx_pkt_buffer[index], poll_len);
         eop = rx_desc_array[index].status & E1000_RXD_STAT_EOP;
 

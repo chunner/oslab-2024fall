@@ -48,6 +48,7 @@
 #include <pgtable.h>
 #include <os/net.h>
 #include <os/fs.h>
+#include <plic.h>
 
 #define VERSION_BUF 50
 

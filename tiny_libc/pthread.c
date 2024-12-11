@@ -18,4 +18,5 @@ int pthread_join(pthread_t thread)
 {
     /* TODO: [p4-task4] implement pthread_join */
     sys_pthread_join(thread);
+    return 0;
 }
