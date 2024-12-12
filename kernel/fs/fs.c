@@ -521,6 +521,7 @@ int do_ls(char *path, int option)
     // find directory inode
     inode_t *d_inode_p = find_inode(path, &wd_inode);
     if (d_inode_p == NULL) {
+        printk("[FS] ls: cannot access '%s': No such file or directory\n", path);
         return -1;
     } else if (d_inode_p->type != IT_DIR) {
         printk("[FS] ls: cannot access '%s': Not a directory\n", path);
@@ -594,8 +595,33 @@ int do_pwd(void) {
 int do_open(char *path, int mode)
 {
     // TODO [P6-task2]: Implement do_open
+    inode_t *inode_p = find_inode(path, &wd_inode);
+    if (inode_p == NULL) {
+        printk("[FS] open: cannot access '%s': No such file or directory\n", path);
+        return -1;
+    } else if (inode_p->type == IT_DIR) {
+        printk("[FS] open: cannot open '%s': Is a directory\n", path);
+        return -1;
+    }
+    // find a free file descriptor
+    int fd_idx = -1;
+    for (int i = 0; i < NUM_FDESCS; i++) {
+        if (fdesc_array[i].valid == 0) {
+            fd_idx = i;
+            break;
+        }
+    }
+    if (fd_idx == -1) {
+        printk("[FS] open: cannot open '%s': No space left on device\n", path);
+        return -1;
+    }
+    // create file descriptor
+    fdesc_array[fd_idx].valid = 1;
+    fdesc_array[fd_idx].mode = mode;
+    fdesc_array[fd_idx].pos = 0;
+    fdesc_array[fd_idx].ino = inode_p->ino;
 
-    return 0;  // return the id of file descriptor
+    return fd_idx;  // return the id of file descriptor
 }
 
 int do_read(int fd, char *buff, int length)

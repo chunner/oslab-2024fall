@@ -87,6 +87,10 @@ typedef struct inode {
 } inode_t;                // Total: 64 bytes, one sector has 512/64 = 8 inodes 
 typedef struct fdesc {
     // TODO [P6-task2]: Implement the data structure of file descriptor
+    uint8_t mode;
+    uint8_t valid;
+    uint32_t ino;
+    uint32_t pos;
 } fdesc_t;
 
 /* modes of do_open */
