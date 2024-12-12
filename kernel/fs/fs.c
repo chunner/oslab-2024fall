@@ -558,6 +558,38 @@ int do_ls(char *path, int option)
     return 0;  // do_ls succeeds
 }
 
+void nest_pwd(inode_t dir_inode) {
+    if (dir_inode.ino == 0) {
+        printk("/");
+        return;
+    }
+    // find parent inode
+    bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, dir_inode.blocks[0]);
+    uint32_t parent_inode_idx = dentry_buffer[1].ino;
+    uint32_t parent_inode_sector = FS_START_SECTOR + INODE_OFFSET + ROUNDDOWN(parent_inode_idx * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
+    uint32_t parent_inode_offset = parent_inode_idx % (SECTOR_SIZE / sizeof(inode_t));
+    bios_sd_read(kva2pa(inode_buffer), 1, parent_inode_sector);
+    inode_t parent_inode = inode_buffer[parent_inode_offset];
+    nest_pwd(parent_inode);
+    // find dir name
+    bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, parent_inode.blocks[0]);  // not root
+    for (int j = 0; j < BLOCK_SIZE / sizeof(dentry_t); j++) {
+        if (dentry_buffer[j].ino == dir_inode.ino) {
+            printk("%s/", dentry_buffer[j].name);
+            return;
+        }
+    }
+}
+
+
+
+int do_pwd(void) {
+    nest_pwd(wd_inode);
+    printk("\n");
+    return 0;  // do_pwd succeeds
+}
+
+
 int do_open(char *path, int mode)
 {
     // TODO [P6-task2]: Implement do_open

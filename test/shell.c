@@ -247,6 +247,10 @@ void handle_ls_command(char *buffer) {
     sys_ls(path, option);
 }
 
+void handle_pwd_command() {
+    sys_pwd();
+}
+
 
 
 int main(void) {
@@ -282,6 +286,8 @@ int main(void) {
             handle_rmdir_command(buffer);
         } else if (strncmp(buffer, "ls", 2) == 0) {
             handle_ls_command(buffer);
+        } else if (strncmp(buffer, "pwd", 3) == 0) {
+            handle_pwd_command();
         } else {
             printf("Error: Unknown Command '%s'!\n", buffer);
         }

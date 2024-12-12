@@ -430,4 +430,9 @@ int sys_lseek(int fd, int offset, int whence)
     return invoke_syscall((long) SYSCALL_FS_LSEEK, (long) fd, (long) offset, (long) whence, IGNORE, IGNORE);
     // the resulting offset location from the beginning of the file
 }
+int sys_pwd(void)
+{
+    int retval = invoke_syscall((long) SYSCALL_FS_PWD, IGNORE, IGNORE, IGNORE, IGNORE, IGNORE);
+    return retval;  // sys_pwd succeeds
+}
 /************************************************************/

@@ -116,4 +116,5 @@ extern int do_lseek(int fd, int offset, int whence);
 
 extern int do_touch(char *path);
 extern int do_cat(char *path);
+extern int do_pwd(void);
 #endif
