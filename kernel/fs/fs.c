@@ -18,7 +18,12 @@ static inode_t wd_inode;    // working directory
 
 static inode_t *find_inode(char *path, inode_t *parent_inode);
 
-
+uint32_t inodeidx2sector(uint32_t inode_idx) {
+    return FS_START_SECTOR + INODE_OFFSET + ROUNDDOWN(inode_idx * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
+}
+uint32_t inodeidx2offset(uint32_t inode_idx) {
+    return inode_idx % (SECTOR_SIZE / sizeof(inode_t));
+}
 uint32_t find_free_inode() {
     bios_sd_read(kva2pa(inode_map), INODE_MAP_SIZE, INODE_MAP_OFFSET + FS_START_SECTOR);
     for (uint32_t byte_idx = 0; byte_idx < INODE_MAP_SIZE * SECTOR_SIZE; byte_idx++) {
@@ -77,8 +82,8 @@ void free_block(uint32_t block_sector) {
 
 void free_inode(uint32_t inode_idx) {
     // clear inode
-    uint32_t inode_sector = FS_START_SECTOR + INODE_OFFSET + ROUNDDOWN(inode_idx * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
-    uint32_t inode_offset = inode_idx % (SECTOR_SIZE / sizeof(inode_t));
+    uint32_t inode_sector = inodeidx2sector(inode_idx);
+    uint32_t inode_offset = inodeidx2offset(inode_idx);
     bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
     bzero((void *) &inode_buffer[inode_offset], sizeof(inode_t));
     bios_sd_write(kva2pa(inode_buffer), 1, inode_sector);
@@ -300,8 +305,8 @@ int do_mkdir(char *path)
         return -1;
     }
     // create inode
-    uint32_t inode_sector = FS_START_SECTOR + INODE_OFFSET + ROUNDDOWN(inode_idx * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
-    uint32_t inode_offset = inode_idx % (SECTOR_SIZE / sizeof(inode_t));
+    uint32_t inode_sector = inodeidx2sector(inode_idx);
+    uint32_t inode_offset = inodeidx2offset(inode_idx);
     bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
     inode_t *inode = &inode_buffer[inode_offset];
     inode->mode = O_RDWR;
@@ -356,8 +361,8 @@ void nest_rmdir(inode_t dir_inode) {
         bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, dir_inode.blocks[0]);
         if (dentry_buffer[j].name[0] != 0) {
             uint32_t inode_index = dentry_buffer[j].ino;
-            uint32_t inode_sector = FS_START_SECTOR + INODE_OFFSET + ROUNDDOWN(inode_index * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
-            uint32_t inode_offset = inode_index % (SECTOR_SIZE / sizeof(inode_t));
+            uint32_t inode_sector = inodeidx2sector(inode_index);
+            uint32_t inode_offset = inodeidx2offset(inode_index);
             bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
             inode_t child_inode = inode_buffer[inode_offset];
             if (child_inode.type == IT_DIR) { // child dir
@@ -464,8 +469,8 @@ inode_t *find_inode(char *path, inode_t *parent_inode)
         printk("[FS] find_inode: cannot access '%s': No such file or directory\n", path);
         return NULL;
     }
-    uint32_t inode_sector = FS_START_SECTOR + INODE_OFFSET + ROUNDDOWN(inode_idx * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
-    uint32_t inode_offset = inode_idx % (SECTOR_SIZE / sizeof(inode_t));
+    uint32_t inode_sector = inodeidx2sector(inode_idx);
+    uint32_t inode_offset = inodeidx2offset(inode_idx);
     bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
     inode_t dir1_inode = inode_buffer[inode_offset];
     if (dir2[0] == 0) {
@@ -485,8 +490,8 @@ inode_t *find_inode(char *path, inode_t *parent_inode)
         printk("[FS] find_inode: cannot access '%s': No such file or directory\n", path);
         return NULL;
     }
-    inode_sector = FS_START_SECTOR + INODE_OFFSET + ROUNDDOWN(inode_idx * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
-    inode_offset = inode_idx % (SECTOR_SIZE / sizeof(inode_t));
+    inode_sector = inodeidx2sector(inode_idx);
+    inode_offset = inodeidx2offset(inode_idx);
     bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
     inode_t dir2_inode = inode_buffer[inode_offset];
     if (dir3[0] == 0) {
@@ -506,8 +511,8 @@ inode_t *find_inode(char *path, inode_t *parent_inode)
         printk("[FS] find_inode: cannot access '%s': No such file or directory\n", path);
         return NULL;
     }
-    inode_sector = FS_START_SECTOR + INODE_OFFSET + ROUNDDOWN(inode_idx * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
-    inode_offset = inode_idx % (SECTOR_SIZE / sizeof(inode_t));
+    inode_sector = inodeidx2sector(inode_idx);
+    inode_offset = inodeidx2offset(inode_idx);
     bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
     return &inode_buffer[inode_offset];
 }
@@ -631,6 +636,11 @@ int do_open(char *path, int mode)
 int do_read(int fd, char *buff, int length)
 {
     // TODO [P6-task2]: Implement do_read
+    uint32_t inode_idx = fdesc_array[fd].ino;
+    uint32_t inode_sector = inodeidx2sector(inode_idx);
+    uint32_t inode_offset = inodeidx2offset(inode_idx);
+    bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
+
 
     return 0;  // return the length of trully read data
 }
@@ -694,8 +704,8 @@ int do_write(int fd, char *buff, int length)
 {
     // TODO [P6-task2]: Implement do_write
     uint32_t inode_idx = fdesc_array[fd].ino;
-    uint32_t inode_sector = FS_START_SECTOR + INODE_OFFSET + ROUNDDOWN(inode_idx * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
-    uint32_t inode_offset = inode_idx % (SECTOR_SIZE / sizeof(inode_t));
+    uint32_t inode_sector = inodeidx2sector(inode_idx);
+    uint32_t inode_offset = inodeidx2offset(inode_idx);
     bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
     inode_t *inode = &inode_buffer[inode_offset];
     uint32_t new_pos = fdesc_array[fd].pos + length;
@@ -778,8 +788,8 @@ int do_touch(char *path)
         return -1;
     }
     // create inode
-    uint32_t inode_sector = FS_START_SECTOR + INODE_OFFSET + ROUNDDOWN(inode_idx * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
-    uint32_t inode_offset = inode_idx % (SECTOR_SIZE / sizeof(inode_t));
+    uint32_t inode_sector = inodeidx2sector(inode_idx);
+    uint32_t inode_offset = inodeidx2offset(inode_idx);
     bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
     inode_t *inode = &inode_buffer[inode_offset];
     inode->mode = O_RDWR;
