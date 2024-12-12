@@ -358,6 +358,7 @@ void nest_rmdir(inode_t dir_inode) {
             inode_t child_inode = inode_buffer[inode_offset];
             if (child_inode.type == IT_DIR) { // child dir
                 nest_rmdir(child_inode);
+                // delete child dentry
                 free_block(child_inode.blocks[0]);
             } else {    // child file
                 for (int i = 0; i < child_inode.size; i++) {
@@ -383,9 +384,6 @@ int do_rmdir(char *path)
         return -1;
     }
     nest_rmdir(*d_inode_p);
-    // delete inode
-    free_block(d_inode_p->blocks[0]);
-    free_inode(d_inode_p->ino);
     // update wd inode
     wd_inode.mtime = get_timer();
     wd_inode.nlink--;
@@ -405,6 +403,9 @@ int do_rmdir(char *path)
             break;
         }
     }
+    // delete path inode
+    free_block(d_inode_p->blocks[0]);
+    free_inode(d_inode_p->ino);
     return 0;  // do_rmdir succeeds
 }
 
