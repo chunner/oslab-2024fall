@@ -76,7 +76,7 @@ typedef struct inode {
     uint8_t type;        // 0 is data, 1 is directory (1 bytes)
     uint16_t nlink;       // Link count (2 bytes)
     uint32_t ino;         // Inode number (4 bytes)
-    uint32_t size;        // File size (blocks) (4 bytes)
+    uint32_t size;        // File size (Bytes) (4 bytes)
     uint32_t atime;       // Last access time (4 bytes)
     uint32_t mtime;       // Last modification time (4 bytes)
     uint32_t ctime;       // Creation time (4 bytes)

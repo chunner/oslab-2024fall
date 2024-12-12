@@ -32,13 +32,11 @@ jump2main:
     jal main      # jump to main
     ld ra, 0(sp)
     addi sp, sp , 8
-
-    // sys exit
-    li a7, 1         # SYSCALL_EXIT
-    ecall      # call sys_exit
     
     /************************************************************/
     /* TODO: [P3] call sys_exit */
+    li a7, 1         # SYSCALL_EXIT
+    ecall      # call sys_exit
     /************************************************************/
 // while(1) loop, unreachable here
 loop:

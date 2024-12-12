@@ -177,7 +177,7 @@ int do_mkfs(void)
     bzero((void *) inode_buffer, SECTOR_SIZE);
     inode_t *root_inode = &inode_buffer[root_inode_offset];
     root_inode->mode = O_RDWR;
-    root_inode->size = 1;   // one block
+    root_inode->size = BLOCK_SIZE;   // one block
     root_inode->atime = root_inode->mtime = root_inode->ctime = get_timer();
     root_inode->ino = root_inode_idx;
     root_inode->nlink = 1;
@@ -301,7 +301,7 @@ int do_mkdir(char *path)
     bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
     inode_t *inode = &inode_buffer[inode_offset];
     inode->mode = O_RDWR;
-    inode->size = 1;   // one block
+    inode->size = BLOCK_SIZE;   // one block
     inode->atime = inode->mtime = inode->ctime = get_timer();
     inode->ino = inode_idx;
     inode->nlink = 1;
@@ -361,7 +361,8 @@ void nest_rmdir(inode_t dir_inode) {
                 // delete child dentry
                 free_block(child_inode.blocks[0]);
             } else {    // child file
-                for (int i = 0; i < child_inode.size; i++) {
+                uint32_t nblocks = ROUND(child_inode.size, BLOCK_SIZE) / BLOCK_SIZE;
+                for (int i = 0; i < nblocks; i++) {
                     uint32_t block_sector = blockid2sector(i, &child_inode);
                     free_block(block_sector);
                 }
