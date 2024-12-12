@@ -51,7 +51,11 @@ uint32_t find_free_block() {
                 if (!(block_map[byte_idx] & (1 << bit))) {
                     block_map[byte_idx] |= (1 << bit);  // Set the corresponding bit to 1
                     bios_sd_write(kva2pa(block_map), INODE_MAP_SIZE, BLOCK_MAP_OFFSET + FS_START_SECTOR);
-                    return BLOCK2SECTOR(block_idx) + DATA_OFFSET + FS_START_SECTOR;
+                    // clear block
+                    uint32_t block_sector = BLOCK2SECTOR(block_idx) + DATA_OFFSET + FS_START_SECTOR;
+                    bzero((void *) data_buffer, BLOCK_SIZE);
+                    bios_sd_write(kva2pa(data_buffer), BLOCK_SIZE / SECTOR_SIZE, block_sector);
+                    return block_sector;
                 }
             }
         }
@@ -604,24 +608,24 @@ int do_open(char *path, int mode)
         return -1;
     }
     // find a free file descriptor
-    int fd_idx = -1;
+    int fd = -1;
     for (int i = 0; i < NUM_FDESCS; i++) {
         if (fdesc_array[i].valid == 0) {
-            fd_idx = i;
+            fd = i;
             break;
         }
     }
-    if (fd_idx == -1) {
+    if (fd == -1) {
         printk("[FS] open: cannot open '%s': No space left on device\n", path);
         return -1;
     }
     // create file descriptor
-    fdesc_array[fd_idx].valid = 1;
-    fdesc_array[fd_idx].mode = mode;
-    fdesc_array[fd_idx].pos = 0;
-    fdesc_array[fd_idx].ino = inode_p->ino;
+    fdesc_array[fd].valid = 1;
+    fdesc_array[fd].mode = mode;
+    fdesc_array[fd].pos = 0;
+    fdesc_array[fd].ino = inode_p->ino;
 
-    return fd_idx;  // return the id of file descriptor
+    return fd;  // return the id of file descriptor
 }
 
 int do_read(int fd, char *buff, int length)
@@ -630,18 +634,104 @@ int do_read(int fd, char *buff, int length)
 
     return 0;  // return the length of trully read data
 }
-
+int alloc_inode_block(uint32_t old_nblock, uint32_t new_nblock, inode_t *inode) {
+    if (old_nblock >= new_nblock) {
+        return -1;
+    }
+    for (int i = old_nblock; i < new_nblock; i++) {
+        if (i < DIRECT_BLOCK_NUM) {
+            inode->blocks[i] = find_free_block();
+        } else if (i < DIRECT_BLOCK_NUM + BLOCK_SIZE / sizeof(uint32_t)) {  // indirect block
+            if (inode->blocks[DIRECT_BLOCK_NUM] == 0) {
+                inode->blocks[DIRECT_BLOCK_NUM] = find_free_block();
+            }
+            uint32_t indirect_block_id = i - DIRECT_BLOCK_NUM;
+            uint32_t *indirect_block = (uint32_t *) data_buffer;
+            indirect_block[indirect_block_id] = find_free_block();
+        } else if (i < DIRECT_BLOCK_NUM + BLOCK_SIZE / sizeof(uint32_t) + (BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t))) {  // double indirect block
+            if (inode->blocks[DIRECT_BLOCK_NUM + 1] == 0) {
+                inode->blocks[DIRECT_BLOCK_NUM + 1] = find_free_block();
+            }
+            bios_sd_read(kva2pa(data_buffer), 1, inode->blocks[DIRECT_BLOCK_NUM + 1]);
+            uint32_t *indirect_block = (uint32_t *) data_buffer;
+            uint32_t indirect_block_id = (i - DIRECT_BLOCK_NUM - BLOCK_SIZE / sizeof(uint32_t)) / (BLOCK_SIZE / sizeof(uint32_t));
+            if (indirect_block[indirect_block_id] == 0) {
+                indirect_block[indirect_block_id] = find_free_block();
+            }
+            uint32_t indirect_block_sector = indirect_block[indirect_block_id];
+            bios_sd_read(kva2pa(data_buffer), 1, indirect_block_sector);
+            uint32_t *indirect_block2 = (uint32_t *) data_buffer;
+            uint32_t indirect_block2_id = (i - DIRECT_BLOCK_NUM - BLOCK_SIZE / sizeof(uint32_t)) % (BLOCK_SIZE / sizeof(uint32_t));
+            indirect_block2[indirect_block2_id] = find_free_block();
+        } else if (i < DIRECT_BLOCK_NUM + BLOCK_SIZE / sizeof(uint32_t) + (BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t)) + (BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t))) {  // triple indirect block
+            if (inode->blocks[DIRECT_BLOCK_NUM + 2] == 0) {
+                inode->blocks[DIRECT_BLOCK_NUM + 2] = find_free_block();
+            }
+            bios_sd_read(kva2pa(data_buffer), 1, inode->blocks[DIRECT_BLOCK_NUM + 2]);
+            uint32_t *indirect_block = (uint32_t *) data_buffer;
+            uint32_t indirect_block_id = (i - DIRECT_BLOCK_NUM - BLOCK_SIZE / sizeof(uint32_t) - (BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t))) / ((BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t)));
+            if (indirect_block[indirect_block_id] == 0) {
+                indirect_block[indirect_block_id] = find_free_block();
+            }
+            uint32_t indirect_block_sector = indirect_block[indirect_block_id];
+            bios_sd_read(kva2pa(data_buffer), 1, indirect_block_sector);
+            uint32_t *indirect_block2 = (uint32_t *) data_buffer;
+            uint32_t indirect_block2_id = (i - DIRECT_BLOCK_NUM - BLOCK_SIZE / sizeof(uint32_t) - (BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t))) % ((BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t)));
+            if (indirect_block2[indirect_block2_id] == 0) {
+                indirect_block2[indirect_block2_id] = find_free_block();
+            }
+            uint32_t indirect_block2_sector = indirect_block2[indirect_block2_id];
+            bios_sd_read(kva2pa(data_buffer), 1, indirect_block2_sector);
+            uint32_t *indirect_block3 = (uint32_t *) data_buffer;
+            uint32_t indirect_block3_id = (i - DIRECT_BLOCK_NUM - BLOCK_SIZE / sizeof(uint32_t) - (BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t))) % (BLOCK_SIZE / sizeof(uint32_t));
+            indirect_block3[indirect_block3_id] = find_free_block();
+        } else {
+            return -1;
+        }
+    }
+}
 int do_write(int fd, char *buff, int length)
 {
     // TODO [P6-task2]: Implement do_write
-
-    return 0;  // return the length of trully written data
+    uint32_t inode_idx = fdesc_array[fd].ino;
+    uint32_t inode_sector = FS_START_SECTOR + INODE_OFFSET + ROUNDDOWN(inode_idx * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
+    uint32_t inode_offset = inode_idx % (SECTOR_SIZE / sizeof(inode_t));
+    bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
+    inode_t *inode = &inode_buffer[inode_offset];
+    uint32_t new_pos = fdesc_array[fd].pos + length;
+    if (ROUND(new_pos, BLOCK_SIZE) > ROUND(inode->size, BLOCK_SIZE)) {  // need to allocate new blocks
+        uint32_t new_nblocks = ROUND(new_pos, BLOCK_SIZE) / BLOCK_SIZE;
+        uint32_t old_nblocks = ROUND(inode->size, BLOCK_SIZE) / BLOCK_SIZE;
+        alloc_inode_block(old_nblocks, new_nblocks, inode);
+    }
+    if (new_pos > inode->size) {
+        inode->size = new_pos;
+    }
+    uint32_t start_block = fdesc_array[fd].pos / BLOCK_SIZE;
+    bios_sd_read(kva2pa(data_buffer), 1, blockid2sector(start_block, inode));
+    for (int i = 0; i < length; i++) {
+        if (fdesc_array[fd].pos % BLOCK_SIZE == 0) {
+            uint32_t block_id = fdesc_array[fd].pos / BLOCK_SIZE;
+            uint32_t block_sector = blockid2sector(block_id, inode);
+            bios_sd_read(kva2pa(data_buffer), 1, block_sector);
+        }
+        uint32_t offset = fdesc_array[fd].pos % BLOCK_SIZE;
+        data_buffer[offset] = buff[i];
+        if (offset == BLOCK_SIZE - 1) {
+            bios_sd_write(kva2pa(data_buffer), 1, blockid2sector(fdesc_array[fd].pos / BLOCK_SIZE, inode));
+        }
+        fdesc_array[fd].pos++;
+    }
+    if (fdesc_array[fd].pos % BLOCK_SIZE != 0) {
+        bios_sd_write(kva2pa(data_buffer), 1, blockid2sector(fdesc_array[fd].pos / BLOCK_SIZE, inode));
+    }
+    return length;  // return the length of trully written data
 }
 
 int do_close(int fd)
 {
     // TODO [P6-task2]: Implement do_close
-
+    fdesc_array[fd].valid = 0;
     return 0;  // do_close succeeds
 }
 
