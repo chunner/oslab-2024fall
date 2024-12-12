@@ -643,6 +643,60 @@ int do_lseek(int fd, int offset, int whence)
 int do_touch(char *path)
 {
     // TODO [P6-task2]: Implement do_touch
+    if (strlen(path) >= 27) {
+        printk("[FS] mkdir: cannot create file '%s': File name too long\n", path);
+        return -1;
+    }
+    // search wd whether has the same name
+    bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, wd_inode.blocks[0]);
+    for (int j = 0; j < BLOCK_SIZE / sizeof(dentry_t); j++) {
+        if (strcmp(dentry_buffer[j].name, path) == 0) {
+            printk("[FS] mkdir: cannot create file '%s': File exists\n", path);
+            return -1;
+        }
+    }
+    // find a free inode
+    uint32_t inode_idx = find_free_inode();
+    if (inode_idx == -1) {
+        printk("[FS] mkdir: cannot create file '%s': No space left on device\n", path);
+        return -1;
+    }
+    // create inode
+    uint32_t inode_sector = FS_START_SECTOR + INODE_OFFSET + ROUNDDOWN(inode_idx * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
+    uint32_t inode_offset = inode_idx % (SECTOR_SIZE / sizeof(inode_t));
+    bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
+    inode_t *inode = &inode_buffer[inode_offset];
+    inode->mode = O_RDWR;
+    inode->size = 0;
+    inode->atime = inode->mtime = inode->ctime = get_timer();
+    inode->ino = inode_idx;
+    inode->nlink = 1;
+    inode->type = IT_FILE;
+    bios_sd_write(kva2pa(inode_buffer), 1, inode_sector);
+    // update wd dentry
+    int found = 0;
+    for (int j = 0; j < BLOCK_SIZE / sizeof(dentry_t); j++) {
+        if (dentry_buffer[j].ino == 0 && dentry_buffer[j].name[0] == 0) {
+            strcpy(dentry_buffer[j].name, path);
+            dentry_buffer[j].ino = inode_idx;
+            dentry_buffer[j].type = IT_FILE;
+            bios_sd_write(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, wd_inode.blocks[0]);
+            found = 1;
+            break;
+        }
+    }
+    if (!found) {
+        printk("[FS] mkdir: cannot create file '%s': no dentry\n", path);
+        return -1;
+    }
+    // update wd inode
+    wd_inode.mtime = get_timer();
+    wd_inode.nlink++;
+    uint32_t wd_inode_sector = FS_START_SECTOR + INODE_OFFSET + ROUNDDOWN(wd_inode.ino * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
+    uint32_t wd_inode_offset = wd_inode.ino % (SECTOR_SIZE / sizeof(inode_t));
+    bios_sd_read(kva2pa(inode_buffer), 1, wd_inode_sector);
+    inode_buffer[wd_inode_offset] = wd_inode;
+    bios_sd_write(kva2pa(inode_buffer), 1, wd_inode_sector);
 
     return 0;  // do_touch succeeds
 }
