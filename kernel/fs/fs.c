@@ -293,10 +293,6 @@ int do_mkdir(char *path)
     }
     // TODO [P6-task1]: Implement do_mkdir
     // search wd whether has the same name
-    if (wd_inode.size != 1) {
-        printk("[FS] mkdir: something wrong !\n", path);
-        return -1;
-    }
     bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, wd_inode.blocks[0]);
     for (int j = 0; j < BLOCK_SIZE / sizeof(dentry_t); j++) {
         if (strcmp(dentry_buffer[j].name, path) == 0) {
