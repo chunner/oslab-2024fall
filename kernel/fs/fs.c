@@ -859,6 +859,22 @@ int do_touch(char *path)
 int do_cat(char *path)
 {
     // TODO [P6-task2]: Implement do_cat
+    inode_t *inode_p = find_inode(path, &wd_inode);
+    if (inode_p == NULL) {
+        printk("[FS] cat: cannot access '%s': No such file or directory\n", path);
+        return -1;
+    } else if (inode_p->type == IT_DIR) {
+        printk("[FS] cat: cannot open '%s': Is a directory\n", path);
+        return -1;
+    }
+    // read data
+    for (int i = 0; i < inode_p->size; i++) {
+        if (i % BLOCK_SIZE == 0) {
+            uint32_t block_id = i / BLOCK_SIZE;
+            bios_sd_read(kva2pa(data_buffer), 1, blockid2sector(block_id, inode_p));
+        }
+        printk("%c", data_buffer[i % BLOCK_SIZE]);
+    }
 
     return 0;  // do_cat succeeds
 }
