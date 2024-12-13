@@ -280,6 +280,10 @@ int main(void)
     init_syscall();
     printk("> [INIT] System call initialized successfully.\n");
 
+    // init filesystem
+    init_fs();
+    printk("> [INIT] Filesystem initialized successfully.\n");
+
     // Init screen (QAQ)
     init_screen();
     printk("> [INIT] SCREEN initialization succeeded.\n");

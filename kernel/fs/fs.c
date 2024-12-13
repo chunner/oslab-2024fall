@@ -134,6 +134,18 @@ uint32_t blockid2sector(uint32_t block_id, inode_t *inode) {
     return -1;
 }
 
+void init_fs(void) {
+    // Initialize the filesystem
+    // read superblock
+    bios_sd_read(kva2pa(superblock_buffer), 1, FS_START_SECTOR);
+    superblock_t *superblock = (superblock_t *) superblock_buffer;
+    if (superblock->magic != SUPERBLOCK_MAGIC) {
+        do_mkfs();
+    }
+    // read root inode;
+    bios_sd_read(kva2pa(inode_buffer), 1, inodeidx2sector(0));
+    wd_inode = inode_buffer[0];
+}
 
 int do_mkfs(void)
 {
