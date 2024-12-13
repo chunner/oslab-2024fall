@@ -948,6 +948,27 @@ int do_rm(char *path)
 int do_lseek(int fd, int offset, int whence)
 {
     // TODO [P6-task2]: Implement do_lseek
+    if (fd < 0 || fd >= NUM_FDESCS || fdesc_array[fd].valid == 0) {
+        printk("[FS] lseek: invalid file descriptor\n");
+        return -1;
+    }
+    uint32_t inode_idx = fdesc_array[fd].ino;
+    uint32_t inode_sector = inodeidx2sector(inode_idx);
+    uint32_t inode_offset = inodeidx2offset(inode_idx);
+    bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
+    inode_t *inode = &inode_buffer[inode_offset];
+    if (whence == SEEK_SET) {
+        fdesc_array[fd].read_pos = fdesc_array[fd].write_pos = offset;
+    } else if (whence == SEEK_CUR) {
+        fdesc_array[fd].read_pos += offset;
+        fdesc_array[fd].write_pos += offset;
+    } else if (whence == SEEK_END) {
+        fdesc_array[fd].read_pos = fdesc_array[fd].write_pos = inode->size + offset;
+    } else {
+        printk("[FS] lseek: invalid whence\n");
+        return -1;
+    }
+
 
     return 0;  // the resulting offset location from the beginning of the file
 }
