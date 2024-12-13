@@ -17,6 +17,7 @@ static char data_buffer[BLOCK_SIZE];  // size = one block, 4KB
 static inode_t wd_inode;    // working directory
 
 static inode_t *find_inode(char *path, inode_t *parent_inode);
+static void parse_path(char *path, char *dir1, char *dir2, char *dir3);
 
 uint32_t inodeidx2sector(uint32_t inode_idx) {
     return FS_START_SECTOR + INODE_OFFSET + ROUNDDOWN(inode_idx * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
@@ -440,32 +441,7 @@ inode_t *find_inode(char *path, inode_t *parent_inode)
     char dir1[MAX_PATHNAME_LEN] = { 0 };
     char dir2[MAX_PATHNAME_LEN] = { 0 };
     char dir3[MAX_PATHNAME_LEN] = { 0 };
-    int i = 0;
-    while (path[i] != '/' && path[i] != 0) {
-        dir1[i] = path[i];
-        i++;
-    }
-    dir1[i] = 0;
-    if (path[i] != 0) {
-        i++;
-        int j = 0;
-        while (path[i] != '/' && path[i] != 0) {
-            dir2[j] = path[i];
-            i++;
-            j++;
-        }
-        dir2[j] = 0;
-        if (path[i] != 0) {
-            i++;
-            int k = 0;
-            while (path[i] != '/' && path[i] != 0) {
-                dir3[k] = path[i];
-                i++;
-                k++;
-            }
-            dir3[k] = 0;
-        }
-    }
+    parse_path(path, dir1, dir2, dir3);
     // find one level node
     uint32_t inode_idx = 0;
     bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, parent_inode->blocks[0]);
@@ -528,7 +504,6 @@ inode_t *find_inode(char *path, inode_t *parent_inode)
     bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
     return &inode_buffer[inode_offset];
 }
-
 
 
 
@@ -819,7 +794,7 @@ void parse_path(char *path, char *dir1, char *dir2, char *dir3) {
         dir3[0] = 0;
     }
 }
-void add_dentry(inode_t *parent_inode, char *path, uint32_t ino, uint32_t type) {
+void add_file_dentry(inode_t *parent_inode, char *path, uint32_t ino) {
     // parse path, dir1/dir2/dir3
     char dir1[MAX_PATHNAME_LEN];
     char dir2[MAX_PATHNAME_LEN];
@@ -832,7 +807,7 @@ void add_dentry(inode_t *parent_inode, char *path, uint32_t ino, uint32_t type) 
             if (dentry_buffer[j].ino == 0 && dentry_buffer[j].name[0] == 0) {
                 strcpy(dentry_buffer[j].name, dir1);
                 dentry_buffer[j].ino = ino;
-                dentry_buffer[j].type = type;
+                dentry_buffer[j].type = IT_FILE;
                 bios_sd_write(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, parent_inode->blocks[0]);
                 return;
             }
@@ -866,7 +841,7 @@ void add_dentry(inode_t *parent_inode, char *path, uint32_t ino, uint32_t type) 
             if (dentry_buffer[j].ino == 0 && dentry_buffer[j].name[0] == 0) {
                 strcpy(dentry_buffer[j].name, dir2);
                 dentry_buffer[j].ino = ino;
-                dentry_buffer[j].type = type;
+                dentry_buffer[j].type = IT_FILE;
                 bios_sd_write(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, dir1_inode.blocks[0]);
                 return;
             }
@@ -898,7 +873,7 @@ void add_dentry(inode_t *parent_inode, char *path, uint32_t ino, uint32_t type) 
         if (dentry_buffer[j].ino == 0 && dentry_buffer[j].name[0] == 0) {
             strcpy(dentry_buffer[j].name, dir3);
             dentry_buffer[j].ino = ino;
-            dentry_buffer[j].type = type;
+            dentry_buffer[j].type = IT_FILE;
             bios_sd_write(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, dir2_inode.blocks[0]);
             return;
         }
@@ -916,7 +891,11 @@ int do_ln(char *src_path, char *dst_path)
         return -1;
     }
     inode_t src_inode = *src_inode_p;
-    add_dentry(&wd_inode, dst_path, src_inode.ino, IT_FILE);
+    add_file_dentry(&wd_inode, dst_path, src_inode.ino);
+    // update src inode
+    bios_sd_read(kva2pa(inode_buffer), 1, inodeidx2sector(src_inode.ino));
+    inode_buffer[inodeidx2offset(src_inode.ino)].nlink++;
+    bios_sd_write(kva2pa(inode_buffer), 1, inodeidx2sector(src_inode.ino));
     return 0;  // do_ln succeeds 
 }
 
