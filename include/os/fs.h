@@ -90,7 +90,8 @@ typedef struct fdesc {
     uint8_t mode;
     uint8_t valid;
     uint32_t ino;
-    uint32_t pos;
+    uint32_t read_pos;
+    uint32_t write_pos;
 } fdesc_t;
 
 /* modes of do_open */
