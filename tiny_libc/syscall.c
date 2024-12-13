@@ -435,4 +435,15 @@ int sys_pwd(void)
     int retval = invoke_syscall((long) SYSCALL_FS_PWD, IGNORE, IGNORE, IGNORE, IGNORE, IGNORE);
     return retval;  // sys_pwd succeeds
 }
+
+int sys_cat(char *path)
+{
+    int retval = invoke_syscall((long) SYSCALL_FS_CAT, (long) path, IGNORE, IGNORE, IGNORE, IGNORE);
+    return retval;  // sys_cat succeeds
+}
+int sys_touch(char *path)
+{
+    int retval = invoke_syscall((long) SYSCALL_FS_TOUCH, (long) path, IGNORE, IGNORE, IGNORE, IGNORE);
+    return retval;  // sys_touch succeeds
+}
 /************************************************************/

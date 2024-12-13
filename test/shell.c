@@ -251,6 +251,67 @@ void handle_pwd_command() {
     sys_pwd();
 }
 
+void handle_touch_command(char *buffer) {
+    char path[MAX_NAME_LEN];
+    int i = 6, path_idx = 0;
+    while (buffer[i] != '\0') {
+        path[path_idx++] = buffer[i++];
+    }
+    path[path_idx++] = '\0';
+    int retval = sys_touch(path);
+    if (retval == 0) {
+        printf("Info: touch successfully\n");
+    } else {
+        printf("Error: fail to touch\n");
+    }
+}
+void handle_cat_command(char *buffer) {
+    char path[MAX_NAME_LEN];
+    int i = 4, path_idx = 0;
+    while (buffer[i] != '\0') {
+        path[path_idx++] = buffer[i++];
+    }
+    path[path_idx++] = '\0';
+    int retval = sys_cat(path);
+    if (retval == 0) {
+        printf("Info: cat successfully\n");
+    } else {
+        printf("Error: fail to cat\n");
+    }
+}
+void handle_ln_command(char *buffer) {
+    char src_path[MAX_NAME_LEN], dst_path[MAX_NAME_LEN];
+    int i = 3, src_path_idx = 0, dst_path_idx = 0;
+    while (buffer[i] != ' ') {
+        src_path[src_path_idx++] = buffer[i++];
+    }
+    src_path[src_path_idx++] = '\0';
+    i++;
+    while (buffer[i] != '\0') {
+        dst_path[dst_path_idx++] = buffer[i++];
+    }
+    dst_path[dst_path_idx++] = '\0';
+    int retval = sys_ln(src_path, dst_path);
+    if (retval == 0) {
+        printf("Info: ln successfully\n");
+    } else {
+        printf("Error: fail to ln\n");
+    }
+}
+void hendle_rm_command(char *buffer) {
+    char path[MAX_NAME_LEN];
+    int i = 3, path_idx = 0;
+    while (buffer[i] != '\0') {
+        path[path_idx++] = buffer[i++];
+    }
+    path[path_idx++] = '\0';
+    int retval = sys_rm(path);
+    if (retval == 0) {
+        printf("Info: rm successfully\n");
+    } else {
+        printf("Error: fail to rm\n");
+    }
+}
 
 
 int main(void) {
@@ -288,6 +349,14 @@ int main(void) {
             handle_ls_command(buffer);
         } else if (strncmp(buffer, "pwd", 3) == 0) {
             handle_pwd_command();
+        } else if (strncmp(buffer, "touch", 5) == 0) {
+            handle_touch_command(buffer);
+        } else if (strncmp(buffer, "cat", 3) == 0) {
+            handle_cat_command(buffer);
+        } else if (strncmp(buffer, "ln", 2) == 0) {
+            handle_ln_command(buffer);
+        } else if (strncmp(buffer, "rm", 2) == 0) {
+            hendle_rm_command(buffer);
         } else {
             printf("Error: Unknown Command '%s'!\n", buffer);
         }
