@@ -378,14 +378,24 @@ void nest_rmdir(inode_t dir_inode) {
                 nest_rmdir(child_inode);
                 // delete child dentry
                 free_block(child_inode.blocks[0]);
+                free_inode(child_inode.ino);
             } else {    // child file
-                uint32_t nblocks = ROUND(child_inode.size, BLOCK_SIZE) / BLOCK_SIZE;
-                for (int i = 0; i < nblocks; i++) {
-                    uint32_t block_sector = blockid2sector(i, &child_inode);
-                    free_block(block_sector);
+                child_inode.nlink--;
+                if (child_inode.nlink == 0) {
+                    uint32_t nblocks = ROUND(child_inode.size, BLOCK_SIZE) / BLOCK_SIZE;
+                    for (int i = 0; i < nblocks; i++) {
+                        uint32_t block_sector = blockid2sector(i, &child_inode);
+                        free_block(block_sector);
+                    }
+                    free_inode(child_inode.ino);
+                } else {
+                    uint32_t inode_sector = inodeidx2sector(child_inode.ino);
+                    uint32_t inode_offset = inodeidx2offset(child_inode.ino);
+                    bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
+                    inode_buffer[inode_offset] = child_inode;
+                    bios_sd_write(kva2pa(inode_buffer), 1, inode_sector);
                 }
             }
-            free_inode(child_inode.ino);
         }
     }
 }
@@ -815,6 +825,7 @@ void add_file_dentry(inode_t *parent_inode, char *path, uint32_t ino) {
     uint32_t dir1_inode_idx;
     int found = 0;
     uint8_t type;
+    bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, parent_inode->blocks[0]);
     for (int j = 0; j < BLOCK_SIZE / sizeof(dentry_t); j++) {
         if (strcmp(dentry_buffer[j].name, dir1) == 0) {
             dir1_inode_idx = dentry_buffer[j].ino;
@@ -848,6 +859,7 @@ void add_file_dentry(inode_t *parent_inode, char *path, uint32_t ino) {
     // level 3
     uint32_t dir2_inode_idx;
     found = 0;
+    bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, dir1_inode.blocks[0]);
     for (int j = 0; j < BLOCK_SIZE / sizeof(dentry_t); j++) {
         if (strcmp(dentry_buffer[j].name, dir2) == 0) {
             dir2_inode_idx = dentry_buffer[j].ino;
@@ -898,6 +910,37 @@ int do_ln(char *src_path, char *dst_path)
 int do_rm(char *path)
 {
     // TODO [P6-task2]: Implement do_rm
+    inode_t *inode_p = find_inode(path, &wd_inode);
+    if (inode_p == NULL) {
+        printk("[FS] rm: cannot access '%s': No such file or directory\n", path);
+        return -1;
+    } else if (inode_p->type == IT_DIR) {
+        printk("[FS] rm: cannot remove '%s': Is a directory\n", path);
+        return -1;
+    }
+    // delete parent dentry
+    bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, wd_inode.blocks[0]);
+    for (int j = 0; j < BLOCK_SIZE / sizeof(dentry_t); j++) {
+        if (dentry_buffer[j].ino == inode_p->ino) {
+            dentry_buffer[j].name[0] = 0;
+            dentry_buffer[j].ino = 0;
+            dentry_buffer[j].type = 0;
+            bios_sd_write(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, wd_inode.blocks[0]);
+            break;
+        }
+    }
+    // update inode
+    inode_p->nlink--;
+    if (inode_p->nlink == 0) {
+        uint32_t nblocks = ROUND(inode_p->size, BLOCK_SIZE) / BLOCK_SIZE;
+        for (int i = 0; i < nblocks; i++) {
+            uint32_t block_sector = blockid2sector(i, inode_p);
+            free_block(block_sector);
+        }
+        free_inode(inode_p->ino);
+    } else {
+        bios_sd_write(kva2pa(inode_buffer), 1, inodeidx2sector(inode_p->ino));
+    }
 
     return 0;  // do_rm succeeds 
 }
