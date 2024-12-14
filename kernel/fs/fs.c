@@ -688,7 +688,7 @@ int alloc_inode_block(uint32_t old_nblock, uint32_t new_nblock, inode_t *inode) 
             if (indirect_block[indirect_block_id] == 0) {
                 uint32_t new_block = find_free_block();
                 bios_sd_read(kva2pa(data_buffer), 1, inode->blocks[DIRECT_BLOCK_NUM + 1]);
-                data_buffer[indirect_block_id] = new_block;
+                indirect_block[indirect_block_id] = new_block;
                 bios_sd_write(kva2pa(data_buffer), 1, inode->blocks[DIRECT_BLOCK_NUM + 1]);
             }
             uint32_t new_block = find_free_block();
