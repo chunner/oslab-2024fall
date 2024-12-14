@@ -11,21 +11,21 @@ int main(void)
     // write 'hello world!' * 10
     for (int i = 0; i < 5; i++)
     {
-        sys_write(fd, "1: hello world!\n", 13);
+        sys_write(fd, "1: hello world!\n", 16);
     }
     int offset = 128 * (1 << 20);   // 128MB
     sys_lseek(fd, offset, SEEK_SET);
 
     for (int i = 0; i < 5; i++)
     {
-        sys_write(fd, "2: hello world!\n", 13);
+        sys_write(fd, "2: hello world!\n", 16);
     }
     // read
     sys_lseek(fd, 0, SEEK_SET);
     for (int i = 0; i < 5; i++)
     {
-        sys_read(fd, buff, 13);
-        for (int j = 0; j < 13; j++)
+        sys_read(fd, buff, 16);
+        for (int j = 0; j < 16; j++)
         {
             printf("%c", buff[j]);
         }
@@ -33,8 +33,8 @@ int main(void)
     sys_lseek(fd, offset, SEEK_SET);
     for (int i = 0; i < 5; i++)
     {
-        sys_read(fd, buff, 13);
-        for (int j = 0; j < 13; j++)
+        sys_read(fd, buff, 16);
+        for (int j = 0; j < 16; j++)
         {
             printf("%c", buff[j]);
         }

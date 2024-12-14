@@ -669,9 +669,11 @@ int alloc_inode_block(uint32_t old_nblock, uint32_t new_nblock, inode_t *inode) 
     }
     for (int i = old_nblock; i < new_nblock; i++) {
         if (i < DIRECT_BLOCK_NUM) {
+            printl("<%d> alloc_inode_block:\n", i);
             inode->blocks[i] = find_free_block();
         } else if (i < DIRECT_BLOCK_NUM + INDIRECT_BLOCK_NUM) {  // indirect block
             uint32_t block_idx1 = i - DIRECT_BLOCK_NUM;
+            printl("<%d> alloc_inode_block: (%d)\n", i, block_idx1);
             if (inode->blocks[DIRECT_BLOCK_NUM] == 0) {
                 inode->blocks[DIRECT_BLOCK_NUM] = find_free_block();
             }
@@ -683,6 +685,7 @@ int alloc_inode_block(uint32_t old_nblock, uint32_t new_nblock, inode_t *inode) 
         } else if (i < DIRECT_BLOCK_NUM + INDIRECT_BLOCK_NUM + DOUBLE_INDIRECT_BLOCK_NUM) {  // double indirect block
             uint32_t block_idx1 = (i - DIRECT_BLOCK_NUM - INDIRECT_BLOCK_NUM) / (INDIRECT_BLOCK_NUM);
             uint32_t block_idx2 = (i - DIRECT_BLOCK_NUM - INDIRECT_BLOCK_NUM) % (INDIRECT_BLOCK_NUM);
+            printl("<%d> alloc_inode_block: (%d, %d)\n", i, block_idx1, block_idx2);
             if (inode->blocks[DIRECT_BLOCK_NUM + 1] == 0) {
                 inode->blocks[DIRECT_BLOCK_NUM + 1] = find_free_block();
             }
@@ -704,6 +707,7 @@ int alloc_inode_block(uint32_t old_nblock, uint32_t new_nblock, inode_t *inode) 
             uint32_t block_idx1 = (i - DIRECT_BLOCK_NUM - INDIRECT_BLOCK_NUM - DOUBLE_INDIRECT_BLOCK_NUM) / (INDIRECT_BLOCK_NUM * INDIRECT_BLOCK_NUM);
             uint32_t block_idx2 = (i - DIRECT_BLOCK_NUM - INDIRECT_BLOCK_NUM - DOUBLE_INDIRECT_BLOCK_NUM - block_idx1 * INDIRECT_BLOCK_NUM * INDIRECT_BLOCK_NUM) / INDIRECT_BLOCK_NUM;
             uint32_t block_idx3 = (i - DIRECT_BLOCK_NUM - INDIRECT_BLOCK_NUM - DOUBLE_INDIRECT_BLOCK_NUM) % INDIRECT_BLOCK_NUM;
+            printl("<%d> alloc_inode_block: (%d, %d, %d)\n", i, block_idx1, block_idx2, block_idx3);
             if (inode->blocks[DIRECT_BLOCK_NUM + 2] == 0) {
                 inode->blocks[DIRECT_BLOCK_NUM + 2] = find_free_block();
             }
