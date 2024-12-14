@@ -86,10 +86,37 @@ void free_block(uint32_t block_sector) {
 }
 // inode_buffer, inode_map
 void free_inode(uint32_t inode_idx) {
-    // clear inode
+    // get inode
     uint32_t inode_sector = inodeidx2sector(inode_idx);
     uint32_t inode_offset = inodeidx2offset(inode_idx);
     bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
+    inode_t *inode = &inode_buffer[inode_offset];
+    // delete block
+    uint32_t nblocks = ROUND(inode->size, BLOCK_SIZE) / BLOCK_SIZE;
+    for (uint32_t i = 0; i < nblocks; i++) {
+        uint32_t block_sector = blockid2sector(i, inode);
+        free_block(block_sector);
+    }
+    // delete indirect block
+    if (nblocks > DIRECT_BLOCK_NUM) {
+        uint32_t indirect_block_sector = inode->blocks[DIRECT_BLOCK_NUM];
+        bios_sd_read(kva2pa(rdata_buffer), 1, indirect_block_sector);
+        uint32_t *indirect_block = (uint32_t *) rdata_buffer;
+        for (uint32_t i = DIRECT_BLOCK_NUM; i < nblocks; i++) {
+            free_block(indirect_block[i - DIRECT_BLOCK_NUM]);
+        }
+        free_block(indirect_block_sector);
+    }
+    // to do
+
+
+
+
+
+
+
+
+
     bzero((void *) &inode_buffer[inode_offset], sizeof(inode_t));
     bios_sd_write(kva2pa(inode_buffer), 1, inode_sector);
     // clear inode map
@@ -237,7 +264,7 @@ int do_statfs(void)
         return -1;
     }
     printk("\t magic number: 0x%x\n", superblock->magic);
-    uint32_t used_sectors = 1 + superblock->block_map_size + superblock->inode_map_size + superblock->inode_size;
+    uint32_t used_blocks = 0;
     bios_sd_read(kva2pa(block_map), BLOCK_MAP_SIZE, BLOCK_MAP_OFFSET + FS_START_SECTOR);
     for (uint32_t byte_idx = 0; byte_idx < BLOCK_MAP_SIZE * SECTOR_SIZE; byte_idx++) {
         if (block_map[byte_idx] != 0x00) {  // Check if there are any free bits in this byte
@@ -248,13 +275,11 @@ int do_statfs(void)
                     break;
                 }
                 if ((block_map[byte_idx] & (1 << bit))) {
-                    used_sectors += BLOCK_SIZE / SECTOR_SIZE;
+                    used_blocks++;
                 }
             }
         }
     }
-    printk("\t used sectors: %d/%d, start sector: %d\n", used_sectors, superblock->fs_size, superblock->fs_start_sec);
-    printk("\t block map offset : %d, occupied sector: %d\n", superblock->block_map_offset, superblock->block_map_size);
     uint32_t used_inodes = 0;
     bios_sd_read(kva2pa(inode_map), INODE_MAP_SIZE, INODE_MAP_OFFSET + FS_START_SECTOR);
     for (uint32_t byte_idx = 0; byte_idx < INODE_MAP_SIZE * SECTOR_SIZE; byte_idx++) {
@@ -267,9 +292,13 @@ int do_statfs(void)
             }
         }
     }
-    printk("\t inode map offset : %d, occupied sector: %d, used: %d/%d\n", superblock->inode_map_offset, superblock->inode_map_size, used_inodes, superblock->inode_size * (SECTOR_SIZE / sizeof(inode_t)));
-    printk("\t inode offset : %d, occupied sector: %d\n", superblock->inode_offset, superblock->inode_size);
-    printk("\t data offset : %d, occupied sector: %d\n", superblock->data_offset, DATA_SIZE);
+    printk("\t total sectors: %d, start sector: %d\n", superblock->fs_size, superblock->fs_start_sec);
+    printk("\t block map offset : %d, occupied sector: %d\n", superblock->block_map_offset, superblock->block_map_size);
+    printk("\t inode map offset : %d, occupied sector: %d\n", superblock->inode_map_offset, superblock->inode_map_size);
+    printk("\t inode offset : %d, occupied sector: %d, used inode: %d/%d\n", superblock->inode_offset, superblock->inode_size
+        , used_inodes, INODE_SIZE * SECTOR_SIZE / sizeof(inode_t));
+    printk("\t data offset : %d, occupied sector: %d, used block: %d/%d\n", superblock->data_offset, DATA_SIZE
+        , used_blocks, SECTOR2BLOCK(DATA_SIZE));
     printk("\t inode entry size: %dB, dir entry size: %dB\n", superblock->inode_entry_size, superblock->dir_entry_size);
     return 0;  // do_statfs succeeds
 }
@@ -961,10 +990,10 @@ int do_rm(char *path)
     inode_p->nlink--;
     if (inode_p->nlink == 0) {
         uint32_t nblocks = ROUND(inode_p->size, BLOCK_SIZE) / BLOCK_SIZE;
-        for (int i = 0; i < nblocks; i++) {
-            uint32_t block_sector = blockid2sector(i, inode_p);
-            free_block(block_sector);
-        }
+        // for (int i = 0; i < nblocks; i++) {
+        //     uint32_t block_sector = blockid2sector(i, inode_p);
+        //     free_block(block_sector);
+        // }
         free_inode(inode_p->ino);
     } else {
         bios_sd_write(kva2pa(inode_buffer), 1, inodeidx2sector(inode_p->ino));

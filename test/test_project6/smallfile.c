@@ -13,7 +13,7 @@ int main(void)
     {
         sys_write(fd, "1: hello world!\n", 16);
     }
-    int offset = 4096 * 50;
+    int offset = 4096 * 1033;
     sys_lseek(fd, offset, SEEK_SET);
 
     for (int i = 0; i < 5; i++)
