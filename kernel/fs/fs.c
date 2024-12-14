@@ -691,13 +691,13 @@ int alloc_inode_block(uint32_t old_nblock, uint32_t new_nblock, inode_t *inode) 
                 indirect_block[indirect_block_id] = new_block;
                 bios_sd_write(kva2pa(data_buffer), 1, inode->blocks[DIRECT_BLOCK_NUM + 1]);
             }
+            uint32_t indirect_block2_sector = indirect_block[indirect_block_id];
             uint32_t new_block = find_free_block();
-            uint32_t indirect_block_sector = indirect_block[indirect_block_id];
-            bios_sd_read(kva2pa(data_buffer), 1, indirect_block_sector);
+            bios_sd_read(kva2pa(data_buffer), 1, indirect_block2_sector);
             uint32_t *indirect_block2 = (uint32_t *) data_buffer;
             uint32_t indirect_block2_id = (i - DIRECT_BLOCK_NUM - BLOCK_SIZE / sizeof(uint32_t)) % (BLOCK_SIZE / sizeof(uint32_t));
             indirect_block2[indirect_block2_id] = new_block;
-            bios_sd_write(kva2pa(data_buffer), 1, indirect_block_sector);
+            bios_sd_write(kva2pa(data_buffer), 1, indirect_block2_sector);
         } else if (i < DIRECT_BLOCK_NUM + BLOCK_SIZE / sizeof(uint32_t) + (BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t)) + (BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t))) {  // triple indirect block
             if (inode->blocks[DIRECT_BLOCK_NUM + 2] == 0) {
                 inode->blocks[DIRECT_BLOCK_NUM + 2] = find_free_block();
@@ -711,23 +711,23 @@ int alloc_inode_block(uint32_t old_nblock, uint32_t new_nblock, inode_t *inode) 
                 indirect_block[indirect_block_id] = new_block;
                 bios_sd_write(kva2pa(data_buffer), 1, inode->blocks[DIRECT_BLOCK_NUM + 2]);
             }
-            uint32_t indirect_block_sector = indirect_block[indirect_block_id];
-            bios_sd_read(kva2pa(data_buffer), 1, indirect_block_sector);
+            uint32_t indirect_block2_sector = indirect_block[indirect_block_id];
+            bios_sd_read(kva2pa(data_buffer), 1, indirect_block2_sector);
             uint32_t *indirect_block2 = (uint32_t *) data_buffer;
             uint32_t indirect_block2_id = (i - DIRECT_BLOCK_NUM - BLOCK_SIZE / sizeof(uint32_t) - (BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t))) % ((BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t)));
             if (indirect_block2[indirect_block2_id] == 0) {
                 uint32_t new_block = find_free_block();
-                bios_sd_read(kva2pa(data_buffer), 1, indirect_block_sector);
+                bios_sd_read(kva2pa(data_buffer), 1, indirect_block2_sector);
                 indirect_block2[indirect_block2_id] = new_block;
-                bios_sd_write(kva2pa(data_buffer), 1, indirect_block_sector);
+                bios_sd_write(kva2pa(data_buffer), 1, indirect_block2_sector);
             }
+            uint32_t indirect_block3_sector = indirect_block2[indirect_block2_id];
             uint32_t new_block = find_free_block();
-            uint32_t indirect_block2_sector = indirect_block2[indirect_block2_id];
-            bios_sd_read(kva2pa(data_buffer), 1, indirect_block2_sector);
+            bios_sd_read(kva2pa(data_buffer), 1, indirect_block3_sector);
             uint32_t *indirect_block3 = (uint32_t *) data_buffer;
             uint32_t indirect_block3_id = (i - DIRECT_BLOCK_NUM - BLOCK_SIZE / sizeof(uint32_t) - (BLOCK_SIZE / sizeof(uint32_t)) * (BLOCK_SIZE / sizeof(uint32_t))) % (BLOCK_SIZE / sizeof(uint32_t));
             indirect_block3[indirect_block3_id] = new_block;
-            bios_sd_write(kva2pa(data_buffer), 1, indirect_block2_sector);
+            bios_sd_write(kva2pa(data_buffer), 1, indirect_block3_sector);
         } else {
             return -1;
         }
