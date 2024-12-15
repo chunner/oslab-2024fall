@@ -97,6 +97,7 @@ void free_inode(uint32_t inode_idx) {
         if (i < DIRECT_BLOCK_NUM) {  // direct block
             uint32_t data_block_sec = inode->blocks[i];
             free_block(data_block_sec);
+            printl("<%d>: free_inode: (%d)", i, i);
         } else if (i < DIRECT_BLOCK_NUM + NBLOCK_LV1) {  // indirect block
             uint32_t index = i - DIRECT_BLOCK_NUM;
             uint32_t block_idx1 = index;
@@ -109,6 +110,7 @@ void free_inode(uint32_t inode_idx) {
             if (index % NBLOCK_LV1 == 0) {
                 free_block(block_lv1_sec);
             }
+            printl("<%d>: free_inode: (%d)", i, block_idx1);
         } else if (i < DIRECT_BLOCK_NUM + NBLOCK_LV1 + NBLOCK_LV2) {  // double indirect block
             uint32_t index = i - DIRECT_BLOCK_NUM - NBLOCK_LV1;
             uint32_t block_idx2 = index / NBLOCK_LV1;
@@ -128,6 +130,7 @@ void free_inode(uint32_t inode_idx) {
             if (index % NBLOCK_LV2 == 0) {
                 free_block(block_lv2_sec);
             }
+            printl("<%d>: free_inode: (%d, %d)", i,block_idx1, block_idx2);
         }else if (i < DIRECT_BLOCK_NUM + NBLOCK_LV1 + NBLOCK_LV2 + NBLOCK_LV3) { // trip indirect block
             // get block lv1, lv2, lv3
             uint32_t index = i - DIRECT_BLOCK_NUM - NBLOCK_LV1 - NBLOCK_LV2;
@@ -156,6 +159,7 @@ void free_inode(uint32_t inode_idx) {
             if (index % (NBLOCK_LV3) == 0) {  // free block lv1
                 free_block(block_lv3_sec);
             }
+            printl("<%d>: free_inode: (%d, %d, %d)", i,block_idx1, block_idx2, block_idx3);
         }
     }
     // delete inode
