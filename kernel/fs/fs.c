@@ -106,7 +106,6 @@ void free_inode(uint32_t inode_idx) {
             uint32_t *block_lv1 = (uint32_t *) rdata_buffer;
             uint32_t data_block_sec = block_lv1[block_idx1];
             free_block(data_block_sec);
-            printl("block_lv1 = %x, block_idx1 = %d, data_block_sec = %x\n", block_lv1_sec, block_idx1, data_block_sec);
             // free indirect block
             if (index % NBLOCK_LV1 == 0) {
                 free_block(block_lv1_sec);
