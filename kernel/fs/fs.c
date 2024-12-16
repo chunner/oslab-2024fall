@@ -1039,13 +1039,12 @@ int do_rm(char *path)
     // update inode
     inode_p->nlink--;
     if (inode_p->nlink == 0) {
-        uint32_t nblocks = ROUND(inode_p->size, BLOCK_SIZE) / BLOCK_SIZE;
+        // uint32_t nblocks = ROUND(inode_p->size, BLOCK_SIZE) / BLOCK_SIZE;
         // for (int i = 0; i < nblocks; i++) {
         //     uint32_t block_sector = blockid2sector(i, inode_p);
         //     free_block(block_sector);
         // }
         free_inode(inode_p->ino);
-        printl("end\n");
     } else {
         bios_sd_write(kva2pa(inode_buffer), 1, inodeidx2sector(inode_p->ino));
     }
