@@ -18,7 +18,7 @@
 #define FS_START_SECTOR (1 << 20)                // the start sector of file system
 
 // SIZE
-#define BLOCK_MAP_SIZE 4                            // 4 SECTOR
+#define BLOCK_MAP_SIZE 32                            // 32 SECTOR
 #define INODE_MAP_SIZE 1                            // 1 SECTOR
 #define INODE_SIZE 512                              // 512 SECTOR
 #define DATA_SIZE (FS_NUM_SECTORS - DATA_OFFSET)

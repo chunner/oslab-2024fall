@@ -9,7 +9,7 @@
 static fdesc_t fdesc_array[NUM_FDESCS];
 static char superblock_buffer[SECTOR_SIZE];
 static char inode_map[INODE_MAP_SIZE * SECTOR_SIZE];
-static char block_map[BLOCK_MAP_SIZE * SECTOR_SIZE];
+static char block_map[BLOCK_MAP_SIZE * SECTOR_SIZE];    // size = 32 sectors, 4 blocks, 16KB
 static inode_t inode_buffer[SECTOR_SIZE / sizeof(inode_t)];     // size = one sector, 512B
 static dentry_t dentry_buffer[BLOCK_SIZE / sizeof(dentry_t)];  // size = one block, 4KB
 static char rdata_buffer[BLOCK_SIZE];  // size = one block, 4KB
