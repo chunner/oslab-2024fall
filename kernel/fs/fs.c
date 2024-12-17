@@ -74,8 +74,8 @@ uint32_t find_free_block() {
 // rdata_buffer, block_map
 void free_block(uint32_t block_sector) {
     // clear block
-    bzero((void *) rdata_buffer, BLOCK_SIZE);
-    bios_sd_write(kva2pa(rdata_buffer), BLOCK_SIZE / SECTOR_SIZE, block_sector);
+    // bzero((void *) rdata_buffer, BLOCK_SIZE);
+    // bios_sd_write(kva2pa(rdata_buffer), BLOCK_SIZE / SECTOR_SIZE, block_sector);
     // clear block map
     bios_sd_read(kva2pa(block_map), BLOCK_MAP_SIZE, BLOCK_MAP_OFFSET + FS_START_SECTOR);
     uint32_t block_idx = SECTOR2BLOCK(block_sector - DATA_OFFSET - FS_START_SECTOR);
@@ -96,8 +96,10 @@ void free_inode(uint32_t inode_idx) {
     for (int64_t i = (int64_t) nblocks - 1; i >= 0; i--) {
         if (i < DIRECT_BLOCK_NUM) {  // direct block
             uint32_t data_block_sec = inode->blocks[i];
+            if(data_block_sec != 0){
             free_block(data_block_sec);
             printl("<%d>: free_inode: (%d) %x\n", i, i, data_block_sec);
+            }
         } else if (i < DIRECT_BLOCK_NUM + NBLOCK_LV1) {  // indirect block
             uint32_t index = i - DIRECT_BLOCK_NUM;
             uint32_t block_idx1 = index;
