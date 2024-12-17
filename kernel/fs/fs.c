@@ -76,6 +76,7 @@ void free_block(uint32_t block_sector) {
     // clear block
     // bzero((void *) rdata_buffer, BLOCK_SIZE);
     // bios_sd_write(kva2pa(rdata_buffer), BLOCK_SIZE / SECTOR_SIZE, block_sector);
+    assert(block_sector >= DATA_OFFSET + FS_START_SECTOR);
     // clear block map
     bios_sd_read(kva2pa(block_map), BLOCK_MAP_SIZE, BLOCK_MAP_OFFSET + FS_START_SECTOR);
     uint32_t block_idx = SECTOR2BLOCK(block_sector - DATA_OFFSET - FS_START_SECTOR);
@@ -96,36 +97,53 @@ void free_inode(uint32_t inode_idx) {
     for (int64_t i = (int64_t) nblocks - 1; i >= 0; i--) {
         if (i < DIRECT_BLOCK_NUM) {  // direct block
             uint32_t data_block_sec = inode->blocks[i];
-            if(data_block_sec != 0){
-            free_block(data_block_sec);
-            printl("<%d>: free_inode: (%d) %x\n", i, i, data_block_sec);
+            if (data_block_sec != 0) {      // skip empty block
+                free_block(data_block_sec);
+                printl("<%d>: free_inode: (%d) %x\n", i, i, data_block_sec);
             }
         } else if (i < DIRECT_BLOCK_NUM + NBLOCK_LV1) {  // indirect block
             uint32_t index = i - DIRECT_BLOCK_NUM;
             uint32_t block_idx1 = index;
             uint32_t block_lv1_sec = inode->blocks[DIRECT_BLOCK_NUM];
+            if (block_lv1_sec == 0) {   // skip whole block lv1
+                i -= index;
+                continue;
+            }
             bios_sd_read(kva2pa(rdata_buffer), BLOCK_SIZE / SECTOR_SIZE, block_lv1_sec);
             uint32_t *block_lv1 = (uint32_t *) rdata_buffer;
             uint32_t data_block_sec = block_lv1[block_idx1];
-            free_block(data_block_sec);
+            if (data_block_sec != 0) {
+                free_block(data_block_sec);
+                printl("<%d>: free_inode: (%d) %x\n", i, block_idx1, data_block_sec);
+            }
             // free indirect block
             if (index % NBLOCK_LV1 == 0) {
                 free_block(block_lv1_sec);
                 printl(" free block lv1： %x\n", block_lv1_sec);
             }
-            printl("<%d>: free_inode: (%d) %x\n", i, block_idx1, data_block_sec);
         } else if (i < DIRECT_BLOCK_NUM + NBLOCK_LV1 + NBLOCK_LV2) {  // double indirect block
             uint32_t index = i - DIRECT_BLOCK_NUM - NBLOCK_LV1;
             uint32_t block_idx2 = index / NBLOCK_LV1;
             uint32_t block_idx1 = index % NBLOCK_LV1;
             uint32_t block_lv2_sec = inode->blocks[DIRECT_BLOCK_NUM + 1];
+            if (block_lv2_sec == 0) { // skip whole block lv2
+                i -= index;
+                continue;
+            }
             bios_sd_read(kva2pa(rdata_buffer), BLOCK_SIZE / SECTOR_SIZE, block_lv2_sec);
             uint32_t *block_lv2 = (uint32_t *) rdata_buffer;
             uint32_t block_lv1_sec = block_lv2[block_idx2];
+            if (block_lv1_sec == 0) {    // skip whole block lv1
+                i -= (index % NBLOCK_LV1);
+                continue;
+            }
             bios_sd_read(kva2pa(rdata_buffer), BLOCK_SIZE / SECTOR_SIZE, block_lv1_sec);
             uint32_t *block_lv1 = (uint32_t *) rdata_buffer;
             uint32_t data_block_sec = block_lv1[block_idx1];
-            free_block(data_block_sec);
+            if (data_block_sec != 0) {
+                free_block(data_block_sec);
+                printl("<%d>: free_inode: (%d, %d) %x\n", i, block_idx2, block_idx1, data_block_sec);
+            }
             // free indirect block
             if (index % NBLOCK_LV1 == 0) {
                 free_block(block_lv1_sec);
@@ -135,7 +153,6 @@ void free_inode(uint32_t inode_idx) {
                 free_block(block_lv2_sec);
                 printl(" free block lv2： %x\n", block_lv2_sec);
             }
-            printl("<%d>: free_inode: (%d, %d) %x\n", i, block_idx2, block_idx1, data_block_sec);
         } else if (i < DIRECT_BLOCK_NUM + NBLOCK_LV1 + NBLOCK_LV2 + NBLOCK_LV3) { // trip indirect block
             // get block lv1, lv2, lv3
             uint32_t index = i - DIRECT_BLOCK_NUM - NBLOCK_LV1 - NBLOCK_LV2;
@@ -143,17 +160,32 @@ void free_inode(uint32_t inode_idx) {
             uint32_t block_idx2 = (index - block_idx3 * NBLOCK_LV1 * NBLOCK_LV1) / NBLOCK_LV1;
             uint32_t block_idx1 = index % NBLOCK_LV1;
             uint32_t block_lv3_sec = inode->blocks[DIRECT_BLOCK_NUM + 2];
+            if (block_lv3_sec == 0) {    // skip whole block lv3
+                i -= index;
+                continue;
+            }
             bios_sd_read(kva2pa(rdata_buffer), BLOCK_SIZE / SECTOR_SIZE, block_lv3_sec);
             uint32_t *block_lv3 = (uint32_t *) rdata_buffer;
             uint32_t block_lv2_sec = block_lv3[block_idx3];
+            if (block_lv2_sec == 0) {   // skip whole block lv2
+                i -= (index % NBLOCK_LV2);
+                continue;
+            }
             bios_sd_read(kva2pa(rdata_buffer), BLOCK_SIZE / SECTOR_SIZE, block_lv2_sec);
             uint32_t *block_lv2 = (uint32_t *) rdata_buffer;
             uint32_t block_lv1_sec = block_lv2[block_idx2];
+            if (block_lv1_sec == 0) {   // skip whole block lv1
+                i -= (index % NBLOCK_LV1);
+                continue;
+            }
             bios_sd_read(kva2pa(rdata_buffer), BLOCK_SIZE / SECTOR_SIZE, block_lv1_sec);
             uint32_t *block_lv1 = (uint32_t *) rdata_buffer;
             uint32_t data_block_sec = block_lv1[block_idx1];
             // free data block
-            free_block(data_block_sec);
+            if (data_block_sec != 0) {
+                free_block(data_block_sec);
+                printl("<%d>: free_inode: (%d, %d, %d)", i, block_idx1, block_idx2, block_idx3);
+            }
             // free indirect block
             if (index % NBLOCK_LV1 == 0) {  // free block lv1
                 free_block(block_lv1_sec);
@@ -164,7 +196,6 @@ void free_inode(uint32_t inode_idx) {
             if (index % (NBLOCK_LV3) == 0) {  // free block lv1
                 free_block(block_lv3_sec);
             }
-            printl("<%d>: free_inode: (%d, %d, %d)", i, block_idx1, block_idx2, block_idx3);
         }
     }
     // delete inode
