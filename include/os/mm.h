@@ -42,7 +42,7 @@
 #define FREE_KERNEL_PAGE_NUM 0x2000
 
 #define USER_MEM_BASE 0xffffffc054000000
-#define FREE_USER_PAGE_NUM 0xb000    // (0x5f00_0000 - 0x5400_0000) / 4K = 0xb00_0000/ 0x1000 = 0xb000
+#define FREE_USER_PAGE_NUM 0x9000    // (0x5d00_0000 - 0x5400_0000) / 4K = 0x900_0000/ 0x1000 = 0x9000
 
  /* Rounding; only works for n = power of two */
 #define ROUND(a, n)     (((((uint64_t)(a))+(n)-1)) & ~((n)-1))
@@ -195,5 +195,10 @@ extern void do_getbrk(uint64_t bss_end);
 extern int check_brk(uintptr_t vpn);
 extern int do_brk(void *addr);
 extern void *do_sbrk(intptr_t icrement);
+
+
+/* ------------------------------------------ page cache ----------------------------------------------*/
+#define PAGE_CACHE_BASE 0xffffffc05d000000 // 0xffffffc05d000000 - 0xffffffc05f000000, size = 0x2000000B = 32MB
+#define PAGE_CACHE_SIZE 0x2000000
 
 #endif /* MM_H */
