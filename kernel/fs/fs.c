@@ -1167,9 +1167,9 @@ int do_touch(char *path)
     // create inode
     uint32_t inode_sector = inodeidx2sector(inode_idx);
     uint32_t inode_offset = inodeidx2offset(inode_idx);
-    // bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
-    bzero((void *) inode_buffer, SECTOR_SIZE);
+    bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
     inode_t *inode = &inode_buffer[inode_offset];
+    bzero(inode, sizeof(inode_t));
     inode->mode = O_RDWR;
     inode->size = 0;
     inode->atime = inode->mtime = inode->ctime = get_timer();
@@ -1194,6 +1194,7 @@ int do_touch(char *path)
         return -1;
     }
     // update wd inode
+    wd_inode.size += sizeof(dentry_t);
     wd_inode.mtime = get_timer();
     wd_inode.nlink++;
     uint32_t wd_inode_sector = inodeidx2sector(wd_inode.ino);
@@ -1216,7 +1217,8 @@ int do_cat(char *path)
         return -1;
     }
     // read data
-    for (int i = 0; i < inode_p->size; i++) {
+    uint32_t max_len = inode_p->size > 200 ? 200 : inode_p->size;
+    for (int i = 0; i < max_len; i++) {
         if (i % BLOCK_SIZE == 0) {
             uint32_t block_id = i / BLOCK_SIZE;
             bios_sd_read(kva2pa(rdata_buffer), BLOCK_SIZE / SECTOR_SIZE, blockid2sector(block_id, inode_p));
