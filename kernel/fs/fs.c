@@ -341,7 +341,7 @@ int do_mkfs(void)
     bzero((void *) inode_buffer, SECTOR_SIZE);
     inode_t *root_inode = &inode_buffer[root_inode_offset];
     root_inode->mode = O_RDWR;
-    root_inode->size = BLOCK_SIZE;   // one block
+    root_inode->size = 2 * sizeof(dentry_t); // . and ..
     root_inode->atime = root_inode->mtime = root_inode->ctime = get_timer();
     root_inode->ino = root_inode_idx;
     root_inode->nlink = 1;
@@ -452,21 +452,20 @@ int do_mkdir(char *path)
         printk("[FS] mkdir: cannot create directory '%s': No space left on device\n", path);
         return -1;
     }
-    // find a free block
+    // find a free block, assign
     uint32_t new_block = find_free_block();
     printl("alloc_dir_block for %s: %x\n", path, new_block);
     if (new_block == -1) {
         printk("[FS] mkdir: cannot create directory '%s': No space left on device\n", path);
         return -1;
     }
-    // create inode
     uint32_t inode_sector = inodeidx2sector(inode_idx);
     uint32_t inode_offset = inodeidx2offset(inode_idx);
-    // bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
-    bzero((void *) inode_buffer, SECTOR_SIZE);
+    bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);     // load inode from sd
     inode_t *inode = &inode_buffer[inode_offset];
+    bzero((void *) inode, sizeof(inode_t));
     inode->mode = O_RDWR;
-    inode->size = BLOCK_SIZE;   // one block
+    inode->size = sizeof(dentry_t) * 2;   // .. and .
     inode->atime = inode->mtime = inode->ctime = get_timer();
     inode->ino = inode_idx;
     inode->nlink = 1;
@@ -475,8 +474,9 @@ int do_mkdir(char *path)
     bios_sd_write(kva2pa(inode_buffer), 1, inode_sector);
     // update wd dentry
     int found = 0;
+    bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, wd_inode.blocks[0]);
     for (int j = 0; j < BLOCK_SIZE / sizeof(dentry_t); j++) {
-        if (dentry_buffer[j].ino == 0 && dentry_buffer[j].name[0] == 0) {
+        if (dentry_buffer[j].name[0] == 0) {
             strcpy(dentry_buffer[j].name, path);
             dentry_buffer[j].ino = inode_idx;
             dentry_buffer[j].type = IT_DIR;
@@ -490,6 +490,7 @@ int do_mkdir(char *path)
         return -1;
     }
     // update wd inode
+    wd_inode.size += sizeof(dentry_t);
     wd_inode.mtime = get_timer();
     wd_inode.nlink++;
     uint32_t wd_inode_sector = inodeidx2sector(wd_inode.ino);
@@ -1146,21 +1147,21 @@ int do_touch(char *path)
 {
     // TODO [P6-task2]: Implement do_touch
     if (strlen(path) >= 27) {
-        printk("[FS] mkdir: cannot create file '%s': File name too long\n", path);
+        printk("[FS] touch: cannot create file '%s': File name too long\n", path);
         return -1;
     }
     // search wd whether has the same name
     bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, wd_inode.blocks[0]);
     for (int j = 0; j < BLOCK_SIZE / sizeof(dentry_t); j++) {
         if (strcmp(dentry_buffer[j].name, path) == 0) {
-            printk("[FS] mkdir: cannot create file '%s': File exists\n", path);
+            printk("[FS] touch: cannot create file '%s': File exists\n", path);
             return -1;
         }
     }
     // find a free inode
     uint32_t inode_idx = find_free_inode();
     if (inode_idx == -1) {
-        printk("[FS] mkdir: cannot create file '%s': No space left on device\n", path);
+        printk("[FS] touch: cannot create file '%s': No space left on device\n", path);
         return -1;
     }
     // create inode
@@ -1189,7 +1190,7 @@ int do_touch(char *path)
         }
     }
     if (!found) {
-        printk("[FS] mkdir: cannot create file '%s': no dentry\n", path);
+        printk("[FS] touch: cannot create file '%s': no dentry\n", path);
         return -1;
     }
     // update wd inode
