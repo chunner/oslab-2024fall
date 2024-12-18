@@ -21,6 +21,7 @@ int main(void)
         sys_write(fd, "2: hello world!\n", 16);
     }
     // read
+    sys_move_cursor(0, 0);
     sys_lseek(fd, 0, SEEK_SET);
     for (int i = 0; i < 5; i++)
     {

@@ -15,6 +15,7 @@ int main(void)
     }
 
     // read
+    sys_move_cursor(0, 0);
     for (int i = 0; i < 10; i++)
     {
         sys_read(fd, buff, 13);
