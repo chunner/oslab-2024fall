@@ -892,16 +892,7 @@ int do_write(int fd, char *buff, int length)
     uint32_t inode_offset = inodeidx2offset(inode_idx);
     bios_sd_read(kva2pa(inode_buffer), 1, inode_sector);
     inode_t *inode = &inode_buffer[inode_offset];
-    // allocate new blocks if necessary
-    uint32_t new_write_pos = fdesc_array[fd].write_pos + length;
-    // if (ROUND(new_write_pos, BLOCK_SIZE) > ROUND(inode->size, BLOCK_SIZE)) {
-    //     uint32_t new_nblocks = ROUND(new_write_pos, BLOCK_SIZE) / BLOCK_SIZE;
-    //     uint32_t old_nblocks = ROUND(inode->size, BLOCK_SIZE) / BLOCK_SIZE;
-    //     alloc_inode_block(old_nblocks, new_nblocks, inode);
-    // }
-    if (new_write_pos > inode->size) {
-        inode->size = new_write_pos;
-    }
+
     // write data
     uint32_t start_block = fdesc_array[fd].write_pos / BLOCK_SIZE;
     uint32_t start_block_sec = blockid2sector(start_block, inode);
@@ -932,6 +923,9 @@ int do_write(int fd, char *buff, int length)
         bios_sd_write(kva2pa(wdata_buffer), BLOCK_SIZE / SECTOR_SIZE, blockid2sector(fdesc_array[fd].write_pos / BLOCK_SIZE, inode));
     }
     // update inode
+    if(fdesc_array[fd].write_pos > inode->size) {
+        inode->size = fdesc_array[fd].write_pos;
+    }
     inode->mtime = inode->atime = get_timer();
     bios_sd_write(kva2pa(inode_buffer), BLOCK_SIZE / SECTOR_SIZE, inode_sector);
     return length;  // return the length of trully written data
