@@ -6,3 +6,4 @@ fpga.log
 pkt-rx-tx-master
 fpga2.log
 *.DS_Store
+clearlog.sh
