@@ -574,6 +574,15 @@ int do_rmdir(char *path)
             break;
         }
     }
+    // update wd inode
+    wd_inode.size -= sizeof(dentry_t);
+    wd_inode.mtime = get_timer();
+    wd_inode.nlink--;
+    wd_inode_sector = inodeidx2sector(wd_inode.ino);
+    wd_inode_offset = inodeidx2offset(wd_inode.ino);
+    bios_sd_read(kva2pa(inode_buffer), 1, wd_inode_sector);
+    inode_buffer[wd_inode_offset] = wd_inode;
+    bios_sd_write(kva2pa(inode_buffer), 1, wd_inode_sector);
     // delete path inode
     free_inode(d_inode_p->ino);
     return 0;  // do_rmdir succeeds
@@ -1093,7 +1102,7 @@ int do_rm(char *path)
         printk("[FS] rm: cannot remove '%s': Is a directory\n", path);
         return -1;
     }
-    // delete parent dentry
+    // delete parent dentry, assert wd is the parent inode
     bios_sd_read(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, wd_inode.blocks[0]);
     for (int j = 0; j < BLOCK_SIZE / sizeof(dentry_t); j++) {
         if (dentry_buffer[j].ino == inode_p->ino) {
@@ -1104,6 +1113,15 @@ int do_rm(char *path)
             break;
         }
     }
+    // update wd inode
+    wd_inode.size -= sizeof(dentry_t);
+    wd_inode.mtime = get_timer();
+    wd_inode.nlink--;
+    uint32_t wd_inode_sector = inodeidx2sector(wd_inode.ino);
+    uint32_t wd_inode_offset = inodeidx2offset(wd_inode.ino);
+    bios_sd_read(kva2pa(inode_buffer), 1, wd_inode_sector);
+    inode_buffer[wd_inode_offset] = wd_inode;
+    bios_sd_write(kva2pa(inode_buffer), 1, wd_inode_sector);
     // update inode
     inode_p->nlink--;
     if (inode_p->nlink == 0) {
