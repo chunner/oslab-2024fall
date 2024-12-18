@@ -198,7 +198,7 @@ extern void *do_sbrk(intptr_t icrement);
 
 
 /* ------------------------------------------ page cache ----------------------------------------------*/
-#define PAGE_CACHE_BASE 0xffffffc05d000000 // 0xffffffc05d000000 - 0xffffffc05f000000, size = 0x2000000B = 32MB
-#define PAGE_CACHE_SIZE 0x2000000
+#define FILE_CACHE_BASE 0xffffffc05d000000 // 0xffffffc05d000000 - 0xffffffc05f000000, size = 0x2000000B = 32MB
+#define FILE_CACHE_SIZE 0x2000000
 
 #endif /* MM_H */

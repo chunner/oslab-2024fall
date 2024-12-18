@@ -126,4 +126,44 @@ extern int do_touch(char *path);
 extern int do_cat(char *path);
 extern int do_pwd(void);
 extern void init_fs(void);
+
+/* -------------------------------------------------buffer------------------------------------------------------------------------*/
+// struct buf {
+//   int flags;             // 标志位，b_valid和b_dirty.
+//   uint dev;              // 缓存块对应的磁盘设备号
+//   uint blockno;          // 缓存块对应的block块号
+//   struct sleeplock lock; // 睡眠锁， 保证一个buffer同一时间只可能被一个进程拥有
+//   uint refcnt;           // 引用次数
+//   struct buf *prev;      // LRU双向链表
+//   struct buf *next;      // LRU双向链表
+//   struct buf *qnext;     // 当Buffer块需要与磁盘间进行同步时，Buffer块之间组成的单向同步队列
+//   uchar data[BSIZE];     // 512字节的数据缓存区
+// };
+#define NBUF 0x5000
+typedef struct buf {
+    uint16_t valid;
+    uint16_t dirty;
+    uint32_t sectorid;
+    struct buf *prev;
+    struct buf *next;
+    char data[SECTOR_SIZE];
+}buf_t;         // less then 1024 bytes = 0x400
+// struct {
+//   struct spinlock lock;   // 锁
+//   struct buf buf[NBUF];   // buffer块数组,一大块连续的buffer
+//   struct buf head;        // 它可以看出一个哨兵，目的方便双向链表的操作
+//                           // head.next 是第一个buffer块， 它是最近使用过的!
+// } bcache;
+typedef struct {
+    buf_t buf[NUM_FDESCS];
+    buf_t head;
+} bcache_t;         // less than 0x5000 * 0x400 =  0x2000000 = 32MB
+
+int page_cache_policy;
+int write_back_freq;
+
+#define BWRITE_BACK 0
+#define BWRITE_THROUGH 1
+
+
 #endif

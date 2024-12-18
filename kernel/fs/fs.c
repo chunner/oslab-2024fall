@@ -20,6 +20,148 @@ static inode_t wd_inode;    // working directory
 static inode_t *find_inode(char *path, inode_t *parent_inode);
 static void parse_path(char *path, char *dir1, char *dir2, char *dir3);
 
+/* ---------------------------------------------------------file cache------------------------------------------------------- */
+bcache_t *bcache = (bcache_t *) FILE_CACHE_BASE;
+
+
+
+void init_bcache() {
+    // init bcache array
+    bcache->head.next = bcache->head.prev = &bcache->head;
+    for (int i = 0; i < NBUF; i++) {
+        bcache->buf[i].valid = 0;
+    }
+    // create /proc/sys/vm, wd_inode is root when init
+    do_mkdir("/proc");
+    do_cd("proc");
+    do_mkdir("sys");
+    do_cd("sys");
+    do_touch("vm");
+    int fd = do_open("vm", O_RDWR);
+    do_write(fd, "page_cache_policy = write back\n", 31);
+    do_write(fd, "write_back_freq = 30\n", 22);
+    do_close(fd);
+    do_cd("../..");
+    // cache config
+    page_cache_policy = BWRITE_BACK;
+    write_back_freq = 30;
+}
+
+buf_t *find_free_buf() {
+    buf_t *buf = &bcache->buf[0];
+    for (int i = 0; i < NBUF; i++) {
+        if (buf->valid == 0) {
+            return buf;
+        }
+        buf++;
+    }
+}
+
+buf_t *search_buf(uint32_t sectorid) {
+    buf_t *buf = bcache->head.next;
+    while (buf != &bcache->head) {
+        if ((buf->valid == 1) && (buf->sectorid == sectorid)) {
+            return buf;
+        }
+        buf = buf->next;
+    }
+    return NULL;
+}
+
+buf_t *brefill(uint32_t sectorid) {
+    buf_t *buf = find_free_buf();
+    if (buf == NULL) {
+        return NULL;
+    }
+    buf->valid = 1;
+    buf->sectorid = sectorid;
+    buf->dirty = 0;
+    bios_sd_read((unsigned) buf->data, 1, sectorid);
+    // insert to head
+    buf->next = bcache->head.next;
+    buf->prev = &bcache->head;
+    bcache->head.next->prev = buf;
+    bcache->head.next = buf;
+    return buf;
+}
+
+void bwrite(unsigned mem_address, unsigned nsectors, unsigned sectorid, int mode) {
+    for (int i = 0; i < nsectors; i++) {
+        buf_t *buf = search_buf(sectorid + i);
+        if (buf == NULL) {
+            buf = brefill(sectorid + i);
+        }
+        buf->dirty = 1;
+        memcpy((void *) buf->data, (void *) mem_address, SECTOR_SIZE);
+        if (mode == BWRITE_THROUGH) { // write through
+            bios_sd_write((unsigned) buf->data, 1, sectorid + i);
+        }
+    }
+}
+
+void bread(unsigned mem_address, unsigned nsectors, unsigned sectorid) {
+    for (int i = 0; i < nsectors; i++) {
+        buf_t *buf = search_buf(sectorid + i);
+        if (buf == NULL) {
+            buf = brefill(sectorid + i);
+        }
+        memcpy((void *) mem_address, (void *) buf->data, SECTOR_SIZE);
+    }
+}
+
+void bflush() {
+    buf_t *buf = bcache->head.next;
+    while (buf != &bcache->head) {
+        if (buf->dirty) {
+            bios_sd_write((unsigned) buf->data, 1, buf->sectorid);
+            buf->dirty = 0;
+        }
+        buf = buf->next;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*---------------------------------------------------fs---------------------------------------------------------*/
+
 uint32_t inodeidx2sector(uint32_t inode_idx) {
     return FS_START_SECTOR + INODE_OFFSET + ROUNDDOWN(inode_idx * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
 }
@@ -362,6 +504,7 @@ int do_mkfs(void)
     dentry_buffer[1].type = IT_DIR;
     bios_sd_write(kva2pa(dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, root_dentry_sector);
     printk("[FS] Filesystem initialized successfully!\n");
+    init_bcache();
     return 0;  // do_mkfs succeeds
 }
 
