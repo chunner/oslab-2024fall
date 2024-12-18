@@ -99,7 +99,7 @@ void free_inode(uint32_t inode_idx) {
             uint32_t data_block_sec = inode->blocks[i];
             if (data_block_sec != 0) {      // skip empty block
                 free_block(data_block_sec);
-                printl("<%d>: free_inode: (%d) %x\n", i, i, data_block_sec);
+                printl("<%d>: free_data_inode: (%d) %x\n", i, i, data_block_sec);
             }
         } else if (i < DIRECT_BLOCK_NUM + NBLOCK_LV1) {  // indirect block
             uint32_t index = i - DIRECT_BLOCK_NUM;
@@ -114,12 +114,12 @@ void free_inode(uint32_t inode_idx) {
             uint32_t data_block_sec = block_lv1[block_idx1];
             if (data_block_sec != 0) {
                 free_block(data_block_sec);
-                printl("<%d>: free_inode: (%d) %x\n", i, block_idx1, data_block_sec);
+                printl("<%d>: free_data_inode: (%d) %x\n", i, block_idx1, data_block_sec);
             }
             // free indirect block
             if (index % NBLOCK_LV1 == 0) {
                 free_block(block_lv1_sec);
-                printl(" free block lv1： %x\n", block_lv1_sec);
+                printl(" free_block_lv1： %x\n", block_lv1_sec);
             }
         } else if (i < DIRECT_BLOCK_NUM + NBLOCK_LV1 + NBLOCK_LV2) {  // double indirect block
             uint32_t index = i - DIRECT_BLOCK_NUM - NBLOCK_LV1;
@@ -142,16 +142,16 @@ void free_inode(uint32_t inode_idx) {
             uint32_t data_block_sec = block_lv1[block_idx1];
             if (data_block_sec != 0) {
                 free_block(data_block_sec);
-                printl("<%d>: free_inode: (%d, %d) %x\n", i, block_idx2, block_idx1, data_block_sec);
+                printl("<%d>: free_data_inode: (%d, %d) %x\n", i, block_idx2, block_idx1, data_block_sec);
             }
             // free indirect block
             if (index % NBLOCK_LV1 == 0) {
                 free_block(block_lv1_sec);
-                printl(" free block lv1： %x\n", block_lv1_sec);
+                printl("<%d>: free_block_lv1： %x\n", i, block_lv1_sec);
             }
             if (index % NBLOCK_LV2 == 0) {
                 free_block(block_lv2_sec);
-                printl(" free block lv2： %x\n", block_lv2_sec);
+                printl("<%d>: free_block_lv2： %x\n", i, block_lv2_sec);
             }
         } else if (i < DIRECT_BLOCK_NUM + NBLOCK_LV1 + NBLOCK_LV2 + NBLOCK_LV3) { // trip indirect block
             // get block lv1, lv2, lv3
@@ -184,17 +184,20 @@ void free_inode(uint32_t inode_idx) {
             // free data block
             if (data_block_sec != 0) {
                 free_block(data_block_sec);
-                printl("<%d>: free_inode: (%d, %d, %d)", i, block_idx1, block_idx2, block_idx3);
+                printl("<%d>: free_data_inode: (%d, %d, %d)", i, block_idx1, block_idx2, block_idx3);
             }
             // free indirect block
             if (index % NBLOCK_LV1 == 0) {  // free block lv1
                 free_block(block_lv1_sec);
+                printl("<%d>: free_block_lv1： %x\n", i, block_lv1_sec);
             }
             if (index % (NBLOCK_LV2) == 0) {  // free block lv2
                 free_block(block_lv2_sec);
+                printl("<%d>: free_block_lv2： %x\n", i, block_lv2_sec);
             }
             if (index % (NBLOCK_LV3) == 0) {  // free block lv1
                 free_block(block_lv3_sec);
+                printl("<%d>: free_block_lv3： %x\n", i, block_lv3_sec);
             }
         }
     }
@@ -340,6 +343,7 @@ int do_mkfs(void)
     root_inode->nlink = 1;
     root_inode->type = IT_DIR;
     root_inode->blocks[0] = find_free_block();
+    printl("alloc_dir_block for root: %x\n", root_inode->blocks[0]);
     bios_sd_write(kva2pa(inode_buffer), 1, root_inode_sector);
     wd_inode = *root_inode;
     // root dentry
@@ -446,6 +450,7 @@ int do_mkdir(char *path)
     }
     // find a free block
     uint32_t new_block = find_free_block();
+    printl("alloc_dir_block for %s: %x\n", path, new_block);
     if (new_block == -1) {
         printk("[FS] mkdir: cannot create directory '%s': No space left on device\n", path);
         return -1;
@@ -515,16 +520,10 @@ void nest_rmdir(inode_t dir_inode) {
             if (child_inode.type == IT_DIR) { // child dir
                 nest_rmdir(child_inode);
                 // delete child dentry
-                free_block(child_inode.blocks[0]);
                 free_inode(child_inode.ino);
             } else {    // child file
                 child_inode.nlink--;
                 if (child_inode.nlink == 0) {
-                    uint32_t nblocks = ROUND(child_inode.size, BLOCK_SIZE) / BLOCK_SIZE;
-                    for (int i = 0; i < nblocks; i++) {
-                        uint32_t block_sector = blockid2sector(i, &child_inode);
-                        free_block(block_sector);
-                    }
                     free_inode(child_inode.ino);
                 } else {
                     uint32_t inode_sector = inodeidx2sector(child_inode.ino);
@@ -571,7 +570,6 @@ int do_rmdir(char *path)
         }
     }
     // delete path inode
-    free_block(d_inode_p->blocks[0]);
     free_inode(d_inode_p->ino);
     return 0;  // do_rmdir succeeds
 }
@@ -804,20 +802,21 @@ int do_read(int fd, char *buff, int length)
 int alloc_inode_block(uint32_t block_idx, inode_t *inode) {
     if (block_idx < DIRECT_BLOCK_NUM) {
         inode->blocks[block_idx] = find_free_block();
-        printl("<%d> alloc_inode_block: %x\n", block_idx, inode->blocks[block_idx]);
+        printl("<%d> alloc_data_block: %x\n", block_idx, inode->blocks[block_idx]);
         return 0;
     }
     if (block_idx < DIRECT_BLOCK_NUM + NBLOCK_LV1) {  // indirect block
         uint32_t block_idx1 = block_idx - DIRECT_BLOCK_NUM;
         if (inode->blocks[DIRECT_BLOCK_NUM] == 0) {
             inode->blocks[DIRECT_BLOCK_NUM] = find_free_block();
+            printl("<%d> alloc_block_lv1: %x\n", block_idx, inode->blocks[DIRECT_BLOCK_NUM]);
         }
         uint32_t new_block = find_free_block();
         bios_sd_read(kva2pa(rdata_buffer), BLOCK_SIZE / SECTOR_SIZE, inode->blocks[DIRECT_BLOCK_NUM]);
         uint32_t *block_lv1 = (uint32_t *) rdata_buffer;
         block_lv1[block_idx1] = new_block;
         bios_sd_write(kva2pa(rdata_buffer), BLOCK_SIZE / SECTOR_SIZE, inode->blocks[DIRECT_BLOCK_NUM]);
-        printl("<%d> alloc_inode_block: (%d) %x\n", block_idx, block_idx1, new_block);
+        printl("<%d> alloc_data_block: (%d) %x\n", block_idx, block_idx1, new_block);
         return 0;
     }
     if (block_idx < DIRECT_BLOCK_NUM + NBLOCK_LV1 + NBLOCK_LV2) {  // double indirect block
@@ -825,11 +824,13 @@ int alloc_inode_block(uint32_t block_idx, inode_t *inode) {
         uint32_t block_idx1 = (block_idx - DIRECT_BLOCK_NUM - NBLOCK_LV1) % (NBLOCK_LV1);
         if (inode->blocks[DIRECT_BLOCK_NUM + 1] == 0) {
             inode->blocks[DIRECT_BLOCK_NUM + 1] = find_free_block();
+            printl("<%d> alloc_block_lv2: %x\n", block_idx, inode->blocks[DIRECT_BLOCK_NUM + 1]);
         }
         bios_sd_read(kva2pa(rdata_buffer), BLOCK_SIZE / SECTOR_SIZE, inode->blocks[DIRECT_BLOCK_NUM + 1]);
         uint32_t *block_lv2 = (uint32_t *) rdata_buffer;
         if (block_lv2[block_idx2] == 0) {
             uint32_t new_block = find_free_block();
+            printl("<%d> alloc_block_lv1: %x\n", block_idx, new_block);
             bios_sd_read(kva2pa(rdata_buffer), BLOCK_SIZE / SECTOR_SIZE, inode->blocks[DIRECT_BLOCK_NUM + 1]);
             block_lv2[block_idx2] = new_block;
             bios_sd_write(kva2pa(rdata_buffer), BLOCK_SIZE / SECTOR_SIZE, inode->blocks[DIRECT_BLOCK_NUM + 1]);
@@ -840,21 +841,22 @@ int alloc_inode_block(uint32_t block_idx, inode_t *inode) {
         uint32_t *block_lv1 = (uint32_t *) rdata_buffer;
         block_lv1[block_idx1] = new_block;
         bios_sd_write(kva2pa(rdata_buffer), BLOCK_SIZE / SECTOR_SIZE, block_lv1_sector);
-        printl("<%d> alloc_inode_block: (%d, %d)%x\n", block_idx, block_idx1, block_idx2, new_block);
+        printl("<%d> alloc_data_block: (%d, %d)%x\n", block_idx, block_idx1, block_idx2, new_block);
         return 0;
     }
     if (block_idx < DIRECT_BLOCK_NUM + NBLOCK_LV1 + NBLOCK_LV2 + NBLOCK_LV3) {  // triple indirect block
         uint32_t block_idx3 = (block_idx - DIRECT_BLOCK_NUM - NBLOCK_LV1 - NBLOCK_LV2) / NBLOCK_LV2;
         uint32_t block_idx2 = (block_idx - DIRECT_BLOCK_NUM - NBLOCK_LV1 - NBLOCK_LV2 - block_idx3 * NBLOCK_LV2) / NBLOCK_LV1;
         uint32_t block_idx1 = (block_idx - DIRECT_BLOCK_NUM - NBLOCK_LV1 - NBLOCK_LV2) % NBLOCK_LV1;
-        printl("<%d> alloc_inode_block: (%d, %d, %d)\n", block_idx, block_idx1, block_idx2, block_idx3);
         if (inode->blocks[DIRECT_BLOCK_NUM + 2] == 0) {
             inode->blocks[DIRECT_BLOCK_NUM + 2] = find_free_block();
+            printl("<%d> alloc_block_lv3: %x\n", block_idx, inode->blocks[DIRECT_BLOCK_NUM + 2]);
         }
         bios_sd_read(kva2pa(rdata_buffer), BLOCK_SIZE / SECTOR_SIZE, inode->blocks[DIRECT_BLOCK_NUM + 2]);
         uint32_t *block_lv3 = (uint32_t *) rdata_buffer;
         if (block_lv3[block_idx3] == 0) {
             uint32_t new_block = find_free_block();
+            printl("<%d> alloc_block_lv2: %x\n", block_idx, new_block);
             bios_sd_read(kva2pa(rdata_buffer), BLOCK_SIZE / SECTOR_SIZE, inode->blocks[DIRECT_BLOCK_NUM + 2]);
             block_lv3[block_idx3] = new_block;
             bios_sd_write(kva2pa(rdata_buffer), BLOCK_SIZE / SECTOR_SIZE, inode->blocks[DIRECT_BLOCK_NUM + 2]);
@@ -864,12 +866,14 @@ int alloc_inode_block(uint32_t block_idx, inode_t *inode) {
         uint32_t *block_lv2 = (uint32_t *) rdata_buffer;
         if (block_lv2[block_idx2] == 0) {
             uint32_t new_block = find_free_block();
+            printl("<%d> alloc_block_lv1: %x\n", block_idx, new_block);
             bios_sd_read(kva2pa(rdata_buffer), BLOCK_SIZE / SECTOR_SIZE, block_lv2_sector);
             block_lv2[block_idx2] = new_block;
             bios_sd_write(kva2pa(rdata_buffer), BLOCK_SIZE / SECTOR_SIZE, block_lv2_sector);
         }
         uint32_t block_lv1_sector = block_lv2[block_idx2];
         uint32_t new_block = find_free_block();
+        printl("<%d> alloc_data_block: (%d, %d, %d) , %x\n", block_idx, block_idx1, block_idx2, block_idx3, new_block);
         bios_sd_read(kva2pa(rdata_buffer), BLOCK_SIZE / SECTOR_SIZE, block_lv1_sector);
         uint32_t *block_lv1 = (uint32_t *) rdata_buffer;
         block_lv1[block_idx1] = new_block;
@@ -1104,11 +1108,6 @@ int do_rm(char *path)
     // update inode
     inode_p->nlink--;
     if (inode_p->nlink == 0) {
-        // uint32_t nblocks = ROUND(inode_p->size, BLOCK_SIZE) / BLOCK_SIZE;
-        // for (int i = 0; i < nblocks; i++) {
-        //     uint32_t block_sector = blockid2sector(i, inode_p);
-        //     free_block(block_sector);
-        // }
         free_inode(inode_p->ino);
     } else {
         bios_sd_write(kva2pa(inode_buffer), 1, inodeidx2sector(inode_p->ino));
