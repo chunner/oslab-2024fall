@@ -16,6 +16,7 @@ static char rdata_buffer[BLOCK_SIZE];  // size = one block, 4KB
 static char wdata_buffer[BLOCK_SIZE];  // size = one block, 4KB
 
 static inode_t wd_inode;    // working directory
+static uint32_t root_ino;
 
 static inode_t *find_inode(char *path, inode_t *parent_inode);
 static void parse_path(char *path, char *dir1, char *dir2, char *dir3);
@@ -121,7 +122,46 @@ void bflush() {
 }
 
 
+void do_vmflush() {
+    uint32_t root_sector = inodeidx2sector(root_ino);
+    uint32_t inode_offset = inodeidx2offset(root_ino);
+    bios_sd_read((unsigned) inode_buffer, 1, root_sector);
+    inode_t root_inode = inode_buffer[inode_offset];
+    inode_t *inode = find_inode("proc/sys/vm", &root_inode);
+    if (inode == NULL) {
+        printf("vmflush: can't find vm\n");
+    }
+    uint32_t data_block_sec = inode->blocks[0];
+    bios_sd_read((unsigned) rdata_buffer, BLOCK_SIZE / SECTOR_SIZE, data_block_sec);
+    char line1[32], line2[32];
 
+    char *line = rdata_buffer;
+    int i = 0;
+    while (line[i] != '\n') {
+        line1[i] = line[i];
+        i++;
+    }
+    line1[i] = '\0';
+    i++;
+    int j = 0;
+    while (line[i] != '\n' && line[i] != '\0') {
+        line2[j] = line[i];
+        i++;
+        j++;
+    }
+    line2[j] = '\0';
+    if (strcmp(line1, "page_cache_policy = write back") == 0) {
+        page_cache_policy = BWRITE_BACK;
+    } else if (strcmp(line1, "page_cache_policy = write through") == 0) {
+        page_cache_policy = BWRITE_THROUGH;
+    }
+    if (strncmp(line2, "write_back_freq = ", 18) == 0) {
+        write_back_freq = 0;
+        for (int k = 18; line2[k] != '\0'; k++) {
+            write_back_freq = write_back_freq * 10 + line2[k] - '0';
+        }
+    }
+}
 
 
 
@@ -477,6 +517,7 @@ int do_mkfs(void)
     printk("[FS] Setting inode...\n");
     // root inode
     uint32_t root_inode_idx = find_free_inode();
+    root_ino = root_inode_idx;
     uint32_t root_inode_sector = inodeidx2sector(root_inode_idx);
     uint32_t root_inode_offset = inodeidx2offset(root_inode_idx);
     // bios_sd_read(kva2pa(inode_buffer), 1, root_inode_sector);
