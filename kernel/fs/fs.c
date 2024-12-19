@@ -472,6 +472,8 @@ void init_fs(void) {
     // read root inode;
     bios_sd_read(kva2pa(inode_buffer), 1, inodeidx2sector(0));
     wd_inode = inode_buffer[0];
+    // vmflush
+    do_vmflush();
 }
 
 int do_mkfs(void)

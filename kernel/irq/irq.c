@@ -9,6 +9,7 @@
 #include <os/smp.h>
 #include <plic.h>
 #include <os/net.h>
+#include <os/fs.h>
 
 handler_t irq_table[IRQC_COUNT];
 handler_t exc_table[EXCC_COUNT];
@@ -31,6 +32,12 @@ void handle_irq_timer(regs_context_t *regs, uint64_t stval, uint64_t scause)
 {
     // TODO: [p2-task4] clock interrupt handler.
     bios_set_timer(time_base / 100 + get_ticks());    // 100 times per secondes
+    static int cnt = 0;
+    cnt++;
+    if (cnt % 100 == 0) {
+        bflush();
+        cnt = 0;
+    }
     do_scheduler();
     return;
 }

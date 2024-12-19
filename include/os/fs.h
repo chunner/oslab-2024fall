@@ -166,4 +166,5 @@ int write_back_freq;
 #define BWRITE_THROUGH 1
 
 extern int do_vmflush();
+extern void bflush();
 #endif
