@@ -298,7 +298,7 @@ void handle_ln_command(char *buffer) {
         printf("Error: fail to ln\n");
     }
 }
-void hendle_rm_command(char *buffer) {
+void handle_rm_command(char *buffer) {
     char path[MAX_NAME_LEN];
     int i = 3, path_idx = 0;
     while (buffer[i] != '\0') {
@@ -311,6 +311,10 @@ void hendle_rm_command(char *buffer) {
     } else {
         printf("Error: fail to rm\n");
     }
+}
+
+void handle_vmflush_command() {
+    sys_vmflush();
 }
 
 
@@ -356,7 +360,9 @@ int main(void) {
         } else if (strncmp(buffer, "ln", 2) == 0) {
             handle_ln_command(buffer);
         } else if (strncmp(buffer, "rm", 2) == 0) {
-            hendle_rm_command(buffer);
+            handle_rm_command(buffer);
+        } else if (strncmp(buffer, "vmflush", 7) == 0) {
+            handle_vmflush_command();
         } else {
             printf("Error: Unknown Command '%s'!\n", buffer);
         }
