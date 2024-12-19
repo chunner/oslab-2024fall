@@ -91,6 +91,8 @@ int sys_lseek(int fd, int offset, int whence);
 int sys_pwd(void);
 int sys_cat(char *path);
 int sys_touch(char *path);
+
+int sys_vmflush();
 /************************************************************/
 
 #endif

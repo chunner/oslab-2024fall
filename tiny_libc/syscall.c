@@ -446,4 +446,9 @@ int sys_touch(char *path)
     int retval = invoke_syscall((long) SYSCALL_FS_TOUCH, (long) path, IGNORE, IGNORE, IGNORE, IGNORE);
     return retval;  // sys_touch succeeds
 }
+int sys_vmflush()
+{
+    int retval = invoke_syscall((long) SYSCALL_VMFLUSH, IGNORE, IGNORE, IGNORE, IGNORE, IGNORE);
+    return retval;
+}
 /************************************************************/

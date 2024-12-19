@@ -122,7 +122,7 @@ void bflush() {
 }
 
 
-void do_vmflush() {
+int do_vmflush() {
     uint32_t root_sector = inodeidx2sector(root_ino);
     uint32_t inode_offset = inodeidx2offset(root_ino);
     bios_sd_read((unsigned) inode_buffer, 1, root_sector);
@@ -130,6 +130,7 @@ void do_vmflush() {
     inode_t *inode = find_inode("proc/sys/vm", &root_inode);
     if (inode == NULL) {
         printf("vmflush: can't find vm\n");
+        return -1;
     }
     uint32_t data_block_sec = inode->blocks[0];
     bios_sd_read((unsigned) rdata_buffer, BLOCK_SIZE / SECTOR_SIZE, data_block_sec);
@@ -161,6 +162,7 @@ void do_vmflush() {
             write_back_freq = write_back_freq * 10 + line2[k] - '0';
         }
     }
+    return 0;
 }
 
 

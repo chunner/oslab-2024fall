@@ -66,5 +66,6 @@
 #define SYSCALL_FS_RM 78
 #define SYSCALL_FS_LSEEK 79
 #define SYSCALL_FS_PWD 82
+#define SYSCALL_VMFLUSH 83
 
 #endif
