@@ -29,11 +29,13 @@ bcache_t *bcache = (bcache_t *) FILE_CACHE_BASE;
 
 
 void init_bcache() {
-    // init bcache array
     bcache->head.next = bcache->head.prev = &bcache->head;
     for (int i = 0; i < NBUF; i++) {
         bcache->buf[i].valid = 0;
     }
+}
+
+void init_bcache_policy() {
     // create /proc/sys/vm, wd_inode is root when init
     do_mkdir("/proc");
     do_cd("proc");
@@ -206,6 +208,24 @@ int do_vmflush() {
 
 
 /*---------------------------------------------------fs---------------------------------------------------------*/
+
+void init_fs(void) {
+    // init_bcache
+    init_bcache();
+    // read superblock
+    bread((superblock_buffer), 1, FS_START_SECTOR);
+    superblock_t *superblock = (superblock_t *) superblock_buffer;
+    if (superblock->magic != SUPERBLOCK_MAGIC) {
+        do_mkfs();
+    }
+    // read root inode;
+    bread((inode_buffer), 1, inodeidx2sector(0));
+    wd_inode = inode_buffer[0];
+    // vmflush
+    do_vmflush();
+}
+
+
 
 uint32_t inodeidx2sector(uint32_t inode_idx) {
     return FS_START_SECTOR + INODE_OFFSET + ROUNDDOWN(inode_idx * sizeof(inode_t), SECTOR_SIZE) / SECTOR_SIZE;
@@ -464,24 +484,11 @@ uint32_t blockid2sector(uint32_t block_id, inode_t *inode) {
     return -1;
 }
 
-void init_fs(void) {
-    // Initialize the filesystem
-    // read superblock
-    bread((superblock_buffer), 1, FS_START_SECTOR);
-    superblock_t *superblock = (superblock_t *) superblock_buffer;
-    if (superblock->magic != SUPERBLOCK_MAGIC) {
-        do_mkfs();
-    }
-    // read root inode;
-    bread((inode_buffer), 1, inodeidx2sector(0));
-    wd_inode = inode_buffer[0];
-    // vmflush
-    do_vmflush();
-}
 
 int do_mkfs(void)
 {
     // TODO [P6-task1]: Implement do_mkfs
+    init_bcache();
     printk("[FS] Start initialize filesystem!\n");
     /* -------------------------------------------------------superblock------------------------------------------------*/
     printk("[FS] Setting superblock...\n");
@@ -552,7 +559,7 @@ int do_mkfs(void)
     dentry_buffer[1].type = IT_DIR;
     bwrite((dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, root_dentry_sector);
     printk("[FS] Filesystem initialized successfully!\n");
-    init_bcache();
+    init_bcache_policy();
     return 0;  // do_mkfs succeeds
 }
 

@@ -15,7 +15,7 @@
 #define BLOCK2SECTOR(b) ((b) * (BLOCK_SIZE / SECTOR_SIZE))
 
 #define FS_NUM_SECTORS (1 << 20)                    // 512 MB = SECTOR_SIZE * NUM_SECTORS = 512B * 2^20
-#define FS_START_SECTOR (1 << 20)                // the start sector of file system
+#define FS_START_SECTOR 0x100                    // (1 << 20)                // the start sector of file system
 
 // SIZE
 #define BLOCK_MAP_SIZE 32                            // 32 SECTOR
@@ -155,7 +155,7 @@ typedef struct buf {
 //                           // head.next 是第一个buffer块， 它是最近使用过的!
 // } bcache;
 typedef struct {
-    buf_t buf[NUM_FDESCS];
+    buf_t buf[NBUF];
     buf_t head;
 } bcache_t;         // less than 0x5000 * 0x400 =  0x2000000 = 32MB
 
