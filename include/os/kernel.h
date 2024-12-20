@@ -4,6 +4,7 @@
 #include <type.h>
 #include <common.h>
 #include <pgtable.h>
+#include <printk.h>
 
 #define KERNEL_JMPTAB_BASE 0xffffffc051ffff00
 typedef enum {
@@ -53,9 +54,11 @@ static inline int bios_getchar(void)
 static inline int bios_sd_read(unsigned mem_address, unsigned num_of_blocks, \
     unsigned block_id)
 {
-    if (block_id >= 0x150000) {
-        while (1);
-    }
+    // if (block_id >= 0x150000) {
+    //     while (1);
+    // }
+    printl("bios_sd_read: mem_address = %x, num_of_blocks = %x, block_id = %x\n", \
+        mem_address, num_of_blocks, block_id);
     return call_jmptab(SD_READ, (long) mem_address, (long) num_of_blocks, \
         (long) block_id, 0, 0);
 }
@@ -65,9 +68,11 @@ static inline int bios_sd_read(unsigned mem_address, unsigned num_of_blocks, \
 static inline int bios_sd_write(unsigned mem_address, unsigned num_of_blocks, \
     unsigned block_id)
 {
-    if (block_id >= 0x150000) {
-        while (1);
-    }
+    // if (block_id >= 0x150000) {
+    //     while (1);
+    // }
+    printl("bios_sd_write: mem_address = %x, num_of_blocks = %x, block_id = %x\n", \
+        mem_address, num_of_blocks, block_id);
     return call_jmptab(SD_WRITE, (long) mem_address, (long) num_of_blocks, \
         (long) block_id, 0, 0);
 }

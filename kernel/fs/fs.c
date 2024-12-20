@@ -97,10 +97,11 @@ void bwrite(uint64_t mem_va, unsigned nsectors, unsigned sectorid) {
         if (buf == NULL) {
             buf = brefill(sectorid + i);
         }
-        buf->dirty = 1;
         memcpy((void *) buf->data, (void *) mem_va, SECTOR_SIZE);
         if (page_cache_policy == BWRITE_THROUGH) { // write through
             bios_sd_write(kva2pa(buf->data), 1, sectorid + i);
+        } else {
+            buf->dirty = 1;
         }
     }
 }
@@ -128,6 +129,7 @@ void bflush() {
 
 
 int do_vmflush() {
+    bflush();
     uint32_t root_sector = inodeidx2sector(root_ino);
     uint32_t inode_offset = inodeidx2offset(root_ino);
     bread(inode_buffer, 1, root_sector);
@@ -139,7 +141,7 @@ int do_vmflush() {
     }
     uint32_t data_block_sec = inode->blocks[0];
     bread(rdata_buffer, BLOCK_SIZE / SECTOR_SIZE, data_block_sec);
-    char line1[32], line2[32];
+    char line1[64], line2[64];
 
     char *line = rdata_buffer;
     int i = 0;
@@ -160,12 +162,18 @@ int do_vmflush() {
         page_cache_policy = BWRITE_BACK;
     } else if (strcmp(line1, "page_cache_policy = write through") == 0) {
         page_cache_policy = BWRITE_THROUGH;
+    } else {
+        printk("vmflush: invalid page_cache_policy\n");
+        return -1;
     }
     if (strncmp(line2, "write_back_freq = ", 18) == 0) {
         write_back_freq = 0;
         for (int k = 18; line2[k] != '\0'; k++) {
             write_back_freq = write_back_freq * 10 + line2[k] - '0';
         }
+    } else {
+        printk("vmflush: invalid write_back_freq\n");
+        return -1;
     }
     return 0;
 }

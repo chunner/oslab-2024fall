@@ -34,7 +34,8 @@ void handle_irq_timer(regs_context_t *regs, uint64_t stval, uint64_t scause)
     bios_set_timer(time_base / 100 + get_ticks());    // 100 times per secondes
     static int cnt = 0;
     cnt++;
-    if (cnt % 100 == 0) {
+    if (cnt % (30 * 100) == 0) {  // 30s
+        printl("bflush: cnt = %d\n", cnt);
         bflush();
         cnt = 0;
     }
