@@ -451,4 +451,7 @@ int sys_vmflush()
     int retval = invoke_syscall((long) SYSCALL_VMFLUSH, IGNORE, IGNORE, IGNORE, IGNORE, IGNORE);
     return retval;
 }
+void sys_init_bcache() {
+    invoke_syscall((long) SYSCALL_INIT_BCACHE, IGNORE, IGNORE, IGNORE, IGNORE, IGNORE);
+}
 /************************************************************/

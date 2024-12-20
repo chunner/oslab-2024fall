@@ -37,7 +37,7 @@ void init_bcache() {
 
 void init_bcache_policy() {
     // create /proc/sys/vm, wd_inode is root when init
-    do_mkdir("/proc");
+    do_mkdir("proc");
     do_cd("proc");
     do_mkdir("sys");
     do_cd("sys");

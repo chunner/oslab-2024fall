@@ -167,4 +167,5 @@ int write_back_freq;
 
 extern int do_vmflush();
 extern void bflush();
+extern void init_bcache();
 #endif

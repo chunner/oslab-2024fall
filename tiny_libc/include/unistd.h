@@ -93,6 +93,7 @@ int sys_cat(char *path);
 int sys_touch(char *path);
 
 int sys_vmflush();
+void sys_init_bcache();
 /************************************************************/
 
 #endif

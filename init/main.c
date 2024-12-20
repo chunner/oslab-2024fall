@@ -183,6 +183,7 @@ static void init_syscall(void)
     syscall[SYSCALL_FS_LSEEK] = (long(*)()) do_lseek;
     syscall[SYSCALL_FS_PWD] = (long(*)()) do_pwd;
     syscall[SYSCALL_VMFLUSH] = (long(*)()) do_vmflush;
+    syscall[SYSCALL_INIT_BCAHCE] = (long(*)()) init_bcache;
 
 }
 /************************************************************/
