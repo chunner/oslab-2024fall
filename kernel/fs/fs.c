@@ -20,6 +20,8 @@ static uint32_t root_ino;
 
 static inode_t *find_inode(char *path, inode_t *parent_inode);
 static void parse_path(char *path, char *dir1, char *dir2, char *dir3);
+static uint32_t inodeidx2sector(uint32_t inode_idx);
+static uint32_t inodeidx2offset(uint32_t inode_idx);
 
 /* ---------------------------------------------------------file cache------------------------------------------------------- */
 bcache_t *bcache = (bcache_t *) FILE_CACHE_BASE;
@@ -56,6 +58,7 @@ buf_t *find_free_buf() {
         }
         buf++;
     }
+    return NULL;
 }
 
 buf_t *search_buf(uint32_t sectorid) {
@@ -129,7 +132,7 @@ int do_vmflush() {
     inode_t root_inode = inode_buffer[inode_offset];
     inode_t *inode = find_inode("proc/sys/vm", &root_inode);
     if (inode == NULL) {
-        printf("vmflush: can't find vm\n");
+        printk("vmflush: can't find vm\n");
         return -1;
     }
     uint32_t data_block_sec = inode->blocks[0];
