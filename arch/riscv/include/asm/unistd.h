@@ -68,5 +68,6 @@
 #define SYSCALL_FS_PWD 82
 #define SYSCALL_VMFLUSH 83
 #define SYSCALL_INIT_BCAHCE 84
+#define SYSCALL_BFLUSH 85
 
 #endif

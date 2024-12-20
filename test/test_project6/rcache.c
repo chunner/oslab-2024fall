@@ -30,9 +30,10 @@ int main(void)
     new_clk = sys_get_tick();
     printf("[read with cache] time: %d\n", new_clk - old_clk);
     // read without cache
+    sys_bflush();
+    sys_init_bcache();
     old_clk = sys_get_tick();
     sys_lseek(fd, 0, SEEK_SET);
-    sys_init_bcache();
     for (int i = 0; i < 5; i++)
     {
         sys_read(fd, buff, 13);

@@ -454,4 +454,7 @@ int sys_vmflush()
 void sys_init_bcache() {
     invoke_syscall((long) SYSCALL_INIT_BCACHE, IGNORE, IGNORE, IGNORE, IGNORE, IGNORE);
 }
+void sys_bflush() {
+    invoke_syscall((long) SYSCALL_BFLUSH, IGNORE, IGNORE, IGNORE, IGNORE, IGNORE);
+}
 /************************************************************/
