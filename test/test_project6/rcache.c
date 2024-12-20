@@ -10,14 +10,16 @@ int main(void)
     int fd = sys_open("rcache.txt", O_RDWR);
 
     // write 'hello world!' * 10
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < 5; i++)
     {
         sys_write(fd, "hello world!\n", 13);
     }
-
-    // read
+    uint64_t old_clk;
+    uint64_t new_clk;
+    // read with cache
     sys_move_cursor(0, 0);
-    for (int i = 0; i < 10; i++)
+    old_clk = sys_get_tick();
+    for (int i = 0; i < 5; i++)
     {
         sys_read(fd, buff, 13);
         for (int j = 0; j < 13; j++)
@@ -25,6 +27,26 @@ int main(void)
             printf("%c", buff[j]);
         }
     }
+    new_clk = sys_get_tick();
+    printf("[read with cache] time: %d\n", new_clk - old_clk);
+    // read without cache
+    old_clk = sys_get_tick();
+    sys_lseek(fd, 0, SEEK_SET);
+    sys_init_bcache();
+    for (int i = 0; i < 5; i++)
+    {
+        sys_read(fd, buff, 13);
+        for (int j = 0; j < 13; j++)
+        {
+            printf("%c", buff[j]);
+        }
+    }
+    new_clk = sys_get_tick();
+    printf("[read without cache] time: %d\n", new_clk - old_clk);
+
+
+
+
 
     sys_close(fd);
 
