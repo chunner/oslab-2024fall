@@ -2,7 +2,8 @@
 #include <string.h>
 #include <unistd.h>
 
-static char buff[64];
+static char buff[256];
+static char buff2[256];
 
 int main(void)
 {
@@ -27,11 +28,11 @@ int main(void)
     {
         sys_lseek(fd, offset, SEEK_SET);
         offset += 4096;
-        sys_read(fd, buff, 13);
-        for (int j = 0; j < 13; j++)
-        {
-            printf("%c", buff[j]);
-        }
+        sys_read(fd, buff + 13 * i, 13);
+        // for (int j = 0; j < 13; j++)
+        // {
+        //     printf("%c", buff[j]);
+        // }
     }
     new_clk = sys_get_tick();
     uint64_t t1 = new_clk - old_clk;
@@ -46,11 +47,11 @@ int main(void)
     {
         sys_lseek(fd, offset, SEEK_SET);
         offset += 4096;
-        sys_read(fd, buff, 13);
-        for (int j = 0; j < 13; j++)
-        {
-            printf("%c", buff[j]);
-        }
+        sys_read(fd, buff2 + 13 * i, 13);
+        // for (int j = 0; j < 13; j++)
+        // {
+        //     printf("%c", buff[j]);
+        // }
     }
     new_clk = sys_get_tick();
     uint64_t t2 = new_clk - old_clk;
@@ -59,6 +60,10 @@ int main(void)
     uint64_t speedup = t2 * 100 / t1;
     printf("t2/t1 = %d%%\n", speedup);
 
+    sys_move_cursor(0, 5);
+    printf("buff1: %s", buff);
+    sys_move_cursor(0, 5);
+    printf("buff2: %s", buff2);
 
     sys_close(fd);
 
