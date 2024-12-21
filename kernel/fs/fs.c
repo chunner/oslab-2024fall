@@ -60,6 +60,21 @@ buf_t *find_free_buf() {
         }
         buf++;
     }
+    // no free buf, use LRU
+    buf = bcache->head.prev;
+    if (buf != &bcache->head) {
+        if (buf->dirty) {
+            bios_sd_write(kva2pa(buf->data), 1, buf->sectorid);
+            buf->dirty = 0;
+        }
+        buf->valid = 0;
+        buf->sectorid = 0;
+        buf->next->prev = buf->prev;
+        buf->prev->next = buf->next;
+        buf->next = NULL;
+        buf->prev = NULL;
+        return buf;
+    }
     return NULL;
 }
 
@@ -160,8 +175,10 @@ int do_vmflush() {
     line2[j] = '\0';
     if (strcmp(line1, "page_cache_policy = write back") == 0) {
         page_cache_policy = BWRITE_BACK;
+        printk("page_cache_policy = write back\n");
     } else if (strcmp(line1, "page_cache_policy = write through") == 0) {
         page_cache_policy = BWRITE_THROUGH;
+        printk("page_cache_policy = write through\n");
     } else {
         printk("vmflush: invalid page_cache_policy\n");
         return -1;
@@ -171,6 +188,7 @@ int do_vmflush() {
         for (int k = 18; line2[k] != '\0'; k++) {
             write_back_freq = write_back_freq * 10 + line2[k] - '0';
         }
+        printk("write_back_freq = %d\n", write_back_freq);
     } else {
         printk("vmflush: invalid write_back_freq\n");
         return -1;
