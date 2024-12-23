@@ -779,7 +779,11 @@ int do_rmdir(char *path)
     if (d_inode_p == NULL) {
         return -1;
     } else if (d_inode_p->type != IT_DIR) {
-        printk("[FS] rmdir: cannot remove '%s': Not a directory\n", path);
+        printk("[FSmmdir: cannot remove '%s': Not a directory\n", path);
+        return -1;
+    }
+    if (d_inode_p->nlink != 1) {
+        printk("[FS] rmdir: directory is not emty!\n");
         return -1;
     }
     nest_rmdir(*d_inode_p);
@@ -1330,10 +1334,11 @@ int do_rm(char *path)
         printk("[FS] rm: cannot remove '%s': Is a directory\n", path);
         return -1;
     }
+    inode_t inode = *inode_p;
     // delete parent dentry, assert wd is the parent inode
     bread((dentry_buffer), BLOCK_SIZE / SECTOR_SIZE, wd_inode.blocks[0]);
     for (int j = 0; j < BLOCK_SIZE / sizeof(dentry_t); j++) {
-        if (dentry_buffer[j].ino == inode_p->ino) {
+        if (dentry_buffer[j].ino == inode.ino) {
             dentry_buffer[j].name[0] = 0;
             dentry_buffer[j].ino = 0;
             dentry_buffer[j].type = 0;
@@ -1351,11 +1356,13 @@ int do_rm(char *path)
     inode_buffer[wd_inode_offset] = wd_inode;
     bwrite((inode_buffer), 1, wd_inode_sector);
     // update inode
-    inode_p->nlink--;
-    if (inode_p->nlink == 0) {
-        free_inode(inode_p->ino);
+    inode.nlink--;
+    if (inode.nlink == 0) {
+        free_inode(inode.ino);
     } else {
-        bwrite((inode_buffer), 1, inodeidx2sector(inode_p->ino));
+        bread(inode_buffer, 1, inodeidx2sector(inode.ino));
+        inode_buffer[inodeidx2offset(inode.ino)] = inode;
+        bwrite((inode_buffer), 1, inodeidx2sector(inode.ino));
     }
 
     return 0;  // do_rm succeeds 
