@@ -772,10 +772,14 @@ int do_rmdir(char *path)
 {
     // TODO [P6-task1]: Implement do_rmdir
     inode_t *d_inode_p = find_inode(path, &wd_inode);
+    if (strcmp(path, ".") == 0 || strcmp(path, "..") == 0) {
+        printk("[FS] rmdir: cannot remove '%s'\n", path);
+        return -1;
+    }
     if (d_inode_p == NULL) {
         return -1;
     } else if (d_inode_p->type != IT_DIR) {
-        printk("[FS] ls: cannot remove '%s': Not a directory\n", path);
+        printk("[FS] rmdir: cannot remove '%s': Not a directory\n", path);
         return -1;
     }
     nest_rmdir(*d_inode_p);
