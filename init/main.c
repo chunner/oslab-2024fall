@@ -213,7 +213,8 @@ int main(void)
     short *slave_hart_lock = (short *) slave_hart_lock_loc;
     uint64_t mhartid;
     if ((mhartid = get_current_cpu_id()) != 0) { // if not master hart
-        *slave_hart_lock = 0;
+        //*slave_hart_lock = 0;
+        cancel_temp_pgdir();
         // move the slave hart cursor
         current_running_1->cursor_y = current_running_0->cursor_y + 1;
         current_running = current_running_1;
@@ -305,9 +306,10 @@ int main(void)
     //kernel_brake();
 
     // wait for slave hart to init
-    while (*slave_hart_lock == 1);
+    if (*slave_hart_lock == 0) {
+        cancel_temp_pgdir();
+    };
     // Cancel temporary mapping 0x5000_0000 to 0x5100_0000
-    cancel_temp_pgdir();
 
     // exec shell
     char *name = "shell";
