@@ -83,10 +83,10 @@ typedef struct inode {
     uint32_t atime;       // Last access time (4 bytes)
     uint32_t mtime;       // Last modification time (4 bytes)
     uint32_t ctime;       // Creation time (4 bytes)
-    uint32_t blocks[DIRECT_BLOCK_NUM];  // Data block pointers (32 bytes)
-    uint32_t indirect;    // Single indirect pointer (4 bytes)
-    uint32_t double_indirect; // Double indirect pointer (4 bytes)
-    uint32_t triple_indirect; // Triple indirect pointer (4 bytes)
+    uint32_t blocks[DIRECT_BLOCK_NUM + 3];  // Data block pointers (32 bytes)
+    // uint32_t indirect;    // Single indirect pointer (4 bytes)
+    // uint32_t double_indirect; // Double indirect pointer (4 bytes)
+    // uint32_t triple_indirect; // Triple indirect pointer (4 bytes)
 } inode_t;                // Total: 64 bytes, one sector has 512/64 = 8 inodes 
 typedef struct fdesc {
     // TODO [P6-task2]: Implement the data structure of file descriptor
